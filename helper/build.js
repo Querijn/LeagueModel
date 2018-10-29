@@ -11,16 +11,17 @@ const baseBuildFolder = "build/web_";
 
 const procArgs = process.argv.filter((v, i) => i >= 2);
 const isProduction = procArgs[0] && procArgs[0].toLowerCase().startsWith("prod");
+const isWasm = !isProduction && procArgs[0] && !(procArgs[0].toLowerCase().startsWith("nowasm") || procArgs[0].toLowerCase().startsWith("no-wasm"));
 const buildFolder = baseBuildFolder + (isProduction ? "prod/" : "dev/");
 const foldersToCopy = [ "data/" ];
-console.log(`Running a ${isProduction ? "production" : "develop"} build.`);
+console.log(`Running a ${isProduction ? "production" : "develop"} build ${isWasm ? "as WebAssembly" : "without WebAssembly"}.`);
 
 const devShell = "helper/dev_index.html";
 const prodShell = "helper/prod_index.html";
 const shellFile = isProduction ? prodShell : devShell;
 
 const requiredArgs = [ "-std=c++11", "-s", "FULL_ES2=1", "-Werror" ]; // , "--shell-file", shellFile ];
-const devArgs = [ "-s", "SAFE_HEAP=1", "-g4", "-s", "ASSERTIONS=2", "-s", "DEMANGLE_SUPPORT=1", /*"-s", "WASM=1",*/ "--source-map-base", "http://localhost:8080/", "-s", "ALLOW_MEMORY_GROWTH=1" ];
+const devArgs = [ "-g4", "-s", "ASSERTIONS=2", "-s", "DEMANGLE_SUPPORT=1", "--source-map-base", "http://localhost:8080/", "-s", "ALLOW_MEMORY_GROWTH=1" ];
 const prodArgs = [ "-s", "WASM=1", "-Os", "--closure", "1" ];
 
 function fileBackedObject(path) {
@@ -143,6 +144,7 @@ fs.ensureFileSync(buildInfoFileName);
 let buildInfoFile = fileBackedObject(buildInfoFileName);
 
 const finalArgs = requiredArgs.concat(isProduction ? prodArgs : devArgs); // Copy
+if (!isWasm) finalArgs.push("-s", "WASM=0");
 
 // Add includes
 for (let include of includeFolders)
@@ -168,8 +170,6 @@ for (let include of includeFolders)
         let buildFile = `./${buildFolder}${sourceFile}.bc`;
         buildFiles.push(buildFile);
 
-        let arg = [compiler, sourceFile, "-o", buildFile].concat(finalArgs);
-
         if (fs.existsSync(buildFile) && !shouldBuild(sourceFile, new Date(buildTime || 0))) {
             console.log(`[${i + 1}/${sourceFiles.length}] Skipping "${sourceFile}" (no changes)`);
             continue;
@@ -178,7 +178,8 @@ for (let include of includeFolders)
         fs.ensureFileSync(buildFile);
 
         try {
-            console.log(`[${i + 1}/${sourceFiles.length}] Building "${sourceFile}"`);
+            let arg = [compiler, sourceFile, "-o", buildFile].concat(finalArgs);
+            console.log(`[${i + 1}/${sourceFiles.length}] Building "${sourceFile} (${finalArgs.join(" ")})"`);
             await run(arg);
             hasChanges = true;
 
