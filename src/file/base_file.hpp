@@ -47,6 +47,8 @@ public:
 	std::string Name() const { return m_Name; }
 
 protected:
+	size_t m_Size = 0;
+
 	std::string m_Name;
 	LoadState m_LoadState = LoadState::NotLoaded;
 };

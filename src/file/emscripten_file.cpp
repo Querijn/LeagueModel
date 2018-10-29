@@ -3,39 +3,13 @@
 
 #include <emscripten.h>
 
-#include <fstream>
-
 std::map<std::string, EmscriptenFile*> EmscriptenFile::m_LoadData;
 
 bool EmscriptenFile::Read(uint8_t* a_Destination, size_t a_ByteCount, size_t a_Offset)
 {
-	printf("Reading..\n");
-	// If offset was undefined, use our internal read offset
-	size_t t_Offset = a_Offset == (size_t)-1 ? m_ReadOffset : a_Offset;
+	if (a_Offset != (size_t)-1) return false; // TODO: Allow for reading from random locations
 
-	// Make sure our offset is 
-	bool t_Result = true;
-	if (t_Offset + a_ByteCount >= m_Data.size())
-	{
-		a_ByteCount = m_Data.size() - t_Offset;
-		t_Result = false;
-	}
-	else if (t_Offset >= m_Data.size())
-	{
-		a_ByteCount = 0;
-		t_Result = false;
-	}
-
-	uint8_t* t_Data = m_Data.data() + t_Offset;
-	printf("Nulls: %s, %s\n", a_Destination == nullptr ? "true" : "false", t_Data == nullptr ? "true" : "false");
-
-	for (int i = 0; i < a_ByteCount; i++)
-		a_Destination[i] = t_Data[i];
-
-	// If offset was undefined, update our read offset
-	if (a_Offset == (size_t)-1) m_ReadOffset = t_Offset + a_ByteCount;
-
-	return t_Result;
+	return !!m_File->read(reinterpret_cast<char*>(a_Destination), a_ByteCount);
 }
 
 void EmscriptenFile::Seek(size_t a_Offset, SeekType a_SeekFrom)
@@ -43,22 +17,32 @@ void EmscriptenFile::Seek(size_t a_Offset, SeekType a_SeekFrom)
 	switch (a_SeekFrom)
 	{
 	case SeekType::FromBeginning:
-		m_ReadOffset = a_Offset;
+		m_File->seekg(a_Offset, std::ios::beg);
 		break;
 
 	case SeekType::FromCurrent:
-		m_ReadOffset += a_Offset;
+		m_File->seekg(a_Offset, std::ios::cur);
 		break;
 
 	case SeekType::FromEnd:
-		m_ReadOffset = m_Data.size() - a_Offset;
+		m_File->seekg(a_Offset, std::ios::end);
 		break;
 	}
 }
 
 std::vector<uint8_t> EmscriptenFile::Data()
 {
-	return m_Data;
+	auto t_Location = m_File->tellg();
+	m_File->seekg(0, std::ios::beg);
+
+	printf("EmscriptenFile::Data() for %zu bytes called, if large, this might be a slow process.\n", m_Size);
+	std::vector<uint8_t> t_Data(m_Size);
+	printf("EmscriptenFile::Data() has allocated %zu bytes.\n", m_Size);
+	m_File->read(reinterpret_cast<char*>(t_Data.data()), m_Size);
+	printf("EmscriptenFile::Data() has read %zu bytes of info, so we're done!\n", m_Size);
+
+	m_File->seekg(t_Location, std::ios::beg);
+	return t_Data;
 }
 
 EmscriptenFile::EmscriptenFile(const std::string & a_File, const EmscriptenFile::OnLoadFunction & a_OnLoadFunction) :
@@ -78,7 +62,7 @@ void EmscriptenFile::DataLoadSuccessHandler(const char * a_FileName)
 	std::string t_FileString = a_FileName;
 	const char* t_FileName = t_FileString.c_str();
 	while (*t_FileName == '/') t_FileName++; // Skip the annoying added / in front
-	
+
 	auto t_FileDataIndex = m_LoadData.find(t_FileName);
 	if (t_FileDataIndex == m_LoadData.end())
 	{
@@ -90,22 +74,15 @@ void EmscriptenFile::DataLoadSuccessHandler(const char * a_FileName)
 		return;
 	}
 
-	printf("Loading file: \"%s\"\n", t_FileName);
+	printf("Loading file: \"%s\"\n", t_FileDataIndex->first.c_str());
+	auto t_FileData = t_FileDataIndex->second;
+	t_FileData->m_File = std::make_shared<std::ifstream>(std::ifstream(a_FileName, std::ios::binary | std::ios::ate));
+	t_FileData->m_Size = t_FileData->m_File->tellg();
 
-	auto& t_FileData = m_LoadData[t_FileName];
-
-	std::ifstream t_File(a_FileName, std::ios::binary | std::ios::ate);
-	std::streamsize t_Size = t_File.tellg();
-	t_File.seekg(0, std::ios::beg);
-
-	t_FileData->m_Data.resize(t_Size > 0 ? t_Size : 0);
-	auto t_Read = !!t_File.read(reinterpret_cast<char*>(t_FileData->m_Data.data()), t_Size);
-	t_FileData->m_LoadState = t_Read ? BaseFile::LoadState::Loaded : BaseFile::LoadState::FailedToLoad;
-	auto t_PointerToFile = t_Read ? t_FileData : nullptr;
-
+	t_FileData->m_LoadState = BaseFile::LoadState::Loaded;
 	if (t_FileData->m_OnLoadFunction)
 	{
-		printf("Calling external load function for \"%s\", file was %s loaded.\n", t_FileName, t_Read ? "succesfully" : "not");
+		printf("Calling external load function for \"%s\", file was succesfully loaded.\n", t_FileName);
 		t_FileData->m_OnLoadFunction(t_FileData, t_FileData->m_LoadState);
 	}
 }

@@ -57,11 +57,11 @@ NativeFile::NativeFile(const std::string & a_File, const NativeFile::OnLoadFunct
 	BaseFile(a_File)
 {
 	std::ifstream t_File(a_File, std::ios::binary | std::ios::ate);
-	std::streamsize t_Size = t_File.tellg();
+	m_Size = t_File.tellg();
 	t_File.seekg(0, std::ios::beg);
 
-	m_Data.resize(t_Size > 0 ? t_Size : 0);
-	auto t_Read = !!t_File.read(reinterpret_cast<char*>(m_Data.data()), t_Size);
+	m_Data.resize(m_Size > 0 ? m_Size : 0);
+	auto t_Read = !!t_File.read(reinterpret_cast<char*>(m_Data.data()), m_Size);
 	m_LoadState = t_Read ? BaseFile::LoadState::Loaded : BaseFile::LoadState::FailedToLoad;
 
 	if (a_OnLoadFunction) a_OnLoadFunction(this, m_LoadState);
