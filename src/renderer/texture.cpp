@@ -126,12 +126,11 @@ void Texture::UploadRGB(BaseFile* a_File, Texture::OnLoadFunction a_OnLoadFuncti
 {
 	int t_Width, t_Height, t_BytesPerPixel;
 
-	auto t_Data = a_File->Data();
-	unsigned char *t_ImageData =
 #if defined(_WIN32)
-		stbi_load_from_memory((const stbi_uc*)t_Data.data(), t_Data.size(), &t_Width, &t_Height, &t_BytesPerPixel, 0);
+	auto t_Data = a_File->Data();
+	unsigned char *t_ImageData = stbi_load_from_memory((const stbi_uc*)t_Data.data(), t_Data.size(), &t_Width, &t_Height, &t_BytesPerPixel, 0);
 #elif defined(__EMSCRIPTEN__)
-		(unsigned char*)emscripten_get_preloaded_image_data(a_File->Name().c_str(), &t_Width, &t_Height);
+	unsigned char *t_ImageData = (unsigned char*)emscripten_get_preloaded_image_data(a_File->Name().c_str(), &t_Width, &t_Height);
 	t_BytesPerPixel = 4;
 #endif
 
