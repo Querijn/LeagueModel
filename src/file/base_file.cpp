@@ -1,6 +1,6 @@
 #include "base_file.hpp"
 
-BaseFile::BaseFile(const std::string & a_File) : // , const BaseFile::OnLoadFunction & a_OnLoadFunction) :
+BaseFile::BaseFile(const std::string & a_File) :
 	m_Name(a_File)
 {
 }

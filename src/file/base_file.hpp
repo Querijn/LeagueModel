@@ -22,7 +22,7 @@ public:
 		FailedToLoad
 	};
 
-	BaseFile(const std::string& a_File);// , const BaseFile::OnLoadFunction& a_OnLoadFunction = nullptr);
+	BaseFile(const std::string& a_File);
 
 	bool IsLoaded() const;
 	LoadState GetLoadState() const;
