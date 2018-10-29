@@ -5,12 +5,12 @@
 
 #include <vector>
 
-template<typename FileType, DerivedFrom(FileType, BaseFile)>
+template<typename FileType, typename OnLoadFunctionType, DerivedFrom(FileType, BaseFile)>
 class BaseFileSystem
 {
 public:
 	virtual bool FileExists(const std::string& a_FileName) = 0;
-	// virtual FileType* OpenFile(const std::string& a_FileName, BaseFile::OnLoadFunction a_OnLoadFunction) = 0;
+	virtual FileType* OpenFile(const std::string& a_FileName, OnLoadFunctionType a_OnLoadFunction) = 0;
 
 private:
 	std::vector<FileType> m_Files;
