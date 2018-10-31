@@ -112,7 +112,6 @@ void League::Animation::Load(const std::string & a_FileName, const League::Skele
 			return;
 		}
 
-		std::map<uint32_t, std::string> boneHashes;
 		uint8_t magicNumber[8];
 		a_File->Read(magicNumber, 8);
 
@@ -127,6 +126,9 @@ void League::Animation::Load(const std::string & a_FileName, const League::Skele
 
 		int numBones, numFrames;
 		float frameDelay;
+		std::map<uint32_t, std::string> boneHashes;
+		for (auto& bone : a_Skeleton.Bones)
+			boneHashes[bone.hash] = bone.name;
 
 		if (version > 5)
 		{

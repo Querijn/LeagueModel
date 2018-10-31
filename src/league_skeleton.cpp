@@ -160,6 +160,15 @@ BaseFile::LoadState League::Skeleton::ReadClassic(BaseFile& a_File)
 	return BaseFile::LoadState::Loaded;
 }
 
+void RecursiveFixGlobalMatrix(const glm::mat4& a_Parent, League::Skeleton::Bone& a_Bone)
+{
+	auto t_Global = a_Parent * a_Bone.localMatrix;
+	a_Bone.globalMatrix = glm::inverse(t_Global);
+
+	for (auto t_Child : a_Bone.Children)
+		RecursiveFixGlobalMatrix(t_Global, *t_Child);
+}
+
 BaseFile::LoadState League::Skeleton::ReadVersion2(BaseFile & a_File)
 {
 	Version2Skeleton::Header t_Header;
@@ -177,18 +186,6 @@ BaseFile::LoadState League::Skeleton::ReadVersion2(BaseFile & a_File)
 		Bones[i].parent = t_Bones[i].ParentID;
 
 		Bones[i].localMatrix = glm::translate(t_Bones[i].Position) * glm::mat4_cast(t_Bones[i].Rotation);
-	}
-
-	for (auto& t_Bone : Bones)
-	{
-		if (t_Bone.parent != -1)
-		{
-			t_Bone.globalMatrix = Bones[t_Bone.parent].globalMatrix * t_Bone.localMatrix;
-		}
-		else
-		{
-			t_Bone.globalMatrix = t_Bone.localMatrix;
-		}
 	}
 
 	a_File.Seek(t_Header.BoneIndexMapOffset, BaseFile::SeekType::FromBeginning);
@@ -228,6 +225,12 @@ BaseFile::LoadState League::Skeleton::ReadVersion2(BaseFile & a_File)
 		while (*t_Pointer == 0) t_Pointer++; // eat all \0s
 
 		if (Bones[i].parent != -1) Bones[Bones[i].parent].Children.push_back(&Bones[i]);
+	}
+
+	for (auto& t_Bone : Bones)
+	{
+		if (t_Bone.parent != -1) continue;
+		RecursiveFixGlobalMatrix(glm::identity<glm::mat4>(), t_Bone);
 	}
 
 	return BaseFile::LoadState::Loaded;
