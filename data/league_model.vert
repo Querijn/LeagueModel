@@ -8,7 +8,7 @@ attribute vec4 v_BoneWeights;
 
 varying vec2 UV;
 
-const int MAX_BONES = 100;
+const int MAX_BONES = 255;
 
 uniform mat4 u_MVP;
 uniform mat4 u_Bones[MAX_BONES];
