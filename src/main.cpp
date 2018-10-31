@@ -61,7 +61,7 @@ bool g_ModelDirty = true;
 glm::vec3 g_Rotation;
 glm::vec3 g_Position;
 glm::vec3 g_Scale(1.0f);
-float g_Time = 0;
+double g_Time = 0;
 float g_AnimDuration;
 
 bool g_CameraDirty = true;
@@ -88,6 +88,25 @@ bool g_AnimationLoaded = false;
 
 bool g_MouseIsDown = false;
 glm::vec2 g_MousePos, g_LastMousePos;
+
+#if defined(__EMSCRIPTEN__)
+#include <emscripten.h>
+double GetCurrentTime()
+{
+	return 0.001 * emscripten_get_now();
+}
+#else
+#undef GetCurrentTime
+LARGE_INTEGER g_Frequency;
+LARGE_INTEGER g_Start;
+double GetCurrentTime()
+{
+	LARGE_INTEGER t_End;
+	QueryPerformanceCounter(&t_End);
+
+	return static_cast<double>(t_End.QuadPart - g_Start.QuadPart) / g_Frequency.QuadPart;
+}
+#endif
 
 void UploadBuffers()
 {
@@ -307,6 +326,7 @@ int main(void)
 			}
 
 			g_SkeletonLoaded = true;
+			printf("Skeleton has %zu bones.\n", g_Skeleton->Bones.size());
 
 			// Make sure the bones are lined up
 			for (auto& t_IndexVector : g_Skin->BoneIndices)
@@ -362,10 +382,18 @@ int main(void)
 		g_MousePos.y = a_Event->y;
 	});
 
+#if defined(_WIN32)
+	QueryPerformanceFrequency(&g_Frequency);
+	QueryPerformanceCounter(&g_Start);
+#endif
+
 	printf("Setting up loop\n");
 	Platform::SetMainLoop([]()
 	{
-		EventHandler::EmitEvent<UpdateEvent>(0.0f);
+		double t_DeltaTime = GetCurrentTime() - g_Time;
+		g_Time = GetCurrentTime();
+
+		EventHandler::EmitEvent<UpdateEvent>(t_DeltaTime);
 		EventHandler::Run();
 
 		if (g_SkinLoaded == false || g_SkeletonLoaded == false || g_AnimationLoaded == false || g_ShadersLoadedCount != 2)
@@ -430,8 +458,6 @@ int main(void)
 		g_IndexBuffer->Draw();
 		
 		g_Window->SwapBuffers();
-
-		g_Time += 0.016;
 		return g_Window->RunFrame();
 	});
 
