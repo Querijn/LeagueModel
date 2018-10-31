@@ -96,30 +96,53 @@ void League::Skin::Load(const std::string & a_Path, OnLoadFunction a_OnLoad)
 		t_File->Read(reinterpret_cast<uint8_t*>(&numIndices), 4);
 		t_File->Read(reinterpret_cast<uint8_t*>(&numVertices), 4);
 
-		if (t_Header.Major == 4) t_File->Seek(48, BaseFile::SeekType::FromCurrent);
+		BoundingMin = glm::vec3(4e4);
+		BoundingMax = glm::vec3(-4e4);
+
+		uint32_t t_HasTangents = 0;
+		if (t_Header.Major == 4)
+		{
+			uint32_t vertexSize;
+			Sphere t_BoundingSphere;
+			
+			t_File->Get(vertexSize);
+			t_File->Get(t_HasTangents);
+			t_File->Get(BoundingMin);
+			t_File->Get(BoundingMax);
+			t_File->Get(t_BoundingSphere);
+		}
 
 		t_File->Get(Indices, numIndices);
 
-		std::vector<Vertex> t_Vertices;
-		t_File->Get(t_Vertices, numVertices);
+		std::vector<VertexV4> t_Vertices;
+		if (t_HasTangents) 
+			t_File->Get(t_Vertices, numVertices);
+		else
+		{
+			t_Vertices.resize(numVertices);
+			for (int i = 0; i < numVertices; ++i)
+				t_File->Get(t_Vertices[i].Base);
+		}
 		
-		BoundingMin = glm::vec3(4e4);
-		BoundingMax = glm::vec3(-4e4);
 		for (auto& t_Vertex : t_Vertices)
 		{
-			if (BoundingMin.x > t_Vertex.Position.x) BoundingMin.x = t_Vertex.Position.x;
-			if (BoundingMin.y > t_Vertex.Position.y) BoundingMin.y = t_Vertex.Position.y;
-			if (BoundingMin.z > t_Vertex.Position.z) BoundingMin.z = t_Vertex.Position.z;
+			// Calculate bounding box if not present in file
+			if (t_Header.Major != 4)
+			{
+				if (BoundingMin.x > t_Vertex.Base.Position.x) BoundingMin.x = t_Vertex.Base.Position.x;
+				if (BoundingMin.y > t_Vertex.Base.Position.y) BoundingMin.y = t_Vertex.Base.Position.y;
+				if (BoundingMin.z > t_Vertex.Base.Position.z) BoundingMin.z = t_Vertex.Base.Position.z;
 
-			if (BoundingMax.x < t_Vertex.Position.x) BoundingMax.x = t_Vertex.Position.x;
-			if (BoundingMax.y < t_Vertex.Position.y) BoundingMax.y = t_Vertex.Position.y;
-			if (BoundingMax.z < t_Vertex.Position.z) BoundingMax.z = t_Vertex.Position.z;
+				if (BoundingMax.x < t_Vertex.Base.Position.x) BoundingMax.x = t_Vertex.Base.Position.x;
+				if (BoundingMax.y < t_Vertex.Base.Position.y) BoundingMax.y = t_Vertex.Base.Position.y;
+				if (BoundingMax.z < t_Vertex.Base.Position.z) BoundingMax.z = t_Vertex.Base.Position.z;
+			}
 
-			Positions.push_back(t_Vertex.Position);
-			UVs.push_back(t_Vertex.UV);
-			Normals.push_back(t_Vertex.Normal);
-			Weights.push_back(t_Vertex.Weights);
-			BoneIndices.push_back({ t_Vertex.BoneIndices[0], t_Vertex.BoneIndices[1], t_Vertex.BoneIndices[2], t_Vertex.BoneIndices[3] });
+			Positions.push_back(t_Vertex.Base.Position);
+			UVs.push_back(t_Vertex.Base.UV);
+			Normals.push_back(t_Vertex.Base.Normal);
+			Weights.push_back(t_Vertex.Base.Weights);
+			BoneIndices.push_back({ t_Vertex.Base.BoneIndices[0], t_Vertex.Base.BoneIndices[1], t_Vertex.Base.BoneIndices[2], t_Vertex.Base.BoneIndices[3] });
 		}
 		
 		if (a_OnLoad) a_OnLoad(this, BaseFile::LoadState::Loaded);
