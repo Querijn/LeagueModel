@@ -22,10 +22,10 @@ struct Header
 	int32_t Signature;
 	uint16_t Major;
 	uint16_t Minor;
-	uint32_t MaterialHeaderCount;
+	uint32_t SubMeshHeaderCount;
 };
 
-struct MaterialHeader
+struct SubMeshHeader
 {
 	char Material[64];
 	uint32_t VertexOffset;
@@ -88,8 +88,8 @@ void League::Skin::Load(const std::string & a_Path, OnLoadFunction a_OnLoad)
 			return;
 		}
 
-		std::vector<MaterialHeader> t_MaterialHeaders;
-		if (t_Header.Major > 0) t_File->Get(t_MaterialHeaders, t_Header.MaterialHeaderCount);
+		std::vector<SubMeshHeader> t_SubMeshHeaders;
+		if (t_Header.Major > 0) t_File->Get(t_SubMeshHeaders, t_Header.SubMeshHeaderCount);
 		if (t_Header.Major == 4) t_File->Seek(4, BaseFile::SeekType::FromCurrent);
 
 		uint32_t numIndices, numVertices;
@@ -141,6 +141,27 @@ void League::Skin::Load(const std::string & a_Path, OnLoadFunction a_OnLoad)
 			Normals.push_back(t_Vertex.Base.Normal);
 			Weights.push_back(t_Vertex.Base.Weights);
 			BoneIndices.push_back({ t_Vertex.Base.BoneIndices[0], t_Vertex.Base.BoneIndices[1], t_Vertex.Base.BoneIndices[2], t_Vertex.Base.BoneIndices[3] });
+		}
+
+		for (int i = 0; i < t_Header.SubMeshHeaderCount; i++)
+		{
+			auto& t_MeshHeader = t_SubMeshHeaders[i];
+			Mesh t_Mesh;
+
+			t_Mesh.MaterialName = t_MeshHeader.Material;
+
+			t_Mesh.IndexCount = t_MeshHeader.IndexCount;
+			t_Mesh.VertexCount = t_MeshHeader.VertexCount;
+
+			t_Mesh.Indices = &Indices[t_MeshHeader.IndexOffset];
+			t_Mesh.Positions = &Positions[t_MeshHeader.VertexOffset];
+			t_Mesh.UVs = &UVs[t_MeshHeader.VertexOffset];
+			t_Mesh.Normals = &Normals[t_MeshHeader.VertexOffset];
+			t_Mesh.Weights = &Weights[t_MeshHeader.VertexOffset];
+			t_Mesh.BoneIndices = &BoneIndices[t_MeshHeader.VertexOffset];
+			t_Mesh.Tangents = nullptr;
+
+			Meshes.push_back(t_Mesh);
 		}
 		
 		if (a_OnLoad) a_OnLoad(this, BaseFile::LoadState::Loaded);

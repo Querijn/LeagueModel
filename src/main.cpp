@@ -1,14 +1,8 @@
 //// Taliyaah
-//auto t_TextureFileLocation = "data/output/assets/characters/taliyah/skins/base/taliyah_base_tx_cm.dds"; 
-//auto t_SkinFileLocation = "data/output/assets/characters/taliyah/skins/base/taliyah_base.skn";
-//auto t_SkeletonFileLocation = "data/output/assets/characters/taliyah/skins/base/taliyah_base.skl";
-//auto t_AnimationFileLocation = "data/output/assets/characters/taliyah/skins/base/animations/taliyah_channel.anm";
-
-//// Honux' test
-auto t_TextureFileLocation = "data/141001/Skin01_Slayer_MAT.dds";
-auto t_SkinFileLocation = "data/141001/141001.skn";
-auto t_SkeletonFileLocation = "data/141001/141001.skl";
-auto t_AnimationFileLocation = "data/141001/Attack2.anm";
+auto t_TextureFileLocation = "data/output/assets/characters/taliyah/skins/base/taliyah_base_tx_cm.dds"; 
+auto t_SkinFileLocation = "data/output/assets/characters/taliyah/skins/base/taliyah_base.skn";
+auto t_SkeletonFileLocation = "data/output/assets/characters/taliyah/skins/base/taliyah_base.skl";
+auto t_AnimationFileLocation = "data/output/assets/characters/taliyah/skins/base/animations/taliyah_channel.anm";
 
 //// Morde
 //auto t_TextureFileLocation = "data/output/assets/characters/mordekaiser/skins/base/mordekaiser.dds"; 
@@ -16,11 +10,17 @@ auto t_AnimationFileLocation = "data/141001/Attack2.anm";
 //auto t_SkeletonFileLocation = "data/output/assets/characters/mordekaiser/skins/base/mordekaiser.skl";
 //auto t_AnimationFileLocation =	"data/output/assets/characters/mordekaiser/skins/base/animations/mordekaiser_idle1.anm";
 
-// Poppy
+//// Poppy
 //auto t_TextureFileLocation = "data/output/assets/characters/poppy/skins/base/poppy_base_tx_cm.dds";
 //auto t_SkinFileLocation = "data/output/assets/characters/poppy/skins/base/poppy.skn";
 //auto t_SkeletonFileLocation = "data/output/assets/characters/poppy/skins/base/poppy.skl";
 //auto t_AnimationFileLocation = "data/output/assets/characters/poppy/skins/base/animations/poppy_run.anm";
+
+//// Kayn
+//auto t_TextureFileLocation = "data/141001/Skin01_Slayer_MAT.dds";
+//auto t_SkinFileLocation = "data/141001/141001.skn";
+//auto t_SkeletonFileLocation = "data/141001/141001.skl";
+//auto t_AnimationFileLocation = "data/141001/Attack2.anm";
 
 #include <league_model/league_skin.hpp>
 #include <league_model/league_skeleton.hpp>
@@ -50,12 +50,18 @@ ShaderProgram g_ShaderProgram;
 Shader g_VertexShader(Shader::Type::Vertex);
 Shader g_FragmentShader(Shader::Type::Fragment);
 
-VertexBuffer<glm::vec3>* g_PositionBuffer;
-VertexBuffer<glm::vec2>* g_UVBuffer;
-VertexBuffer<glm::vec3>* g_NormalBuffer;
-VertexBuffer<glm::vec4>* g_BoneIndexBuffer;
-VertexBuffer<glm::vec4>* g_BoneWeightBuffer;
-IndexBuffer<uint16_t>* g_IndexBuffer;
+struct Mesh
+{
+	VertexBuffer<glm::vec3>* PositionBuffer;
+	VertexBuffer<glm::vec2>* UVBuffer;
+	VertexBuffer<glm::vec3>* NormalBuffer;
+	VertexBuffer<glm::vec4>* BoneIndexBuffer;
+	VertexBuffer<glm::vec4>* BoneWeightBuffer;
+
+	std::vector<IndexBuffer<uint16_t>*> IndexBuffers;
+};
+
+std::vector<Mesh> g_Meshes;
 
 bool g_ModelDirty = true;
 glm::vec3 g_Rotation;
@@ -112,19 +118,29 @@ void UploadBuffers()
 {
 	if (g_SkinLoaded == false || g_SkeletonLoaded == false || g_AnimationLoaded == false || g_ShadersLoadedCount != 2) return;
 
-	g_PositionBuffer = g_ShaderProgram.GetVertexBuffer<glm::vec3>("v_Positions");
-	g_UVBuffer = g_ShaderProgram.GetVertexBuffer<glm::vec2>("v_UVs");
-	g_NormalBuffer = g_ShaderProgram.GetVertexBuffer<glm::vec3>("v_Normals");
-	g_BoneIndexBuffer = g_ShaderProgram.GetVertexBuffer<glm::vec4>("v_BoneIndices");
-	g_BoneWeightBuffer = g_ShaderProgram.GetVertexBuffer<glm::vec4>("v_BoneWeights");
-	g_IndexBuffer = &g_ShaderProgram.GetIndexBuffer<uint16_t>();
+	Mesh t_Mesh;
 
-	if (g_PositionBuffer) g_PositionBuffer->Upload(g_Skin->Positions);
-	if (g_UVBuffer) g_UVBuffer->Upload(g_Skin->UVs);
-	if (g_NormalBuffer) g_NormalBuffer->Upload(g_Skin->Normals);
-	if (g_BoneWeightBuffer) g_BoneWeightBuffer->Upload(g_Skin->Weights);
-	if (g_BoneIndexBuffer) g_BoneIndexBuffer->Upload(g_Skin->BoneIndices);
-	g_IndexBuffer->Upload(g_Skin->Indices);
+	t_Mesh.PositionBuffer = g_ShaderProgram.GetVertexBuffer<glm::vec3>("v_Positions");
+	t_Mesh.UVBuffer = g_ShaderProgram.GetVertexBuffer<glm::vec2>("v_UVs");
+	t_Mesh.NormalBuffer = g_ShaderProgram.GetVertexBuffer<glm::vec3>("v_Normals");
+	t_Mesh.BoneIndexBuffer = g_ShaderProgram.GetVertexBuffer<glm::vec4>("v_BoneIndices");
+	t_Mesh.BoneWeightBuffer = g_ShaderProgram.GetVertexBuffer<glm::vec4>("v_BoneWeights");
+
+	if (t_Mesh.PositionBuffer) t_Mesh.PositionBuffer->Upload(g_Skin->Positions);
+	if (t_Mesh.UVBuffer) t_Mesh.UVBuffer->Upload(g_Skin->UVs);
+	if (t_Mesh.NormalBuffer) t_Mesh.NormalBuffer->Upload(g_Skin->Normals);
+	if (t_Mesh.BoneWeightBuffer) t_Mesh.BoneWeightBuffer->Upload(g_Skin->Weights);
+	if (t_Mesh.BoneIndexBuffer) t_Mesh.BoneIndexBuffer->Upload(g_Skin->BoneIndices);
+
+	for (int i = 0; i < g_Skin->Meshes.size(); i++)
+	{
+		auto* t_Index = &g_ShaderProgram.GetIndexBuffer<uint16_t>();
+		auto& t_SkinMesh = g_Skin->Meshes[i];
+		t_Index->Upload(t_SkinMesh.Indices, t_SkinMesh.IndexCount);
+		t_Mesh.IndexBuffers.push_back(t_Index);
+	}
+	
+	g_Meshes.push_back(t_Mesh);
 }
 
 void OnShaderLoad(Shader* a_Shader, BaseFile::LoadState a_LoadState)
@@ -251,6 +267,7 @@ void SetupHierarchy(const glm::mat4& a_InverseRoot, std::vector<glm::mat4>& a_Bo
 		auto t_LocalTransform = glm::translate(t_Translation) * glm::mat4_cast(t_Rotation) * glm::scale(t_Scale);
 		t_GlobalTransform = a_Parent * t_LocalTransform;
 	}
+	else __debugbreak();
 
 	a_Bones[a_SkeletonBone.id] = t_GlobalTransform * a_SkeletonBone.globalMatrix;
 
@@ -450,12 +467,17 @@ int main(void)
 
 		g_ShaderProgram.Update();
 
-		if (g_PositionBuffer) g_PositionBuffer->Use();
-		if (g_UVBuffer) g_UVBuffer->Use();
-		if (g_NormalBuffer) g_NormalBuffer->Use();
-		if (g_BoneIndexBuffer) g_BoneIndexBuffer->Use();
-		if (g_BoneWeightBuffer) g_BoneWeightBuffer->Use();
-		g_IndexBuffer->Draw();
+		for (int i = 0; i < g_Meshes.size(); i++)
+		{
+			if (g_Meshes[i].PositionBuffer) g_Meshes[i].PositionBuffer->Use();
+			if (g_Meshes[i].UVBuffer) g_Meshes[i].UVBuffer->Use();
+			if (g_Meshes[i].NormalBuffer) g_Meshes[i].NormalBuffer->Use();
+			if (g_Meshes[i].BoneIndexBuffer) g_Meshes[i].BoneIndexBuffer->Use();
+			if (g_Meshes[i].BoneWeightBuffer) g_Meshes[i].BoneWeightBuffer->Use();
+
+			g_Meshes[i].IndexBuffers.back()->Draw();
+		}
+		
 		
 		g_Window->SwapBuffers();
 		return g_Window->RunFrame();

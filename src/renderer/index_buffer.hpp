@@ -17,7 +17,7 @@ public:
 		glDeleteBuffers(1, &m_ID); 
 	}
 
-	void Upload(const std::vector<T>& a_Data) 
+	void Upload(const std::vector<T>& a_Data)
 	{
 		m_ElementCount = a_Data.size();
 		m_Type = GetType();
@@ -25,6 +25,16 @@ public:
 		glGenBuffers(1, &m_ID);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ID);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_ElementCount * sizeof(T), a_Data.data(), GL_STATIC_DRAW);
+	}
+
+	void Upload(const T* a_Data, size_t a_ElementCount)
+	{
+		m_ElementCount = a_ElementCount;
+		m_Type = GetType();
+
+		glGenBuffers(1, &m_ID);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ID);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_ElementCount * sizeof(T), a_Data, GL_STATIC_DRAW);
 	}
 
 	size_t GetType() const { printf("Seems like something went wrong getting the tpye of this index buffer!\n"); throw 0; return GL_UNSIGNED_SHORT; }

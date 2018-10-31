@@ -33,7 +33,7 @@ namespace League
 			glm::vec3* Normals;
 			glm::vec4* Tangents;
 			glm::vec4* Weights;
-			uint8_t* BoneIndices;
+			glm::vec4* BoneIndices;
 
 			uint16_t* Indices;
 			size_t IndexCount;

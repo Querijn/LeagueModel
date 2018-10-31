@@ -18,12 +18,20 @@ public:
 	}
 
 	void Use() { printf("Yikes! Trying to use VertexBuffer without a specialised type (%s)!\n", typeid(T).name()); throw 0; }
-	void Upload(const std::vector<T>& a_Data) 
+	void Upload(const std::vector<T>& a_Data)
 	{
 		GL(glDeleteBuffers(1, &m_BufferID));
 		GL(glGenBuffers(1, &m_BufferID));
 		GL(glBindBuffer(GL_ARRAY_BUFFER, m_BufferID));
 		GL(glBufferData(GL_ARRAY_BUFFER, a_Data.size() * sizeof(T), a_Data.data(), GL_STATIC_DRAW));
+	}
+
+	void Upload(const T* a_Data, size_t a_Count)
+	{
+		GL(glDeleteBuffers(1, &m_BufferID));
+		GL(glGenBuffers(1, &m_BufferID));
+		GL(glBindBuffer(GL_ARRAY_BUFFER, m_BufferID));
+		GL(glBufferData(GL_ARRAY_BUFFER, a_Count * sizeof(T), a_Data, GL_STATIC_DRAW));
 	}
 
 	friend class ShaderProgram;
