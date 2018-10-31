@@ -102,14 +102,12 @@ void League::Skin::Load(const std::string & a_Path, OnLoadFunction a_OnLoad)
 		uint32_t t_HasTangents = 0;
 		if (t_Header.Major == 4)
 		{
-			uint32_t vertexSize;
-			Sphere t_BoundingSphere;
-			
-			t_File->Get(vertexSize);
+			uint32_t t_VertexSize;			
+			t_File->Get(t_VertexSize);
 			t_File->Get(t_HasTangents);
 			t_File->Get(BoundingMin);
 			t_File->Get(BoundingMax);
-			t_File->Get(t_BoundingSphere);
+			t_File->Seek(sizeof(Sphere), BaseFile::SeekType::FromCurrent);
 		}
 
 		t_File->Get(Indices, numIndices);
