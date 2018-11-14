@@ -22,6 +22,9 @@ public:
 	// TODO
 	size_t GetWidth() const { return 800; }
 	size_t GetHeight() const { return 600; }
+
+private:
+	bool m_MouseIsInside = false;
 };
 
 #endif
