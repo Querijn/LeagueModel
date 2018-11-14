@@ -4,7 +4,7 @@
 #include <platform/mouse_definitions.hpp>
 
 #include <vector>
-#include <string>
+#include <string.hpp>
 
 // Pointer events
 DEFINE_EVENT_3(PointerMoveEvent, int, index, int, x, int, y);

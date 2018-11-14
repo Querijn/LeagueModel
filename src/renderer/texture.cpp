@@ -5,30 +5,49 @@
 
 #include <algorithm>
 
-Texture::Texture()
+void Texture::Load(StringView a_ImagePath, Texture::OnLoadFunction a_OnLoadFunction, void* a_Argument)
 {
-}
+	auto* t_File = FileSystem::GetFile(a_ImagePath);
 
-void Texture::Load(const std::string & a_ImagePath, Texture::OnLoadFunction a_OnLoadFunction)
-{
-	FileSystem t_FileSystem;
-
-	t_FileSystem.OpenFile(a_ImagePath, [&](BaseFile* a_File, BaseFile::LoadState a_LoadState)
+	struct LoadData
 	{
-		if (a_LoadState != BaseFile::LoadState::Loaded)
+		LoadData(Texture* a_Target, OnLoadFunction a_Function, void* a_Argument) :
+			Target(a_Target), OnLoadFunction(a_Function), Argument(a_Argument)
+		{}
+
+		Texture* Target;
+		OnLoadFunction OnLoadFunction;
+		void* Argument;
+	};
+	auto* t_LoadData = new LoadData(this, a_OnLoadFunction, a_Argument);
+		
+	t_File->Load([](File* a_File, File::LoadState a_LoadState, void* a_Argument)
+	{
+		auto* t_LoadData = (LoadData*)a_Argument;
+		auto* t_Texture = t_LoadData->Target;
+		if (a_LoadState != File::LoadState::Loaded)
 		{
-			if (a_OnLoadFunction) a_OnLoadFunction(nullptr, a_LoadState);
+			t_Texture->m_LoadState = a_LoadState;
+			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Texture, t_LoadData->Argument);
+
+			FileSystem::CloseFile(*a_File);
+			delete t_LoadData;
 			return;
 		}
 
-		// Check if image path ends in DDS
-		auto t_Index = a_ImagePath.find_last_of('.');
-		auto t_IsDDS = (a_ImagePath[t_Index + 1] == 'd' || a_ImagePath[t_Index + 1] == 'D') && (a_ImagePath[t_Index + 2] == 'd' || a_ImagePath[t_Index + 2] == 'D') && (a_ImagePath[t_Index + 3] == 's' || a_ImagePath[t_Index + 3] == 'S');
+		std::string t_Path = a_File->GetName().Get();
 
-		if (t_IsDDS) UploadDDS(a_File, a_OnLoadFunction);
-		else UploadRGB(a_File, a_OnLoadFunction);
-	});
-	
+		// Check if image path ends in DDS
+		auto t_Index = t_Path.find_last_of('.');
+		auto t_IsDDS = (t_Path[t_Index + 1] == 'd' || t_Path[t_Index + 1] == 'D') && (t_Path[t_Index + 2] == 'd' || t_Path[t_Index + 2] == 'D') && (t_Path[t_Index + 3] == 's' || t_Path[t_Index + 3] == 'S');
+
+		// Upload as DDS or as whatever STB can decypher for us
+		t_Texture->m_LoadState = t_IsDDS ? t_Texture->UploadDDS(a_File) : t_Texture->UploadRGB(a_File);
+
+		if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Texture, t_LoadData->Argument);
+		FileSystem::CloseFile(*a_File);
+		delete t_LoadData;
+	}, t_LoadData);
 }
 
 Texture::~Texture()
@@ -55,7 +74,12 @@ unsigned int Texture::GetPosition() const
 	return m_Position;
 }
 
-void Texture::UploadDDS(BaseFile* a_File, Texture::OnLoadFunction a_OnLoadFunction)
+File::LoadState Texture::GetLoadState() const
+{
+	return m_LoadState;
+}
+
+File::LoadState Texture::UploadDDS(File* a_File)
 {
 	static const uint32_t t_DDS = MAKEFOURCC('D', 'D', 'S', ' ');
 	static const uint32_t t_DXT1 = MAKEFOURCC('D', 'X', 'T', '1');
@@ -64,11 +88,12 @@ void Texture::UploadDDS(BaseFile* a_File, Texture::OnLoadFunction a_OnLoadFuncti
 
 	// Check signature. If it fails, fall back to importer
 	uint32_t t_Signature;
-	a_File->Get(t_Signature);
-	if (t_DDS != t_Signature) return UploadRGB(a_File, a_OnLoadFunction);
+	size_t t_Offset = 0;
+	a_File->Get(t_Signature, t_Offset);
+	if (t_DDS != t_Signature) return UploadRGB(a_File);
 
 	DirectX::DDS_HEADER t_Header;
-	a_File->Get(t_Header);
+	a_File->Get(t_Header, t_Offset);
 
 	unsigned int t_Format;
 	switch (t_Header.ddspf.fourCC)
@@ -87,7 +112,7 @@ void Texture::UploadDDS(BaseFile* a_File, Texture::OnLoadFunction a_OnLoadFuncti
 		break;
 
 	default:
-		return;
+		return File::LoadState::FailedToLoad;
 	}
 
 	GL(glGenTextures(1, &m_ID));
@@ -103,7 +128,7 @@ void Texture::UploadDDS(BaseFile* a_File, Texture::OnLoadFunction a_OnLoadFuncti
 	for (unsigned int i = 0; i < std::max(1u, t_Header.mipMapCount); i++)
 	{
 		unsigned int t_Size = std::max(1u, ((t_Width + 3) / 4) * ((t_Height + 3) / 4)) * t_BlockSize;
-		a_File->Get(t_Buffer, t_Size);
+		a_File->Get(t_Buffer, t_Size, t_Offset);
 
 		GL(glCompressedTexImage2D(GL_TEXTURE_2D, i, t_Format, t_Width, t_Height, 0, t_Size, t_Buffer.data()));
 
@@ -111,7 +136,7 @@ void Texture::UploadDDS(BaseFile* a_File, Texture::OnLoadFunction a_OnLoadFuncti
 		t_Height /= 2;
 	}
 
-	if (a_OnLoadFunction) a_OnLoadFunction(this, BaseFile::LoadState::Loaded);
+	return File::LoadState::Loaded;
 }
 
 void Texture::SetDefaultParameters()
@@ -122,29 +147,20 @@ void Texture::SetDefaultParameters()
 	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
 }
 
-void Texture::UploadRGB(BaseFile* a_File, Texture::OnLoadFunction a_OnLoadFunction)
+File::LoadState Texture::UploadRGB(File* a_File)
 {
 	int t_Width, t_Height, t_BytesPerPixel;
 
 #if defined(_WIN32)
-	auto t_Data = a_File->Data();
+	auto t_Data = a_File->GetData();
 	unsigned char *t_ImageData = stbi_load_from_memory((const stbi_uc*)t_Data.data(), t_Data.size(), &t_Width, &t_Height, &t_BytesPerPixel, 0);
 #elif defined(__EMSCRIPTEN__)
-	unsigned char *t_ImageData = (unsigned char*)emscripten_get_preloaded_image_data(a_File->Name().c_str(), &t_Width, &t_Height);
+	auto t_Name = a_File->GetName().Get();
+	unsigned char *t_ImageData = (unsigned char*)emscripten_get_preloaded_image_data(t_Name.c_str(), &t_Width, &t_Height);
 	t_BytesPerPixel = 4;
 #endif
 
-	if (t_ImageData == nullptr)
-	{
-		if (a_OnLoadFunction) a_OnLoadFunction(nullptr, BaseFile::LoadState::FailedToLoad);
-		return;
-	}
-
-#if defined(_WIN32)
-	stbi_image_free(t_ImageData);
-#elif defined(__EMSCRIPTEN__)
-	free(t_ImageData);
-#endif
+	if (t_ImageData == nullptr) return File::LoadState::FailedToLoad;
 
 	GL(glGenTextures(1, &m_ID));
 	GL(glBindTexture(GL_TEXTURE_2D, m_ID));
@@ -169,5 +185,12 @@ void Texture::UploadRGB(BaseFile* a_File, Texture::OnLoadFunction a_OnLoadFuncti
 	}
 
 	GL(glTexImage2D(GL_TEXTURE_2D, 0, t_Format, t_Width, t_Height, 0, t_Format, GL_UNSIGNED_BYTE, t_ImageData));
-	if (a_OnLoadFunction) a_OnLoadFunction(this, BaseFile::LoadState::Loaded);
+
+#if defined(_WIN32)
+	stbi_image_free(t_ImageData);
+#elif defined(__EMSCRIPTEN__)
+	free(t_ImageData);
+#endif
+
+	return File::LoadState::Loaded;
 }

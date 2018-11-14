@@ -6,7 +6,7 @@
 class Shader
 {
 public:
-	using OnLoadFunction = std::function<void(Shader* a_Shader, BaseFile::LoadState a_LoadState)>;
+	using OnLoadFunction = void(*)(Shader* a_Shader, void* a_Argument);
 	enum Type
 	{
 		Vertex = GL_VERTEX_SHADER,
@@ -16,13 +16,17 @@ public:
 	Shader(Type a_Type);
 	~Shader();
 
-	void Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFunction);
+	void Load(StringView a_FilePath, OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
 
 	operator GLuint() const;
 
 	void Delete();
+	
+	File::LoadState GetLoadState() const { return m_State; }
 
 private:
+	File::LoadState m_State = File::LoadState::NotLoaded;
+
 	Type m_Type;
 	GLuint m_ID = 0;
 };

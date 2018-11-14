@@ -52,7 +52,7 @@ GLuint ShaderProgram::GetID() const
 
 void ShaderProgram::Use()
 {
-	glUseProgram(*this);
+	GL(glUseProgram(m_ID));
 }
 
 void ShaderProgram::Update()
