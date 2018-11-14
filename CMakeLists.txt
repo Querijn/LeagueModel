@@ -35,20 +35,17 @@ endfunction(ADD_LEAGUEMODEL_SOURCE)
 include_directories("include")
 include_directories("src")
 
-ADD_LEAGUEMODEL_SOURCE(Application							""												"src/main.cpp")
+ADD_LEAGUEMODEL_SOURCE(Application							"src/application.hpp"							"src/application.cpp")
+ADD_LEAGUEMODEL_SOURCE(Application\\Mesh					"src/application_mesh.hpp"						"src/application_mesh.cpp")
 
-ADD_LEAGUEMODEL_SOURCE(FileSystem							"src/file_system.hpp"							"src/file_system.cpp")
-ADD_LEAGUEMODEL_SOURCE(FileSystem\\Base						"src/file_system/base_file_system.hpp"			"src/file_system/base_file_system.cpp")
-ADD_LEAGUEMODEL_SOURCE(FileSystem\\Emscripten				"src/file_system/emscripten_file_system.hpp"	"src/file_system/emscripten_file_system.cpp")
-ADD_LEAGUEMODEL_SOURCE(FileSystem\\Native					"src/file_system/native_file_system.hpp"		"src/file_system/native_file_system.cpp")
-
+ADD_LEAGUEMODEL_SOURCE(File									"src/file_system.hpp"							"src/file_system.cpp")
 ADD_LEAGUEMODEL_SOURCE(File\\Base							"src/file/base_file.hpp"						"src/file/base_file.cpp")
 ADD_LEAGUEMODEL_SOURCE(File\\Emscripten						"src/file/emscripten_file.hpp"					"src/file/emscripten_file.cpp")
 ADD_LEAGUEMODEL_SOURCE(File\\Native							"src/file/native_file.hpp"						"src/file/native_file.cpp")
 
-ADD_LEAGUEMODEL_SOURCE(League\\Skin							"include/league_model/league_skin.hpp"			"src/league_skin.cpp")
-ADD_LEAGUEMODEL_SOURCE(League\\Skeleton						"include/league_model/league_skeleton.hpp"		"src/league_skeleton.cpp")
-ADD_LEAGUEMODEL_SOURCE(League\\Animation					"include/league_model/league_animation.hpp"		"src/league_animation.cpp")
+ADD_LEAGUEMODEL_SOURCE(League\\Skin							"src/league/skin.hpp"							"src/league/skin.cpp")
+ADD_LEAGUEMODEL_SOURCE(League\\Skeleton						"src/league/skeleton.hpp"						"src/league/skeleton.cpp")
+ADD_LEAGUEMODEL_SOURCE(League\\Animation					"src/league/animation.hpp"						"src/league/animation.cpp")
 
 ADD_LEAGUEMODEL_SOURCE(Window								"src/window.hpp"								"src/window.cpp")
 ADD_LEAGUEMODEL_SOURCE(Window\\BaseWindow					"src/window/base_window.hpp"					"src/window/base_window.cpp")
@@ -70,6 +67,7 @@ ADD_LEAGUEMODEL_SOURCE(Platform\\WindowsPlatform			"src/platform/windows_platfor
 ADD_LEAGUEMODEL_SOURCE(Platform\\EmscriptenPlatform			"src/platform/emscripten_platform.hpp"			"src/platform/emscripten_platform.cpp")
 
 ADD_LEAGUEMODEL_SOURCE(Helper								"src/helper.hpp"								"src/helper.cpp")
+ADD_LEAGUEMODEL_SOURCE(Helper\\String						"src/string.hpp"								"src/string.cpp")
 
 ADD_LEAGUEMODEL_SOURCE(EventHandler							"src/event_handler.hpp"							"src/event_handler.cpp")
 ADD_LEAGUEMODEL_SOURCE(EventHandler\\Event					"src/event_handler/event.hpp"					"src/event_handler/event.cpp")
