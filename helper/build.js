@@ -11,7 +11,7 @@ const baseBuildFolder = "build/web_";
 
 const procArgs = process.argv.filter((v, i) => i >= 2);
 const isProduction = procArgs[0] && procArgs[0].toLowerCase().startsWith("prod");
-const isWasm = !isProduction && procArgs[0] && !(procArgs[0].toLowerCase().startsWith("nowasm") || procArgs[0].toLowerCase().startsWith("no-wasm"));
+const isWasm = isProduction || !(procArgs[0] && (procArgs[0].toLowerCase().startsWith("nowasm") || procArgs[0].toLowerCase().startsWith("no-wasm")));
 const buildFolder = baseBuildFolder + (isProduction ? "prod/" : "dev/");
 const foldersToCopy = [ "data/" ];
 console.log(`Running a ${isProduction ? "production" : "develop"} build ${isWasm ? "as WebAssembly" : "without WebAssembly"}.`);
@@ -20,9 +20,9 @@ const devShell = "helper/dev_index.html";
 const prodShell = "helper/prod_index.html";
 const shellFile = isProduction ? prodShell : devShell;
 
-const requiredArgs = [ "-std=c++11", "-s", "FULL_ES2=1", "-Werror" ]; // , "--shell-file", shellFile ];
-const devArgs = [ "-g4", "-s", "ASSERTIONS=2", "-s", "DEMANGLE_SUPPORT=1", "--source-map-base", "http://localhost:8080/", "-s", "ALLOW_MEMORY_GROWTH=1" ];
-const prodArgs = [ "-s", "WASM=1", "-Os", "--closure", "1" ];
+const requiredArgs = [ "-std=c++11", "-s", "FULL_ES2=1", "-Werror", "-s", "ASSERTIONS=2", "-s", "DEMANGLE_SUPPORT=1",  "-s", "ALLOW_MEMORY_GROWTH=1" ]; // , "--shell-file", shellFile ];
+const devArgs = [ "-g4", "--source-map-base", "http://localhost:8080/", ];
+const prodArgs = [ "-Os", "--closure", "1", "-Walmost-asm" ];
 
 function fileBackedObject(path) {
     const contents = fs.readFileSync(path, "utf8");
@@ -179,7 +179,8 @@ for (let include of includeFolders)
 
         try {
             let arg = [compiler, sourceFile, "-o", buildFile].concat(finalArgs);
-            console.log(`[${i + 1}/${sourceFiles.length}] Building "${sourceFile} (${finalArgs.join(" ")})"`);
+            //console.log(`[${i + 1}/${sourceFiles.length}] Building "${sourceFile} (${finalArgs.join(" ")})"`);
+            console.log(`[${i + 1}/${sourceFiles.length}] Building "${sourceFile}"`);
             await run(arg);
             hasChanges = true;
 
