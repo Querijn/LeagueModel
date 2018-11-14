@@ -3,33 +3,53 @@
 
 #include <file/base_file.hpp>
 
-#include <memory>
-#include <map>
-#include <fstream>
+#include <vector>
 
 class EmscriptenFile : public BaseFile
 {
 public:
-	using OnLoadFunction = std::function<void(EmscriptenFile* a_File, LoadState)>;
+	using LoadState = FileLoadState;
+	using OnLoadFunction = void(*)(EmscriptenFile* a_File, FileLoadState a_LoadState, void* a_Argument);
 
-	~EmscriptenFile() {}
+	void Load(OnLoadFunction a_OnLoadCallback, void* a_Argument = nullptr);
+	size_t Read(uint8_t* a_Destination, size_t a_ByteCount, size_t& a_Offset) const;
 
-	bool Read(uint8_t* a_Destination, size_t a_ByteCount, size_t a_Offset = (size_t)-1) override;
-	void Seek(size_t a_Offset, BaseFile::SeekType a_SeekFrom) override;
+	template<typename T>
+	bool Get(T& a_Element, size_t& a_Offset)
+	{
+		bool t_Read = Read((uint8_t*)&a_Element, sizeof(T), a_Offset) == sizeof(T);
+		return t_Read;
+	}
 
-	virtual std::vector<uint8_t> Data() override;
+	template<typename T>
+	bool Get(std::vector<T>& a_Element, size_t a_Offset)
+	{
+		return false;
+	}
 
-	friend class EmscriptenFileSystem;
+	template<typename T>
+	bool Get(std::vector<T>& a_Element, size_t a_Count, size_t a_Offset)
+	{
+		a_Element.resize(a_Count);
+		return Read((uint8_t*)a_Element.data(), a_Count * sizeof(T), a_Offset) == a_Count * sizeof(T);
+	}
+
+	const std::vector<uint8_t>& GetData() const;
+	StringView GetName() const;
+
+	friend class FileSystem;
 protected:
-	EmscriptenFile(const std::string& a_File, const EmscriptenFile::OnLoadFunction& a_OnLoadFunction = nullptr);
+	EmscriptenFile(StringView a_FileName) : BaseFile(a_FileName) { }
 
 private:
-	OnLoadFunction m_OnLoadFunction;
-	std::shared_ptr<std::ifstream> m_File;
+	static void OnLoad(void* a_Argument, void* a_Data, int a_Size);
+	static void OnLoadFailed(void* a_Argument);
+
+	std::vector<uint8_t> m_Data;
+	std::shared_ptr<std::ifstream> m_Stream;
 	
-	static std::map<std::string, EmscriptenFile*> m_LoadData;
-	static void DataLoadSuccessHandler(const char* a_FileName);
-	static void DataLoadFailHandler(const char* a_FileName);
+	OnLoadFunction m_OnLoadArg = nullptr;
+	void* m_ArgData = nullptr;
 };
 
 #endif

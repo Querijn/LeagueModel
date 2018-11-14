@@ -3,6 +3,9 @@
 
 #include <algorithm>
 
+LARGE_INTEGER g_Frequency;
+LARGE_INTEGER g_Start;
+
 bool WindowsPlatform::IsNative()
 {
 	return true;
@@ -13,27 +16,23 @@ bool WindowsPlatform::IsWeb()
 	return false;
 }
 
-size_t WindowsPlatform::GetCoreCount()
-{
-	return 1;
-}
-
-void WindowsPlatform::Sleep(size_t a_Milliseconds)
-{
-	::Sleep(a_Milliseconds);
-}
-
 void WindowsPlatform::SetMainLoop(LoopFunction a_Function)
 {
+	QueryPerformanceFrequency(&g_Frequency);
+	QueryPerformanceCounter(&g_Start);
+
 	while (a_Function())
 	{
 
 	}
 }
 
-void WindowsPlatform::AtExit(AtExitFunction a_Function)
+double WindowsPlatform::GetTimeSinceStart()
 {
-	std::atexit(a_Function);
+	LARGE_INTEGER t_End;
+	QueryPerformanceCounter(&t_End);
+
+	return static_cast<double>(t_End.QuadPart - g_Start.QuadPart) / g_Frequency.QuadPart;
 }
 
 #endif

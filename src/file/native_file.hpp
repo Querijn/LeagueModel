@@ -1,30 +1,49 @@
 #pragma once
 #if defined(_WIN32)
-#include <file/base_file.hpp>
 
-#include <memory>
-#include <map>
+#include <file/base_file.hpp>
+#include <vector>
 
 class NativeFile : public BaseFile
 {
 public:
-	using OnLoadFunction = std::function<void(NativeFile* a_File, LoadState)>;
+	using LoadState = FileLoadState;
+	using OnLoadFunction = void(*)(NativeFile* a_File, FileLoadState a_LoadState, void* a_Argument);
 
-	~NativeFile() {}
+	void Load(OnLoadFunction a_OnLoadCallback, void* a_Argument = nullptr);
+	size_t Read(uint8_t* a_Destination, size_t a_ByteCount, size_t& a_Offset) const;
 
-	bool Read(uint8_t* a_Destination, size_t a_ByteCount, size_t a_Offset = (size_t)-1) override;
-	void Seek(size_t a_Offset, BaseFile::SeekType a_SeekFrom) override;
+	std::vector<uint8_t> GetData() const;
+	StringView GetName() const;
 
-	virtual std::vector<uint8_t> Data() override;
+	template<typename T>
+	bool Get(T& a_Element, size_t& a_Offset)
+	{
+		return Read((uint8_t*)&a_Element, sizeof(T), a_Offset) == sizeof(T);
+	}
 
-	friend class NativeFileSystem;
+	template<typename T>
+	bool Get(std::vector<T>& a_Element, size_t a_Offset)
+	{
+		static_assert(false, "Can't use Get(a_Element, a_Offset) with an std::vector");
+		return false;
+	}
+
+	template<typename T>
+	bool Get(std::vector<T>& a_Element, size_t a_Count, size_t& a_Offset)
+	{
+		a_Element.resize(a_Count);
+		return Read((uint8_t*)a_Element.data(), a_Count * sizeof(T), a_Offset) == a_Count * sizeof(T);
+	}
+
+	friend class FileSystem;
 protected:
-	NativeFile(const std::string& a_File, const NativeFile::OnLoadFunction& a_OnLoadFunction = nullptr);
+	NativeFile(StringView a_FileName) : BaseFile(a_FileName) {}
 
 private:
-	size_t m_ReadOffset = 0;
-
 	std::vector<uint8_t> m_Data;
-	OnLoadFunction m_OnLoadFunction;
+
+	FileLoadState FetchData();
 };
+
 #endif

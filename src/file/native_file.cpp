@@ -1,70 +1,58 @@
 #if defined(_WIN32)
 #include "native_file.hpp"
+#include "file_system.hpp"
 
 #include <fstream>
 
-bool NativeFile::Read(uint8_t * a_Destination, size_t a_ByteCount, size_t a_Offset)
+void NativeFile::Load(NativeFile::OnLoadFunction a_OnLoadCallback, void* a_Argument)
 {
-	// If offset was undefined, use our internal read offset
-	size_t t_Offset = a_Offset == (size_t)-1 ? m_ReadOffset : a_Offset;
-
-	// Make sure our offset is 
-	bool t_Result = true;
-	if (t_Offset + a_ByteCount >= m_Data.size())
-	{
-		a_ByteCount = m_Data.size() - t_Offset;
-		t_Result = false;
-	}
-	else if (t_Offset >= m_Data.size())
-	{
-		a_ByteCount = 0;
-		t_Result = false;
-	}
-
-	uint8_t* t_Data = m_Data.data() + t_Offset;
-	memcpy(a_Destination, t_Data, a_ByteCount);
-
-	// If offset was undefined, update our read offset
-	if (a_Offset == (size_t)-1) m_ReadOffset = t_Offset + a_ByteCount;
-
-	return t_Result;
+	auto t_State = FetchData();
+	if (a_OnLoadCallback) a_OnLoadCallback(this, t_State, a_Argument);
 }
 
-void NativeFile::Seek(size_t a_Offset, SeekType a_SeekFrom)
+size_t NativeFile::Read(uint8_t* a_Destination, size_t a_ByteCount, size_t& a_Offset) const
 {
-	switch (a_SeekFrom)
+	if (a_Offset + a_ByteCount > m_Size)
 	{
-	case SeekType::FromBeginning:
-		m_ReadOffset = a_Offset;
-		break;
-
-	case SeekType::FromCurrent:
-		m_ReadOffset += a_Offset;
-		break;
-
-	case SeekType::FromEnd:
-		m_ReadOffset = m_Data.size() - a_Offset;
-		break;
+		if (a_Offset > m_Size) return 0;
+		else a_ByteCount = m_Size - a_Offset;
 	}
+
+	if (a_ByteCount == 0) return 0;
+
+	memcpy(a_Destination, m_Data.data() + a_Offset, a_ByteCount);
+
+	a_Offset += a_ByteCount;
+	return a_ByteCount;
 }
 
-std::vector<uint8_t> NativeFile::Data()
+std::vector<uint8_t> NativeFile::GetData() const
 {
 	return m_Data;
 }
 
-NativeFile::NativeFile(const std::string & a_File, const NativeFile::OnLoadFunction & a_OnLoadFunction) :
-	BaseFile(a_File)
+StringView NativeFile::GetName() const
 {
-	std::ifstream t_File(a_File, std::ios::binary | std::ios::ate);
+	return m_Name;
+}
+
+NativeFile::LoadState NativeFile::FetchData()
+{
+	auto t_FileName = m_Name.Get();
+	std::ifstream t_File(t_FileName.c_str(), std::ios::binary | std::ios::ate);
 	m_Size = t_File.tellg();
-	if (m_Size == (size_t)-1) m_Size = 0;
+	if (m_Size == (size_t)-1)
+	{
+		m_Size = 0;
+		return NativeFile::LoadState::NotFound;
+	}
+
 	t_File.seekg(0, std::ios::beg);
-
 	m_Data.resize(m_Size);
-	auto t_Read = !!t_File.read(reinterpret_cast<char*>(m_Data.data()), m_Size);
-	m_LoadState = m_Size && t_Read ? BaseFile::LoadState::Loaded : BaseFile::LoadState::FailedToLoad;
 
-	if (a_OnLoadFunction) a_OnLoadFunction(this, m_LoadState);
+	bool t_Read = !!t_File.read((char*)m_Data.data(), m_Size);
+	t_File.close();
+
+	return t_Read ? NativeFile::LoadState::Loaded : NativeFile::LoadState::FailedToLoad;
 }
 #endif

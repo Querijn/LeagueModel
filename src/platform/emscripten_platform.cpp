@@ -20,16 +20,6 @@ bool EmscriptenPlatform::IsWeb()
 	return true;
 }
 
-size_t EmscriptenPlatform::GetCoreCount()
-{
-	return 1;
-}
-
-void EmscriptenPlatform::Sleep(size_t a_Milliseconds)
-{
-
-}
-
 void Loop()
 {
 	if (!m_LoopFunction()) 
@@ -42,8 +32,8 @@ void EmscriptenPlatform::SetMainLoop(LoopFunction a_Function)
 	emscripten_set_main_loop(Loop, 0, 0);
 }
 
-void EmscriptenPlatform::AtExit(AtExitFunction a_Function)
+double EmscriptenPlatform::GetTimeSinceStart()
 {
-	std::atexit(a_Function);
+	return 0.001 * emscripten_get_now();
 }
 #endif
