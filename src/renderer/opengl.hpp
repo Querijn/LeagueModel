@@ -60,7 +60,7 @@
 	std::cerr << "GL Error at " << __FUNCTION__ << ":" << __LINE__ << ": " << t_ErrorMessage << " (" << t_Error << ")" << std::endl;  \
 } while (0);
 
-#define GL_RET(a, b) [&]() -> b \
+#define GL_RET(a, b) [&](const char* a_Function) -> b \
 {\
 	glGetError();\
 	b t_Result = a;\
@@ -97,9 +97,9 @@
 	}\
 \
 	if (t_Error == GL_NO_ERROR) return t_Result;\
-	std::cout << "GL Error at " << __FUNCTION__ << ":" << __LINE__ << ": " << t_ErrorMessage << " (" << t_Error << ")" << std::endl;  \
+	std::cout << "GL Error at " << a_Function << ":" << __LINE__ << ": " << t_ErrorMessage << " (" << t_Error << ")" << std::endl;  \
 	return t_Result;\
-}();
+}(__FUNCTION__);
 #pragma endregion 
 #else
 #pragma region ProdDefines
