@@ -8,7 +8,7 @@
 #include <glm/matrix.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include <string>
+#include <string.hpp>
 
 class ShaderProgram;
 class BaseShaderVariable 
@@ -39,7 +39,7 @@ class ShaderVariable : public BaseShaderVariable
 public:
 	~ShaderVariable() {}
 
-	T Get() const { return m_Value; }
+	T& Get() { m_Dirty = true; return m_Value; }
 	operator T&() { m_Dirty = true; return m_Value; }
 	operator T() const { return m_Value; }
 	T* operator->() { m_Dirty = true; return &m_Value; }
