@@ -1,4 +1,5 @@
-#version 120
+//#version 120
+precision mediump float;
 
 attribute vec3 v_Positions;
 attribute vec2 v_UVs;

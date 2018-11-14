@@ -1,4 +1,5 @@
-#version 120
+//#version 120
+precision mediump float;
 
 varying vec2 UV;
 
