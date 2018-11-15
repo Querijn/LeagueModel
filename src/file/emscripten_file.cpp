@@ -32,7 +32,6 @@ void EmscriptenFile::OnLoadFailed(void* a_Argument)
 	auto t_FileName = t_File->GetName().Get();
 
 	t_File->m_Size = 0;
-	//if (t_File->m_OnLoad) t_File->m_OnLoad(t_File, EmscriptenFile::LoadState::NotFound);
 	if (t_File->m_OnLoadArg) t_File->m_OnLoadArg(t_File, EmscriptenFile::LoadState::NotFound, t_File->m_ArgData);
 }
 

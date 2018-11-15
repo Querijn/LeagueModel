@@ -151,14 +151,8 @@ File::LoadState Texture::UploadRGB(File* a_File)
 {
 	int t_Width, t_Height, t_BytesPerPixel;
 
-#if defined(_WIN32)
 	auto t_Data = a_File->GetData();
 	unsigned char *t_ImageData = stbi_load_from_memory((const stbi_uc*)t_Data.data(), t_Data.size(), &t_Width, &t_Height, &t_BytesPerPixel, 0);
-#elif defined(__EMSCRIPTEN__)
-	auto t_Name = a_File->GetName().Get();
-	unsigned char *t_ImageData = (unsigned char*)emscripten_get_preloaded_image_data(t_Name.c_str(), &t_Width, &t_Height);
-	t_BytesPerPixel = 4;
-#endif
 
 	if (t_ImageData == nullptr) return File::LoadState::FailedToLoad;
 
@@ -180,8 +174,7 @@ File::LoadState Texture::UploadRGB(File* a_File)
 
 	default:
 		printf("Yikes! UploadRGB could not determine the BPP format! (%d BPP)\n", t_BytesPerPixel);
-		throw 0;
-		break;
+		return File::LoadState::FailedToLoad;
 	}
 
 	GL(glTexImage2D(GL_TEXTURE_2D, 0, t_Format, t_Width, t_Height, 0, t_Format, GL_UNSIGNED_BYTE, t_ImageData));

@@ -7,7 +7,6 @@
 #include <GL/glext.h> 
 #include <GL/wglext.h>
 
-#include "stb_image.h"
 #endif
 
 #ifdef __EMSCRIPTEN__
@@ -19,6 +18,7 @@
 #include <iostream>
 
 #if defined(_DEBUG)
+#include "stb_image.h"
 #pragma region DebugDefines
 #define GL(a) do \
 {\
