@@ -106,7 +106,7 @@ void ApplicationMesh::Draw(size_t a_SubMeshIndex, float a_Time, ShaderProgram& a
 
 	auto& t_Submesh = SubMeshes[a_SubMeshIndex];
 
-	if (a_Diffuse) *a_Diffuse = /*t_Submesh.HasImage ? t_Submesh.Image :*/ Application::Instance->GetDefaultTexture();
+	if (a_Diffuse) *a_Diffuse = t_Submesh.HasImage ? t_Submesh.Image : Application::Instance->GetDefaultTexture();
 
 	if (a_BoneTransforms)
 	{
