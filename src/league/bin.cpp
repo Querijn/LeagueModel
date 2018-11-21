@@ -10,12 +10,12 @@ struct ValueStorageCompare
 {
 	bool operator() (const League::Bin::ValueStorage& a_LeftHandSide, const League::Bin::ValueStorage& a_RightHandSide) const
 	{
-	/*	if (a_LeftHandSide.GetType() != a_RightHandSide.GetType())
+		if (a_LeftHandSide.GetType() != a_RightHandSide.GetType())
 			return a_LeftHandSide.GetType() < a_RightHandSide.GetType();
 
 		if (a_LeftHandSide.GetPointer() != a_RightHandSide.GetPointer())
 			return a_LeftHandSide.GetPointer() < a_RightHandSide.GetPointer();
-*/
+
 		auto* t_Data1 = a_LeftHandSide.GetData();
 		auto* t_Data2 = a_RightHandSide.GetData();
 		for (int i = 0; i < 256; i++)
