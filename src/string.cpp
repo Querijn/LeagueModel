@@ -44,8 +44,9 @@ size_t StringView::GetHash() const
 
 StringView & StringView::operator=(const char * a_String)
 {
-	m_Hash = GenerateHash(a_String);
-	(*m_Register)[m_Hash] = a_String;
+	std::string t_String = a_String ? a_String : "";
+	m_Hash = GenerateHash(t_String);
+	(*m_Register)[m_Hash] = t_String;
 	return *this;
 }
 
