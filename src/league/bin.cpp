@@ -6,6 +6,55 @@
 #include <initializer_list>
 #include <map>
 
+std::map<std::string, std::string> m_HashMap;
+void InitBinHashMap()
+{
+	if (m_HashMap.size() != 0) return;
+
+	auto* t_File = FileSystem::GetFile("data/cdtb/cdragontoolbox/hashes.bin.txt");
+	t_File->Load([](File* a_File, File::LoadState a_LoadState, void* a_UserData)
+	{
+		if (a_LoadState != File::LoadState::Loaded)
+		{
+			FileSystem::CloseFile(*a_File);
+			return;
+		}
+
+		static const size_t t_ReadLength = 1024;
+		size_t t_Offset = 0;
+		std::string t_String(t_ReadLength, '\0');
+		
+		bool t_WasEnd = false;
+		do
+		{
+			t_WasEnd = a_File->Read((uint8_t*)&t_String[0], t_ReadLength, t_Offset) != t_ReadLength;
+
+			size_t i;
+			for (i = 0; i < t_ReadLength; i++)
+			{
+				size_t t_NewLineOffset = t_String.find('\n', i);
+				if (t_NewLineOffset == std::string::npos)
+				{
+					size_t t_Diff = t_ReadLength - i;
+					std::string t_DebugLine = t_String.substr(i, t_Diff);
+					t_Offset -= t_Diff;
+					break;
+				}
+				bool t_HasCaretReturn = t_String[t_NewLineOffset - 1] == '\r';
+				size_t t_LineLength = t_NewLineOffset - i - (t_HasCaretReturn ? 1 : 0);
+				std::string t_Line = t_String.substr(i, t_LineLength);
+
+				size_t t_HashEnd = t_Line.find(' '); // Should always be 8
+				std::string t_Hash = t_Line.substr(0, t_HashEnd);
+				std::string t_Value = t_Line.substr(t_HashEnd + 1);
+
+				m_HashMap[t_Hash] = t_Value;
+				i = t_NewLineOffset;
+			}
+		} while (!t_WasEnd);
+	});
+}
+
 template <typename I> 
 std::string NumberToHexString(I a_Number, size_t a_StringLength = sizeof(I) << 1) 
 {
@@ -15,6 +64,17 @@ std::string NumberToHexString(I a_Number, size_t a_StringLength = sizeof(I) << 1
 		t_Result[i] = t_Digits[(a_Number >> j) & 0x0f];
 
 	return t_Result;
+}
+
+std::string GetStringByHash(uint32_t a_Hash)
+{
+	InitBinHashMap();
+
+	auto t_Index = m_HashMap.find(NumberToHexString(a_Hash));
+	if (t_Index != m_HashMap.end())
+		return t_Index->second;
+
+	return NumberToHexString(a_Hash);
 }
 
 struct ValueStorageCompare
@@ -188,7 +248,7 @@ std::string GetJSONVector(const void* a_Data, size_t a_Size, const std::initiali
 
 std::string League::Bin::ValueStorage::GetAsJSON(bool a_ExposeHash) const
 {
-	std::string t_Prefix = a_ExposeHash ? "\"" + NumberToHexString(m_Hash) + "\": " : "";
+	std::string t_Prefix = a_ExposeHash ? "\"" + GetStringByHash(m_Hash) + "\": " : "";
 
 	switch (m_Type)
 	{
@@ -216,7 +276,7 @@ std::string League::Bin::ValueStorage::GetAsJSON(bool a_ExposeHash) const
 		return t_Prefix + std::to_string(Read<uint32_t>());
 
 	case ValueStorage::Type::Hash: // TODO
-		return t_Prefix + NumberToHexString(Read<uint32_t>());
+		return t_Prefix + GetStringByHash(Read<uint32_t>());
 
 	case ValueStorage::Type::S64:
 		return t_Prefix + std::to_string(Read<int64_t>());
@@ -558,7 +618,7 @@ std::string League::Bin::GetAsJSON() const
 	{
 		if (t_First == false) t_Return += ",";
 
-		t_Return += "\"" + NumberToHexString(t_MapPair.first) + "\": {"; // Hash
+		t_Return += "\"" + GetStringByHash(t_MapPair.first) + "\": {"; // Hash
 
 		bool t_First2 = true;
 		for (int i = 0; i < t_MapPair.second.size(); i++)
