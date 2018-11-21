@@ -51,7 +51,7 @@ namespace League
 			template<typename T> T Read() const { return *(T*)m_Data; }
 
 			void DebugPrint();
-			std::string GetAsJSON() const;
+			std::string GetAsJSON(bool a_ExposeHash) const;
 
 			inline uint32_t GetHash() const { return m_Hash; }
 			inline Type GetType() const { return m_Type; }

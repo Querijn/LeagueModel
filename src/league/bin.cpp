@@ -6,6 +6,17 @@
 #include <initializer_list>
 #include <map>
 
+template <typename I> 
+std::string NumberToHexString(I a_Number, size_t a_StringLength = sizeof(I) << 1) 
+{
+	static const char* t_Digits = "0123456789abcdef";
+	std::string t_Result(a_StringLength, '0');
+	for (size_t i = 0, j = (a_StringLength - 1) * 4; i < a_StringLength; ++i, j -= 4)
+		t_Result[i] = t_Digits[(a_Number >> j) & 0x0f];
+
+	return t_Result;
+}
+
 struct ValueStorageCompare
 {
 	bool operator() (const League::Bin::ValueStorage& a_LeftHandSide, const League::Bin::ValueStorage& a_RightHandSide) const
@@ -175,60 +186,64 @@ std::string GetJSONVector(const void* a_Data, size_t a_Size, const std::initiali
 	return t_Return;
 }
 
-std::string League::Bin::ValueStorage::GetAsJSON() const
+std::string League::Bin::ValueStorage::GetAsJSON(bool a_ExposeHash) const
 {
+	std::string t_Prefix = a_ExposeHash ? "\"" + NumberToHexString(m_Hash) + "\": " : "";
+
 	switch (m_Type)
 	{
 	case ValueStorage::Type::Bool:
-		return Read<bool>() ? "true" : "false";
+		return t_Prefix + (Read<bool>() ? "true" : "false");
 
 	case ValueStorage::Type::S8:
-		return std::to_string(Read<int8_t>());
+		return t_Prefix + std::to_string(Read<int8_t>());
 
 	case ValueStorage::Type::Padding:
 	case ValueStorage::Type::U8:
-		return std::to_string(Read<uint8_t>());
+		return t_Prefix + std::to_string(Read<uint8_t>());
 
 	case ValueStorage::Type::S16:
-		return std::to_string(Read<int16_t>());
+		return t_Prefix + std::to_string(Read<int16_t>());
 
 	case ValueStorage::Type::U16:
-		return std::to_string(Read<uint16_t>());
+		return t_Prefix + std::to_string(Read<uint16_t>());
 
 	case ValueStorage::Type::S32:
-		return std::to_string(Read<int32_t>());
+		return t_Prefix + std::to_string(Read<int32_t>());
 
 	case ValueStorage::Type::U32:
 	case ValueStorage::Type::Link: // TODO
+		return t_Prefix + std::to_string(Read<uint32_t>());
+
 	case ValueStorage::Type::Hash: // TODO
-		return std::to_string(Read<uint32_t>());
+		return t_Prefix + NumberToHexString(Read<uint32_t>());
 
 	case ValueStorage::Type::S64:
-		return std::to_string(Read<int64_t>());
+		return t_Prefix + std::to_string(Read<int64_t>());
 
 	case ValueStorage::Type::U64:
-		return std::to_string(Read<uint64_t>());
+		return t_Prefix + std::to_string(Read<uint64_t>());
 
 	case ValueStorage::Type::Float:
-		return std::to_string(Read<float>());
+		return t_Prefix + std::to_string(Read<float>());
 
 	case ValueStorage::Type::U16Vec3:
-		return GetJSONVector<uint16_t>(m_Data, 3);
+		return t_Prefix + GetJSONVector<uint16_t>(m_Data, 3);
 
 	case ValueStorage::Type::FVec2:
-		return GetJSONVector<float>(m_Data, 2);
+		return t_Prefix + GetJSONVector<float>(m_Data, 2);
 
 	case ValueStorage::Type::FVec3:
-		return GetJSONVector<float>(m_Data, 3);
+		return t_Prefix + GetJSONVector<float>(m_Data, 3);
 
 	case ValueStorage::Type::FVec4:
-		return GetJSONVector<float>(m_Data, 4);
+		return t_Prefix + GetJSONVector<float>(m_Data, 4);
 
 	case ValueStorage::Type::RGBA:
-		return GetJSONVector<uint8_t>(m_Data, 4, { 'r', 'g', 'b', 'a' });
+		return t_Prefix + GetJSONVector<uint8_t>(m_Data, 4, { 'r', 'g', 'b', 'a' });
 
 	case ValueStorage::Type::String:
-		return  "\"" + std::string((const char*)m_Data) + "\"";
+		return t_Prefix +  "\"" + std::string((const char*)m_Data) + "\"";
 
 	case ValueStorage::Type::Map:
 	{
@@ -241,13 +256,13 @@ std::string League::Bin::ValueStorage::GetAsJSON() const
 		{
 			if (t_First == false) t_Return += ",";
 
-			t_Return += "\"" + t_MapPair.first.GetAsJSON() + "\": ";
-			t_Return += t_MapPair.second.GetAsJSON();
+			t_Return += "\"" + t_MapPair.first.GetAsJSON(false) + "\": ";
+			t_Return += t_MapPair.second.GetAsJSON(false);
 
 			t_First = false;
 		}
 
-		return t_Return + "}";
+		return t_Prefix + t_Return + "}";
 	}
 
 	case ValueStorage::Type::Array:
@@ -262,12 +277,12 @@ std::string League::Bin::ValueStorage::GetAsJSON() const
 		{
 			if (t_First == false) t_Return += ",";
 
-			t_Return += t_ValueStorage.GetAsJSON();
+			t_Return += t_ValueStorage.GetAsJSON(false);
 
 			t_First = false;
 		}
 
-		return t_Return + "]";
+		return t_Prefix + t_Return + "]";
 	}
 
 	case ValueStorage::Type::Struct:
@@ -282,13 +297,12 @@ std::string League::Bin::ValueStorage::GetAsJSON() const
 		{
 			if (t_First == false) t_Return += ",";
 
-			t_Return += "\"" + std::to_string(t_ValueStorage.GetHash()) + "\": ";
-			t_Return += t_ValueStorage.GetAsJSON();
+			t_Return += t_ValueStorage.GetAsJSON(true);
 
 			t_First = false;
 		}
 
-		return t_Return + "}";
+		return t_Prefix + t_Return + "}";
 	}
 
 	default:
@@ -318,7 +332,6 @@ void League::Bin::ValueStorage::FetchDataFromFile(File* a_File, size_t& a_Offset
 	case ValueStorage::Type::RGBA:
 	case ValueStorage::Type::Hash:
 		a_File->Read(m_Data, GetSizeByType(m_Type), a_Offset);
-		DebugPrint();
 		break;
 
 	case ValueStorage::Type::String:
@@ -545,18 +558,18 @@ std::string League::Bin::GetAsJSON() const
 	{
 		if (t_First == false) t_Return += ",";
 
-		t_Return += "\"" + std::to_string(t_MapPair.first) + "\": ["; // Hash
+		t_Return += "\"" + NumberToHexString(t_MapPair.first) + "\": {"; // Hash
 
 		bool t_First2 = true;
 		for (int i = 0; i < t_MapPair.second.size(); i++)
 		{
 			if (t_First2 == false) t_Return += ",";
-			t_Return += t_MapPair.second[i].GetAsJSON();
+			t_Return += t_MapPair.second[i].GetAsJSON(true);
 
 			t_First2 = false;
 		}
 		
-		t_Return += "]";
+		t_Return += "}";
 		t_First = false;
 	}
 
