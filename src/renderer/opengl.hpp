@@ -17,8 +17,9 @@
 #include <cstdint>
 #include <iostream>
 
-#if defined(_DEBUG)
 #include "stb_image.h"
+
+#if defined(GL_DEBUG)
 #pragma region DebugDefines
 #define GL(a) do \
 {\
