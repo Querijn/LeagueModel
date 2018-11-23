@@ -3,6 +3,7 @@
 #include <event_handler.hpp>
 #include <event_handler/events.hpp>
 
+#include <league/bin.hpp>
 #include <league/skin.hpp>
 #include <league/skeleton.hpp>
 #include <league/animation.hpp>
@@ -14,6 +15,8 @@
 #include <glm/gtx/transform.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/compatibility.hpp>
+
+#include <fstream>
 
 Application* Application::Instance = nullptr;
 double g_LastTime = 0;
@@ -56,22 +59,7 @@ void Application::Init()
 	LoadDefaultTexture();
 	LoadShaders();
 
-	LoadMesh("data/141001/141001.skn", "data/141001/141001.skl", [](StringView a_SkinPath, StringView a_SkeletonPath, Application::Mesh* a_Mesh, void* a_UserData)
-	{
-		if (a_Mesh == nullptr) return;
-
-		a_Mesh->SubMeshes[0].SetTexture("data/141001/main_texture.dds");
-
-		Instance->LoadAnimation(*a_Mesh, "data/141001/Dance.anm", [](League::Animation& a_Animation, void* a_UserData)
-		{
-			if (a_Animation.GetLoadState() != File::LoadState::Loaded)
-				return;
-
-			auto* t_Mesh = (Application::Mesh*)a_UserData;
-			t_Mesh->ApplyAnimation(a_Animation);
-		}, a_Mesh);
-	});
-
+	LoadSkin("data/output/data/characters/poppy/skins/skin0.bin");
 	UpdateViewMatrix();
 
 	Platform::SetMainLoop([]() 
@@ -86,16 +74,58 @@ void Application::Init()
 	});
 }
 
-void Application::LoadMesh(StringView a_SkinPath, StringView a_SkeletonPath, OnMeshLoadFunction a_OnLoadFunction, void* a_UserData)
+void Application::LoadSkin(String a_BinPath)
+{
+	League::Bin t_Bin;
+	t_Bin.Load(a_BinPath, [](League::Bin& a_Bin, void* a_UserData)
+	{
+		auto t_MeshProperties = a_Bin.Get("skinMeshProperties");
+		if (!t_MeshProperties) return;
+
+		auto t_SkeletonValue = t_MeshProperties->Get("skeleton");
+		if (!t_SkeletonValue) return;
+		String t_Data = (const char*)(t_SkeletonValue->GetData());
+		String t_Skeleton = "data/output/" + t_Data;
+
+		auto t_SkinValue = t_MeshProperties->Get("simpleSkin");
+		if (!t_SkinValue) return;
+		String t_Data2 = (const char*)t_SkinValue->GetData();
+		String t_Skin = "data/output/" + String(t_Data2);
+
+		auto t_TextureValue = t_MeshProperties->Get("texture");
+		if (!t_TextureValue) return;
+		String* t_Texture = new String("data/output/" + String((char*)t_TextureValue->GetData()));
+
+		Application::Instance->LoadMesh(t_Skin, t_Skeleton, [](String a_SkinPath, String a_SkeletonPath, Application::Mesh* a_Mesh, void* a_UserData)
+		{
+			if (a_Mesh == nullptr) return;
+			String* t_Texture = (String*)a_UserData;
+
+			a_Mesh->SubMeshes[0].SetTexture(*t_Texture);
+
+			Instance->LoadAnimation(*a_Mesh, "data/141001/Dance.anm", [](League::Animation& a_Animation, void* a_UserData)
+			{
+				if (a_Animation.GetLoadState() != File::LoadState::Loaded)
+					return;
+
+				auto* t_Mesh = (Application::Mesh*)a_UserData;
+				t_Mesh->ApplyAnimation(a_Animation);
+			}, a_Mesh);
+		}, t_Texture);
+
+	});
+}
+
+void Application::LoadMesh(String a_SkinPath, String a_SkeletonPath, OnMeshLoadFunction a_OnLoadFunction, void* a_UserData)
 {
 	struct LoadData
 	{
-		LoadData(StringView a_SkinPath, StringView a_SkeletonPath, OnMeshLoadFunction a_Function, void* a_Argument) :
+		LoadData(String a_SkinPath, String a_SkeletonPath, OnMeshLoadFunction a_Function, void* a_Argument) :
 			SkinPath(a_SkinPath), SkeletonPath(a_SkeletonPath), OnLoadFunction(a_Function), Argument(a_Argument)
 		{}
 
-		StringView SkinPath;
-		StringView SkeletonPath;
+		String SkinPath;
+		String SkeletonPath;
 		League::Skin* SkinTarget = nullptr;
 		OnMeshLoadFunction OnLoadFunction;
 		void* Argument;
@@ -173,7 +203,7 @@ void Application::LoadMesh(StringView a_SkinPath, StringView a_SkeletonPath, OnM
 	}, t_LoadData);
 }
 
-void Application::LoadAnimation(Application::Mesh & a_Mesh, StringView a_AnimationPath, League::Animation::OnLoadFunction a_OnLoadFunction, void * a_UserData)
+void Application::LoadAnimation(Application::Mesh & a_Mesh, String a_AnimationPath, League::Animation::OnLoadFunction a_OnLoadFunction, void * a_UserData)
 {
 	if (a_Mesh.Skeleton == nullptr)
 	{
@@ -186,12 +216,12 @@ void Application::LoadAnimation(Application::Mesh & a_Mesh, StringView a_Animati
 
 	struct LoadData
 	{
-		LoadData(StringView a_AnimationPath, League::Animation::OnLoadFunction a_Function, void* a_Argument) :
+		LoadData(String a_AnimationPath, League::Animation::OnLoadFunction a_Function, void* a_Argument) :
 			AnimationPath(a_AnimationPath), OnLoadFunction(a_Function), Argument(a_Argument)
 		{}
 
-		StringView AnimationPath;
-		StringView SkeletonPath;
+		String AnimationPath;
+		String SkeletonPath;
 		League::Animation::OnLoadFunction OnLoadFunction;
 		void* Argument;
 	};

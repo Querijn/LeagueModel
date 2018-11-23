@@ -22,10 +22,9 @@ public:
 	
 	void Init();
 
-	using OnMeshLoadFunction = void(*)(StringView a_SkinPath, StringView a_SkeletonPath, Application::Mesh* a_Mesh, void* a_UserData);
-	void LoadMesh(StringView a_SkinPath, StringView a_SkeletonPath, OnMeshLoadFunction a_OnLoadFunction = nullptr, void* a_UserData = nullptr);
+	void LoadSkin(String a_BinPath);
 
-	void LoadAnimation(Application::Mesh& a_Mesh, StringView a_AnimationPath, League::Animation::OnLoadFunction a_OnLoadFunction = nullptr, void* a_UserData = nullptr);
+	void LoadAnimation(Application::Mesh& a_Mesh, String a_AnimationPath, League::Animation::OnLoadFunction a_OnLoadFunction = nullptr, void* a_UserData = nullptr);
 
 	const Texture& GetDefaultTexture() const;
 
@@ -44,6 +43,9 @@ private:
 	void UpdateViewMatrix();
 
 	bool Update(double a_DT);
+
+	using OnMeshLoadFunction = void(*)(String a_SkinPath, String a_SkeletonPath, Application::Mesh* a_Mesh, void* a_UserData);
+	void LoadMesh(String a_SkinPath, String a_SkeletonPath, OnMeshLoadFunction a_OnLoadFunction = nullptr, void* a_UserData = nullptr);
 
 	Window m_Window;
 
