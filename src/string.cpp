@@ -2,7 +2,7 @@
 
 #include <cassert>
 
-static const size_t g_SpaceSizeIncrement = 1024;
+static const size_t g_SpaceSizeIncrement = 2 ^ 15;
 std::vector<char>* String::m_Pool = nullptr;
 std::map<size_t, String::Space>* String::m_Spaces = nullptr;
 
@@ -144,12 +144,20 @@ size_t String::GetAvailableOffset(size_t a_Size)
 		}
 	}
 
-	assert(a_Size < g_SpaceSizeIncrement);
-
+	// No space available
 	size_t t_Offset = m_Pool->size();
-	m_Pool->resize(t_Offset + g_SpaceSizeIncrement);
-	(*m_Spaces)[t_Offset].Capacity = a_Size;
-	(*m_Spaces)[t_Offset + a_Size].Capacity = g_SpaceSizeIncrement - a_Size;
+	if (a_Size > g_SpaceSizeIncrement)
+	{
+		m_Pool->resize(t_Offset + a_Size);
+		(*m_Spaces)[t_Offset].Capacity = a_Size;
+	}
+	else
+	{
+		m_Pool->resize(t_Offset + g_SpaceSizeIncrement);
+		(*m_Spaces)[t_Offset].Capacity = a_Size;
+		(*m_Spaces)[t_Offset + a_Size].Capacity = g_SpaceSizeIncrement - a_Size;
+	}
+
 	return t_Offset;
 }
 

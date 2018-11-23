@@ -631,10 +631,10 @@ void League::Bin::Load(String a_FilePath, OnLoadFunction a_OnLoadFunction, void 
 				uint16_t t_StringLength;
 				a_File->Get(t_StringLength, t_Offset);
 
-				char t_StringVector[256] = { 0 };
-				a_File->Read((uint8_t*)t_StringVector, t_StringLength, t_Offset);
+				String t_String(t_StringLength);
+				a_File->Read((uint8_t*)&t_String[0], t_StringLength, t_Offset);
 
-				t_Bin->m_LinkedFiles.push_back(t_StringVector);
+				t_Bin->m_LinkedFiles.push_back(t_String);
 			}
 		}
 

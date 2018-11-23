@@ -111,8 +111,9 @@ void Application::LoadSkin(String a_BinPath)
 				auto* t_Mesh = (Application::Mesh*)a_UserData;
 				t_Mesh->ApplyAnimation(a_Animation);
 			}, a_Mesh);
-		}, t_Texture);
 
+			delete t_Texture;
+		}, t_Texture);
 	});
 }
 
@@ -364,6 +365,16 @@ bool Application::Update(double a_DT)
 
 int main()
 {
+	League::Bin t_Bin;
+	t_Bin.Load("data/output/data/characters/poppy/poppy.bin", [](League::Bin& a_Bin, void* a_UserData)
+	{
+		if (a_Bin.GetLoadState() != File::LoadState::Loaded) return;
+
+		std::ofstream t_OutputJson("poppy.json");
+		t_OutputJson << a_Bin.GetAsJSON().Get();
+		t_OutputJson.close();
+	});
+
 	printf("LeagueModel Application built on %s at %s, calling new\n", __DATE__, __TIME__);
 	auto* t_Application = new Application();
 
