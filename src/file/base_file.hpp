@@ -12,9 +12,9 @@ enum FileLoadState
 class BaseFile
 {
 public:
-	BaseFile(StringView a_FileName) : m_Name(a_FileName) {}
+	BaseFile(String a_FileName) : m_Name(a_FileName) {}
 
 protected:
-	StringView m_Name;
+	String m_Name;
 	size_t m_Size;
 };

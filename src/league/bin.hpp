@@ -11,8 +11,8 @@ namespace League
 	public:
 		using OnLoadFunction = void(*)(League::Bin& a_Bin, void* a_Argument);
 
-		void Load(StringView a_FilePath, OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
-		std::string GetAsJSON() const;
+		void Load(String a_FilePath, OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
+		String GetAsJSON() const;
 
 		File::LoadState GetLoadState() const { return m_State; }
 
@@ -37,7 +37,7 @@ namespace League
 				FVec4 = 13,
 				Mat4 = 14,
 				RGBA = 15,
-				String = 16,
+				StringT = 16,
 				Hash = 17,
 				Container = 18,
 				Struct = 19,
@@ -51,12 +51,14 @@ namespace League
 			template<typename T> T Read() const { return *(T*)m_Data; }
 
 			void DebugPrint();
-			std::string GetAsJSON(bool a_ExposeHash) const;
+			String GetAsJSON(bool a_ExposeHash) const;
 
-			inline uint32_t GetHash() const { return m_Hash; }
-			inline Type GetType() const { return m_Type; }
-			inline const uint8_t* GetData() const { return m_Data; }
-			inline const void* GetPointer() const { return m_Pointer; }
+			uint32_t GetHash() const { return m_Hash; }
+			Type GetType() const { return m_Type; }
+			const uint8_t* GetData() const { return m_Data; }
+			const void* GetPointer() const { return m_Pointer; }
+
+			const ValueStorage* Get(String a_Name) const;
 
 			friend class League::Bin;
 		protected:
@@ -68,16 +70,18 @@ namespace League
 			uint32_t m_Hash = 0;
 		};
 
+		const ValueStorage* Get(String a_Name) const;
+
 		friend class League::Bin::ValueStorage;
 	protected:
 		static void GetStorageData(File* a_File, League::Bin::ValueStorage& t_Storage, size_t& t_Offset);
 
 	private:
-		static inline size_t GetSizeByType(League::Bin::ValueStorage::Type a_Type);
+		static size_t GetSizeByType(League::Bin::ValueStorage::Type a_Type);
 
 		File::LoadState m_State = File::LoadState::NotLoaded;
 
 		std::map<uint32_t, std::vector<ValueStorage>> m_Values;
-		std::vector<StringView> m_LinkedFiles;
+		std::vector<String> m_LinkedFiles;
 	};
 }

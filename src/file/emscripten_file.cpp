@@ -10,7 +10,7 @@ void EmscriptenFile::Load(EmscriptenFile::OnLoadFunction a_OnLoadCallback, void*
 	m_ArgData = a_Argument;
 
 	auto t_Name = m_Name.Get();
-	emscripten_async_wget_data(t_Name.c_str(), (void*)this, OnLoad, OnLoadFailed);
+	emscripten_async_wget_data(t_Name, (void*)this, OnLoad, OnLoadFailed);
 }
 
 void EmscriptenFile::OnLoad(void* a_Argument, void* a_Data, int a_Size)
@@ -51,7 +51,7 @@ const std::vector<uint8_t>& EmscriptenFile::GetData() const
 	return m_Data;
 }
 
-StringView EmscriptenFile::GetName() const
+String EmscriptenFile::GetName() const
 {
 	return m_Name;
 }

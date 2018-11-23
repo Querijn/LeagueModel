@@ -5,7 +5,7 @@
 
 #include <algorithm>
 
-void Texture::Load(StringView a_ImagePath, Texture::OnLoadFunction a_OnLoadFunction, void* a_Argument)
+void Texture::Load(String a_ImagePath, Texture::OnLoadFunction a_OnLoadFunction, void* a_Argument)
 {
 	auto* t_File = FileSystem::GetFile(a_ImagePath);
 

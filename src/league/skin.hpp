@@ -14,15 +14,15 @@ namespace League
 	public:
 		using OnLoadFunction = void(*)(League::Skin& a_Skin, void* a_Argument);
 		
-		void Load(StringView a_FilePath, OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
+		void Load(String a_FilePath, OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
 
 		struct Mesh
 		{
-			Mesh(StringView a_MaterialName) :
+			Mesh(String a_MaterialName) :
 				MaterialName(a_MaterialName)
 			{}
 
-			StringView MaterialName;
+			String MaterialName;
 			size_t VertexCount;
 
 			glm::vec3* Positions;

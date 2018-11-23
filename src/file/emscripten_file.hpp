@@ -35,11 +35,11 @@ public:
 	}
 
 	const std::vector<uint8_t>& GetData() const;
-	StringView GetName() const;
+	String GetName() const;
 
 	friend class FileSystem;
 protected:
-	EmscriptenFile(StringView a_FileName) : BaseFile(a_FileName) { }
+	EmscriptenFile(String a_FileName) : BaseFile(a_FileName) { }
 
 private:
 	static void OnLoad(void* a_Argument, void* a_Data, int a_Size);

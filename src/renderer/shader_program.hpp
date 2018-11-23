@@ -23,12 +23,12 @@ public:
 	void Update();
 
 	template<typename T>
-	ShaderVariable<T>* GetVariable(StringView a_Name, const T& a_Value = T())
+	ShaderVariable<T>* GetVariable(String a_Name, const T& a_Value = T())
 	{
 		if (m_Variables.find(a_Name) == m_Variables.end())
 		{
 			auto t_Name = a_Name.Get();
-			GLint t_Reference = GL_RET(glGetUniformLocation(m_ID, t_Name.c_str()), GLint);
+			GLint t_Reference = GL_RET(glGetUniformLocation(m_ID, t_Name), GLint);
 
 			if (t_Reference < 0)
 				return nullptr;
@@ -40,10 +40,10 @@ public:
 	}
 
 	template<typename T>
-	VertexBuffer<T>* GetVertexBuffer(StringView a_Name)
+	VertexBuffer<T>* GetVertexBuffer(String a_Name)
 	{
 		auto t_String = a_Name.Get();
-		GLint t_Reference = GL_RET(glGetAttribLocation(m_ID, t_String.c_str()), GLint);
+		GLint t_Reference = GL_RET(glGetAttribLocation(m_ID, t_String), GLint);
 		if (t_Reference < 0) return nullptr;
 
 		auto* t_Buffer = new VertexBuffer<T>(t_Reference);
@@ -61,7 +61,7 @@ public:
 
 private:
 	GLuint m_ID = 0;
-	std::map<StringView, BaseShaderVariable*, StringViewCompare> m_Variables;
+	std::map<String, BaseShaderVariable*, StringCompare> m_Variables;
 	std::vector<BaseVertexBuffer*> m_VertexBuffers;
 	std::vector<BaseIndexBuffer*> m_IndexBuffers;
 };

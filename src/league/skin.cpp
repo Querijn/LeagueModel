@@ -3,14 +3,14 @@
 
 struct SubMeshHeader
 {
-	StringView Material = "";
+	String Material = "";
 	uint32_t VertexOffset;
 	uint32_t VertexCount;
 	uint32_t IndexOffset;
 	uint32_t IndexCount;
 };
 
-void League::Skin::Load(StringView a_FilePath, OnLoadFunction a_OnLoadFunction, void * a_Argument)
+void League::Skin::Load(String a_FilePath, OnLoadFunction a_OnLoadFunction, void * a_Argument)
 {
 	auto* t_File = FileSystem::GetFile(a_FilePath);
 

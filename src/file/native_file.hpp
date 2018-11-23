@@ -14,7 +14,7 @@ public:
 	size_t Read(uint8_t* a_Destination, size_t a_ByteCount, size_t& a_Offset) const;
 
 	std::vector<uint8_t> GetData() const;
-	StringView GetName() const;
+	String GetName() const;
 
 	template<typename T>
 	bool Get(T& a_Element, size_t& a_Offset)
@@ -38,7 +38,7 @@ public:
 
 	friend class FileSystem;
 protected:
-	NativeFile(StringView a_FileName) : BaseFile(a_FileName) {}
+	NativeFile(String a_FileName) : BaseFile(a_FileName) {}
 
 private:
 	std::vector<uint8_t> m_Data;

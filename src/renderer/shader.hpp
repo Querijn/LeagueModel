@@ -16,7 +16,7 @@ public:
 	Shader(Type a_Type);
 	~Shader();
 
-	void Load(StringView a_FilePath, OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
+	void Load(String a_FilePath, OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
 
 	operator GLuint() const;
 

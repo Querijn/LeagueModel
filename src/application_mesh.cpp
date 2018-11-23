@@ -86,7 +86,7 @@ void ApplicationMesh::SetupHierarchy(const glm::mat4& a_InverseRoot, std::vector
 		auto t_LocalTransform = glm::translate(t_Translation) * glm::mat4_cast(t_Rotation) * glm::scale(t_Scale);
 		t_GlobalTransform = a_Parent * t_LocalTransform;
 	}
-	//else printf("Animation bone %s is not found\n", a_SkeletonBone.Name.Get().c_str());
+	//else printf("Animation bone %s is not found\n", a_SkeletonBone.Name.Get());
 
 	a_Bones[a_SkeletonBone.ID] = t_GlobalTransform * a_SkeletonBone.InverseGlobalMatrix;
 
@@ -153,7 +153,7 @@ glm::mat4 ApplicationMesh::SubMesh::GetTransformMatrix() const
 	return glm::translate(Position) * glm::mat4_cast(Rotation) * glm::scale(Scale);
 }
 
-void ApplicationMesh::SubMesh::SetTexture(StringView a_FilePath)
+void ApplicationMesh::SubMesh::SetTexture(String a_FilePath)
 {
 	Image.Load(a_FilePath, [](Texture& a_Texture, void* a_UserData)
 	{

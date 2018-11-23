@@ -31,7 +31,7 @@ std::vector<uint8_t> NativeFile::GetData() const
 	return m_Data;
 }
 
-StringView NativeFile::GetName() const
+String NativeFile::GetName() const
 {
 	return m_Name;
 }
@@ -39,7 +39,7 @@ StringView NativeFile::GetName() const
 NativeFile::LoadState NativeFile::FetchData()
 {
 	auto t_FileName = m_Name.Get();
-	std::ifstream t_File(t_FileName.c_str(), std::ios::binary | std::ios::ate);
+	std::ifstream t_File(t_FileName, std::ios::binary | std::ios::ate);
 	m_Size = t_File.tellg();
 	if (m_Size == (size_t)-1)
 	{

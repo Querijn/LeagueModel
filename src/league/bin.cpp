@@ -6,7 +6,20 @@
 #include <initializer_list>
 #include <map>
 
-std::map<std::string, std::string> m_HashMap;
+// TODO: get rid?
+#include <string>
+
+uint32_t FNV1Hash(String a_String)
+{
+	size_t t_Hash = 0x811c9dc5;
+	const char* t_Chars = a_String.Get();
+	for (int i = 0; i < a_String.Size(); i++)
+		t_Hash = ((t_Hash ^ tolower(t_Chars[i])) * 0x01000193) % 0x100000000;
+
+	return t_Hash;
+}
+
+std::map<String, String, StringCompare> m_HashMap;
 void InitBinHashMap()
 {
 	if (m_HashMap.size() != 0) return;
@@ -27,7 +40,7 @@ void InitBinHashMap()
 		bool t_WasEnd = false;
 		do
 		{
-			t_WasEnd = a_File->Read((uint8_t*)&t_String[0], t_ReadLength, t_Offset) != t_ReadLength;
+			t_WasEnd = a_File->Read((uint8_t*)t_String.c_str(), t_ReadLength, t_Offset) != t_ReadLength;
 
 			size_t i;
 			for (i = 0; i < t_ReadLength; i++)
@@ -48,25 +61,25 @@ void InitBinHashMap()
 				std::string t_Hash = t_Line.substr(0, t_HashEnd);
 				std::string t_Value = t_Line.substr(t_HashEnd + 1);
 
-				m_HashMap[t_Hash] = t_Value;
+				m_HashMap[t_Hash.c_str()] = t_Value.c_str();
 				i = t_NewLineOffset;
 			}
 		} while (!t_WasEnd);
 	});
 }
 
-template <typename I> 
-std::string NumberToHexString(I a_Number, size_t a_StringLength = sizeof(I) << 1) 
+String NumberToHexString(uint32_t a_Number)
 {
+	static const size_t t_Size = sizeof(uint32_t) << 1;
 	static const char* t_Digits = "0123456789abcdef";
-	std::string t_Result(a_StringLength, '0');
-	for (size_t i = 0, j = (a_StringLength - 1) * 4; i < a_StringLength; ++i, j -= 4)
+	String t_Result(t_Size, '0');
+	for (size_t i = 0, j = (t_Size - 1) * 4; i < t_Size; ++i, j -= 4)
 		t_Result[i] = t_Digits[(a_Number >> j) & 0x0f];
 
 	return t_Result;
 }
 
-std::string GetStringByHash(uint32_t a_Hash)
+String GetStringByHash(uint32_t a_Hash)
 {
 	InitBinHashMap();
 
@@ -152,6 +165,23 @@ inline size_t League::Bin::GetSizeByType(ValueStorage::Type a_Type)
 	}
 }
 
+const League::Bin::ValueStorage * League::Bin::Get(String a_Name) const
+{
+	const auto t_Hash = FNV1Hash(a_Name.Get());
+	for (const auto& t_VectorReference : m_Values)
+	{
+		const auto& t_ValueVector = t_VectorReference.second;
+		for (int i = 0; i < t_ValueVector.size(); i++)
+		{
+			auto t_ValueHash = t_ValueVector[i].GetHash();
+			if (t_ValueHash == t_Hash)
+				return &t_ValueVector[i];
+		}
+	}
+
+	return nullptr;
+}
+
 void League::Bin::GetStorageData(File* a_File, League::Bin::ValueStorage& a_Storage, size_t& a_Offset)
 {
 	a_File->Get(a_Storage.m_Hash, a_Offset);
@@ -207,7 +237,7 @@ void League::Bin::ValueStorage::DebugPrint()
 		printf("uint64 = %f\n", Read<float>());
 		return;
 
-	case ValueStorage::Type::String:
+	case ValueStorage::Type::StringT:
 		printf("string = %s\n", (char*)m_Data);
 		break;
 
@@ -226,9 +256,9 @@ void League::Bin::ValueStorage::DebugPrint()
 }
 
 template<typename T>
-std::string GetJSONVector(const void* a_Data, size_t a_Size, const std::initializer_list<char>& a_Names = { 'x', 'y', 'z', 'w' })
+String GetJSONVector(const void* a_Data, size_t a_Size, const std::initializer_list<char>& a_Names = { 'x', 'y', 'z', 'w' })
 {
-	std::string t_Return = "{ ";
+	String t_Return = "{ ";
 	T* t_Vector = (T*)a_Data;
 
 	for (int i = 0; i < a_Size; i++)
@@ -237,7 +267,7 @@ std::string GetJSONVector(const void* a_Data, size_t a_Size, const std::initiali
 		t_Return += '\"';
 		t_Return += t_Character;
 		t_Return += "\": ";
-		t_Return += std::to_string(t_Vector[i]);
+		t_Return += ToString(t_Vector[i]);
 
 		if (i != a_Size - 1) t_Return += ", ";
 	}
@@ -246,9 +276,9 @@ std::string GetJSONVector(const void* a_Data, size_t a_Size, const std::initiali
 	return t_Return;
 }
 
-std::string League::Bin::ValueStorage::GetAsJSON(bool a_ExposeHash) const
+String League::Bin::ValueStorage::GetAsJSON(bool a_ExposeHash) const
 {
-	std::string t_Prefix = a_ExposeHash ? "\"" + GetStringByHash(m_Hash) + "\": " : "";
+	String t_Prefix = a_ExposeHash ? "\"" + GetStringByHash(m_Hash) + "\": " : "";
 
 	switch (m_Type)
 	{
@@ -256,36 +286,36 @@ std::string League::Bin::ValueStorage::GetAsJSON(bool a_ExposeHash) const
 		return t_Prefix + (Read<bool>() ? "true" : "false");
 
 	case ValueStorage::Type::S8:
-		return t_Prefix + std::to_string(Read<int8_t>());
+		return t_Prefix + ToString(Read<int8_t>());
 
 	case ValueStorage::Type::Padding:
 	case ValueStorage::Type::U8:
-		return t_Prefix + std::to_string(Read<uint8_t>());
+		return t_Prefix + ToString(Read<uint8_t>());
 
 	case ValueStorage::Type::S16:
-		return t_Prefix + std::to_string(Read<int16_t>());
+		return t_Prefix + ToString(Read<int16_t>());
 
 	case ValueStorage::Type::U16:
-		return t_Prefix + std::to_string(Read<uint16_t>());
+		return t_Prefix + ToString(Read<uint16_t>());
 
 	case ValueStorage::Type::S32:
-		return t_Prefix + std::to_string(Read<int32_t>());
+		return t_Prefix + ToString(Read<int32_t>());
 
 	case ValueStorage::Type::U32:
 	case ValueStorage::Type::Link: // TODO
-		return t_Prefix + std::to_string(Read<uint32_t>());
+		return t_Prefix + ToString(Read<uint32_t>());
 
 	case ValueStorage::Type::Hash: // TODO
 		return t_Prefix + GetStringByHash(Read<uint32_t>());
 
 	case ValueStorage::Type::S64:
-		return t_Prefix + std::to_string(Read<int64_t>());
+		return t_Prefix + ToString(Read<int64_t>());
 
 	case ValueStorage::Type::U64:
-		return t_Prefix + std::to_string(Read<uint64_t>());
+		return t_Prefix + ToString(Read<uint64_t>());
 
 	case ValueStorage::Type::Float:
-		return t_Prefix + std::to_string(Read<float>());
+		return t_Prefix + ToString(Read<float>());
 
 	case ValueStorage::Type::U16Vec3:
 		return t_Prefix + GetJSONVector<uint16_t>(m_Data, 3);
@@ -302,12 +332,12 @@ std::string League::Bin::ValueStorage::GetAsJSON(bool a_ExposeHash) const
 	case ValueStorage::Type::RGBA:
 		return t_Prefix + GetJSONVector<uint8_t>(m_Data, 4, { 'r', 'g', 'b', 'a' });
 
-	case ValueStorage::Type::String:
-		return t_Prefix +  "\"" + std::string((const char*)m_Data) + "\"";
+	case ValueStorage::Type::StringT:
+		return t_Prefix +  "\"" + String((const char*)m_Data) + "\"";
 
 	case ValueStorage::Type::Map:
 	{
-		std::string t_Return = "{";
+		String t_Return = "{";
 
 		auto& t_Values = *(std::map<ValueStorage, ValueStorage, ValueStorageCompare>*)m_Pointer;
 
@@ -328,7 +358,7 @@ std::string League::Bin::ValueStorage::GetAsJSON(bool a_ExposeHash) const
 	case ValueStorage::Type::Array:
 	case ValueStorage::Type::Container:
 	{
-		std::string t_Return = "[";
+		String t_Return = "[";
 
 		auto& t_Values = *(std::vector<ValueStorage>*)m_Pointer;
 
@@ -348,7 +378,7 @@ std::string League::Bin::ValueStorage::GetAsJSON(bool a_ExposeHash) const
 	case ValueStorage::Type::Struct:
 	case ValueStorage::Type::Embedded:
 	{
-		std::string t_Return = "{";
+		String t_Return = "{";
 
 		auto& t_Values = *(std::vector<ValueStorage>*)m_Pointer;
 
@@ -368,6 +398,43 @@ std::string League::Bin::ValueStorage::GetAsJSON(bool a_ExposeHash) const
 	default:
 		__debugbreak();
 	}
+}
+
+const League::Bin::ValueStorage* League::Bin::ValueStorage::Get(String a_Name) const
+{
+	auto t_Hash = FNV1Hash(a_Name.Get());
+	switch (m_Type)
+	{
+	case ValueStorage::Type::Map:
+	{
+		auto& t_Values = *(std::map<ValueStorage, ValueStorage, ValueStorageCompare>*)m_Pointer;
+
+		for (auto& t_KeyValuePair : t_Values)
+		{
+			if (t_KeyValuePair.first.GetType() == ValueStorage::Type::Hash && t_Hash == t_KeyValuePair.first.Read<uint32_t>())
+				return &t_KeyValuePair.second;
+
+			if (t_Hash == t_KeyValuePair.second.GetHash())
+				return &t_KeyValuePair.second;
+
+			if (t_Hash == t_KeyValuePair.first.GetHash())
+				return &t_KeyValuePair.second;
+		}
+	}
+
+	case ValueStorage::Type::Struct:
+	case ValueStorage::Type::Embedded:
+	case ValueStorage::Type::Array:
+	case ValueStorage::Type::Container:
+	{
+		auto& t_Values = *(std::vector<ValueStorage>*)m_Pointer;
+		for (auto& t_Value : t_Values)
+			if (t_Value.GetHash() != 0 && t_Value.GetHash() == t_Hash)
+				return &t_Value;
+	}
+	}
+
+	return nullptr;
 }
 
 void League::Bin::ValueStorage::FetchDataFromFile(File* a_File, size_t& a_Offset)
@@ -394,7 +461,7 @@ void League::Bin::ValueStorage::FetchDataFromFile(File* a_File, size_t& a_Offset
 		a_File->Read(m_Data, GetSizeByType(m_Type), a_Offset);
 		break;
 
-	case ValueStorage::Type::String:
+	case ValueStorage::Type::StringT:
 	{
 		uint16_t t_StringLength;
 		a_File->Get(t_StringLength, a_Offset);
@@ -498,7 +565,7 @@ void League::Bin::ValueStorage::FetchDataFromFile(File* a_File, size_t& a_Offset
 	}
 }
 
-void League::Bin::Load(StringView a_FilePath, OnLoadFunction a_OnLoadFunction, void * a_Argument)
+void League::Bin::Load(String a_FilePath, OnLoadFunction a_OnLoadFunction, void * a_Argument)
 {
 	auto* t_File = FileSystem::GetFile(a_FilePath);
 
@@ -609,9 +676,9 @@ void League::Bin::Load(StringView a_FilePath, OnLoadFunction a_OnLoadFunction, v
 	}, t_LoadData);
 }
 
-std::string League::Bin::GetAsJSON() const
+String League::Bin::GetAsJSON() const
 {
-	std::string t_Return = "{";
+	String t_Return = "{";
 
 	bool t_First = true;
 	for (auto& t_MapPair : m_Values)

@@ -15,7 +15,7 @@ Shader::~Shader()
 	Delete();
 }
 
-void Shader::Load(StringView a_FilePath, Shader::OnLoadFunction a_OnLoadFunction, void * a_Argument)
+void Shader::Load(String a_FilePath, Shader::OnLoadFunction a_OnLoadFunction, void * a_Argument)
 {
 	auto* t_File = FileSystem::GetFile(a_FilePath);
 	struct LoadData
@@ -72,7 +72,7 @@ void Shader::Load(StringView a_FilePath, Shader::OnLoadFunction a_OnLoadFunction
 			const char* t_Type = t_Shader->m_Type == Type::Vertex ? "vertex" : "fragment";
 
 			auto t_Name = a_File->GetName().Get();
-			printf("Compilation log of %s shader '%s' (%s):\n%s\n", t_Type, t_Name.c_str(), t_HasSucceeded ? "loaded successfully" : "failed to load", t_Log.data());
+			printf("Compilation log of %s shader '%s' (%s):\n%s\n", t_Type, t_Name, t_HasSucceeded ? "loaded successfully" : "failed to load", t_Log.data());
 		}
 
 		t_Shader->m_State = t_HasSucceeded ? File::LoadState::Loaded : File::LoadState::FailedToLoad;

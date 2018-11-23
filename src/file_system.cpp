@@ -2,13 +2,13 @@
 
 #include <map>
 
-std::map<StringView, File*, StringViewCompare>* m_Files = nullptr;
+std::map<String, File*, StringCompare>* m_Files = nullptr;
 
-File * FileSystem::GetFile(StringView a_FilePath)
+File * FileSystem::GetFile(String a_FilePath)
 {
 	if (m_Files == nullptr)
 	{
-		m_Files = new std::map<StringView, File*, StringViewCompare>();
+		m_Files = new std::map<String, File*, StringCompare>();
 		std::atexit([]()
 		{
 			for (auto& i : *m_Files)
