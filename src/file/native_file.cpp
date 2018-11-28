@@ -31,14 +31,14 @@ std::vector<uint8_t> NativeFile::GetData() const
 	return m_Data;
 }
 
-String NativeFile::GetName() const
+std::string NativeFile::GetName() const
 {
 	return m_Name;
 }
 
 NativeFile::LoadState NativeFile::FetchData()
 {
-	auto t_FileName = m_Name.Get();
+	auto t_FileName = m_Name.c_str();
 	std::ifstream t_File(t_FileName, std::ios::binary | std::ios::ate);
 	m_Size = t_File.tellg();
 	if (m_Size == (size_t)-1)

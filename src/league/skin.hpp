@@ -1,7 +1,7 @@
 #pragma once
 
 #include <file_system.hpp>
-#include <string.hpp>
+#include <string>
 
 #include <glm/glm.hpp>
 
@@ -14,15 +14,15 @@ namespace League
 	public:
 		using OnLoadFunction = void(*)(League::Skin& a_Skin, void* a_Argument);
 		
-		void Load(String a_FilePath, OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
+		void Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
 
 		struct Mesh
 		{
-			Mesh(String a_MaterialName) :
+			Mesh(std::string a_MaterialName) :
 				MaterialName(a_MaterialName)
 			{}
 
-			String MaterialName;
+			std::string MaterialName;
 			size_t VertexCount;
 
 			glm::vec3* Positions;

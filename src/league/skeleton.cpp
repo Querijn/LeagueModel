@@ -1,6 +1,8 @@
 #include "league/skeleton.hpp"
 #include "league/skin.hpp"
 
+#include <map>
+
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
 #include <glm/gtx/quaternion.hpp>
@@ -21,7 +23,7 @@ void RecursiveInvertGlobalMatrices(const glm::mat4& a_Parent, League::Skeleton::
 		RecursiveInvertGlobalMatrices(t_Global, *t_Child);
 }
 
-void League::Skeleton::Load(String a_FilePath, OnLoadFunction a_OnLoadFunction, void * a_Argument)
+void League::Skeleton::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction, void * a_Argument)
 {
 	auto* t_File = FileSystem::GetFile(a_FilePath);
 
@@ -90,7 +92,7 @@ const std::vector<League::Skeleton::Bone>& League::Skeleton::GetBones() const
 	return m_Bones;
 }
 
-const League::Skeleton::Bone* League::Skeleton::GetBone(String a_Name) const
+const League::Skeleton::Bone* League::Skeleton::GetBone(std::string a_Name) const
 {
 	for (const auto& t_Bone : m_Bones)
 		if (t_Bone.Name == a_Name)
@@ -216,7 +218,7 @@ File::LoadState League::Skeleton::ReadVersion2(File& a_File, size_t& a_Offset)
 	{
 		m_Bones[i].Name = t_Pointer;
 		size_t t_NameLength = strlen(t_Pointer);
-		String t_Name = t_Pointer;
+		std::string t_Name = t_Pointer;
 		t_Pointer += t_NameLength;
 		while (*t_Pointer == 0) t_Pointer++; // eat all \0s
 	}

@@ -10,7 +10,7 @@ League::Animation::Animation(Skeleton & a_Skeleton) :
 {
 }
 
-void League::Animation::Load(String a_FilePath, OnLoadFunction a_OnLoadFunction, void * a_Argument)
+void League::Animation::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction, void * a_Argument)
 {
 	struct LoadData
 	{
@@ -57,7 +57,7 @@ void League::Animation::Load(String a_FilePath, OnLoadFunction a_OnLoadFunction,
 		uint32_t t_Version;
 		a_File->Get(t_Version, t_Offset);
 
-		std::map<uint32_t, String> t_BoneNameHashes;
+		std::map<uint32_t, std::string> t_BoneNameHashes;
 		auto t_Bones = t_Animation->m_Skeleton.GetBones();
 		for (auto& t_Bone : t_Bones)
 			t_BoneNameHashes[t_Bone.Hash] = t_Bone.Name;
@@ -159,7 +159,7 @@ float uncompressTime(const uint16_t& ct, const float& animationLength)
 	return ut;
 }
 
-const League::Animation::Bone* League::Animation::GetBone(String a_Name) const
+const League::Animation::Bone* League::Animation::GetBone(std::string a_Name) const
 {
 	for (const auto& t_Bone : m_Bones)
 		if (t_Bone.Name == a_Name)
@@ -168,7 +168,7 @@ const League::Animation::Bone* League::Animation::GetBone(String a_Name) const
 	return nullptr;
 }
 
-File::LoadState League::Animation::LoadVersion1(const std::map<uint32_t, String>& a_BoneNameHashes, File& a_File, size_t & a_Offset)
+File::LoadState League::Animation::LoadVersion1(const std::map<uint32_t, std::string>& a_BoneNameHashes, File& a_File, size_t & a_Offset)
 {
 	int32_t t_FileSize;
 	a_File.Read((uint8_t*)(&t_FileSize), 4, a_Offset);

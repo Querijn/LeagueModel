@@ -1,18 +1,22 @@
 #pragma once
-#include <string.hpp>
+#include <string>
 #include <file_system.hpp>
 
 #include <glm/glm.hpp>
+#include <map>
 
 namespace League
 {
 	class Bin
 	{
 	public:
-		using OnLoadFunction = void(*)(League::Bin& a_Bin, void* a_Argument);
+		class ValueStorage;
 
-		void Load(String a_FilePath, OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
-		String GetAsJSON() const;
+		using OnLoadFunction = void(*)(League::Bin& a_Bin, void* a_Argument);
+		using FindConditionFunction = bool(*)(const ValueStorage& a_Value, void* a_UserData);
+
+		void Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
+		std::string GetAsJSON() const;
 
 		File::LoadState GetLoadState() const { return m_State; }
 
@@ -51,14 +55,17 @@ namespace League
 			template<typename T> T Read() const { return *(T*)m_Data; }
 
 			void DebugPrint();
-			String GetAsJSON(bool a_ExposeHash) const;
+			std::string GetAsJSON(bool a_ForceToString, bool a_ExposeHash) const;
 
+			std::vector<const ValueStorage*> Find(FindConditionFunction a_Function, void* a_UserData) const;
+
+			bool Is(const std::string& a_Name) const;
 			uint32_t GetHash() const { return m_Hash; }
 			Type GetType() const { return m_Type; }
 			const uint8_t* GetData() const { return m_Data; }
 			const void* GetPointer() const { return m_Pointer; }
 
-			const ValueStorage* Get(String a_Name) const;
+			const ValueStorage* Get(std::string a_Name) const;
 
 			friend class League::Bin;
 		protected:
@@ -70,7 +77,8 @@ namespace League
 			uint32_t m_Hash = 0;
 		};
 
-		const ValueStorage* Get(String a_Name) const;
+		std::vector<const ValueStorage*> Find(FindConditionFunction a_Function, void* a_UserData = nullptr) const;
+		const ValueStorage* Get(std::string a_Name) const;
 
 		friend class League::Bin::ValueStorage;
 	protected:
@@ -82,6 +90,6 @@ namespace League
 		File::LoadState m_State = File::LoadState::NotLoaded;
 
 		std::map<uint32_t, std::vector<ValueStorage>> m_Values;
-		std::vector<String> m_LinkedFiles;
+		std::vector<std::string> m_LinkedFiles;
 	};
 }

@@ -2,13 +2,13 @@
 
 #include <map>
 
-std::map<String, File*, StringCompare>* m_Files = nullptr;
+std::map<std::string, File*>* m_Files = nullptr;
 
-File * FileSystem::GetFile(String a_FilePath)
+File * FileSystem::GetFile(std::string a_FilePath)
 {
 	if (m_Files == nullptr)
 	{
-		m_Files = new std::map<String, File*, StringCompare>();
+		m_Files = new std::map<std::string, File*>();
 		std::atexit([]()
 		{
 			for (auto& i : *m_Files)
@@ -27,7 +27,7 @@ File * FileSystem::GetFile(String a_FilePath)
 
 void FileSystem::CloseFile(File & a_File)
 {
-	auto t_FileName = a_File.GetName().Get();
+	auto t_FileName = a_File.GetName().c_str();
 	auto t_Index = m_Files->find(a_File.GetName());
 	if (t_Index == m_Files->end()) return;
 

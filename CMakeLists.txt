@@ -68,7 +68,6 @@ ADD_LEAGUEMODEL_SOURCE(Platform\\WindowsPlatform			"src/platform/windows_platfor
 ADD_LEAGUEMODEL_SOURCE(Platform\\EmscriptenPlatform			"src/platform/emscripten_platform.hpp"			"src/platform/emscripten_platform.cpp")
 
 ADD_LEAGUEMODEL_SOURCE(Helper								"src/helper.hpp"								"src/helper.cpp")
-ADD_LEAGUEMODEL_SOURCE(Helper\\String						"src/string.hpp"								"src/string.cpp")
 
 ADD_LEAGUEMODEL_SOURCE(EventHandler							"src/event_handler.hpp"							"src/event_handler.cpp")
 ADD_LEAGUEMODEL_SOURCE(EventHandler\\Event					"src/event_handler/event.hpp"					"src/event_handler/event.cpp")

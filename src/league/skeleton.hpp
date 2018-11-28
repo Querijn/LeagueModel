@@ -1,7 +1,7 @@
 #pragma once
 
 #include <file_system.hpp>
-#include <string.hpp>
+#include <string>
 
 #include <glm/glm.hpp>
 
@@ -18,11 +18,11 @@ namespace League
 
 		Skeleton(League::Skin& a_Skin);
 
-		void Load(String a_FilePath, OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
+		void Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
 		
 		struct Bone
 		{
-			String Name;
+			std::string Name;
 			uint32_t Hash;
 
 			int16_t ID;
@@ -46,7 +46,7 @@ namespace League
 
 		File::LoadState GetLoadState() const { return m_State; }
 
-		const Skeleton::Bone* GetBone(String a_Name) const;
+		const Skeleton::Bone* GetBone(std::string a_Name) const;
 
 	private:
 		File::LoadState m_State = File::LoadState::NotLoaded;

@@ -5,7 +5,7 @@
 
 #include <algorithm>
 
-void Texture::Load(String a_ImagePath, Texture::OnLoadFunction a_OnLoadFunction, void* a_Argument)
+void Texture::Load(std::string a_ImagePath, Texture::OnLoadFunction a_OnLoadFunction, void* a_Argument)
 {
 	auto* t_File = FileSystem::GetFile(a_ImagePath);
 
@@ -35,7 +35,7 @@ void Texture::Load(String a_ImagePath, Texture::OnLoadFunction a_OnLoadFunction,
 			return;
 		}
 
-		std::string t_Path = a_File->GetName().Get();
+		std::string t_Path = a_File->GetName().c_str();
 
 		// Check if image path ends in DDS
 		auto t_Index = t_Path.find_last_of('.');

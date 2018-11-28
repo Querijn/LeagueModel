@@ -3,16 +3,21 @@
 #include <renderer.hpp>
 #include <league/skeleton.hpp>
 
+#include <map>
+#include <string>
+
 namespace League { class Animation; }
 
 class ApplicationMesh
 {
 public:
-	void ApplyAnimation(const League::Animation& a_Animation);
+	void AddAnimationReference(const std::string& a_Name, const League::Animation& a_Animation);
+	void ApplyAnimation(const std::string& a_Animation);
 	void Draw(size_t a_SubMeshIndex, float a_Time, ShaderProgram& a_Program, glm::mat4& a_MVP, Texture* a_Diffuse, std::vector<glm::mat4>* a_BoneTransforms);
 
 	std::shared_ptr<League::Skeleton> Skeleton = nullptr;
-	const League::Animation* Animation = nullptr;
+	std::map<std::string, const League::Animation*> Animations;
+	std::string CurrentAnimation;
 
 	VertexBuffer<glm::vec3>* PositionBuffer;
 	VertexBuffer<glm::vec2>* UVBuffer;
@@ -23,7 +28,7 @@ public:
 	struct SubMesh
 	{
 		glm::mat4 GetTransformMatrix() const;
-		void SetTexture(String a_FilePath);
+		void SetTexture(std::string a_FilePath);
 
 		IndexBuffer<uint16_t>* IndexBuffer;
 

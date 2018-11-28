@@ -76,7 +76,7 @@ void ApplicationMesh::SetupHierarchy(const glm::mat4& a_InverseRoot, std::vector
 {
 	glm::mat4 t_GlobalTransform = a_Parent;
 
-	const auto* t_AnimBone = Animation->GetBone(a_SkeletonBone.Name);
+	const auto* t_AnimBone = Animations[CurrentAnimation]->GetBone(a_SkeletonBone.Name);
 	if (t_AnimBone != nullptr)
 	{
 		glm::vec3 t_Translation = FindNearestTime(t_AnimBone->Translation, a_Time);
@@ -86,7 +86,7 @@ void ApplicationMesh::SetupHierarchy(const glm::mat4& a_InverseRoot, std::vector
 		auto t_LocalTransform = glm::translate(t_Translation) * glm::mat4_cast(t_Rotation) * glm::scale(t_Scale);
 		t_GlobalTransform = a_Parent * t_LocalTransform;
 	}
-	//else printf("Animation bone %s is not found\n", a_SkeletonBone.Name.Get());
+	//else printf("Animation bone %s is not found\n", a_SkeletonBone.Name.c_str());
 
 	a_Bones[a_SkeletonBone.ID] = t_GlobalTransform * a_SkeletonBone.InverseGlobalMatrix;
 
@@ -135,7 +135,7 @@ void ApplicationMesh::Draw(size_t a_SubMeshIndex, float a_Time, ShaderProgram& a
 void ApplicationMesh::SetupAnimation(std::vector<glm::mat4>& a_BoneTransforms, float a_Time)
 {
 	glm::mat4 t_InverseRoot = glm::identity<glm::mat4>();
-	auto t_Bones = Animation->GetBones();
+	auto t_Bones = Animations[CurrentAnimation]->GetBones();
 
 	for (size_t i = 0; i < t_Bones.size(); i++)
 	{
@@ -153,7 +153,7 @@ glm::mat4 ApplicationMesh::SubMesh::GetTransformMatrix() const
 	return glm::translate(Position) * glm::mat4_cast(Rotation) * glm::scale(Scale);
 }
 
-void ApplicationMesh::SubMesh::SetTexture(String a_FilePath)
+void ApplicationMesh::SubMesh::SetTexture(std::string a_FilePath)
 {
 	Image.Load(a_FilePath, [](Texture& a_Texture, void* a_UserData)
 	{

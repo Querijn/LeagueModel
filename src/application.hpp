@@ -22,9 +22,9 @@ public:
 	
 	void Init();
 
-	void LoadSkin(String a_BinPath);
+	void LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath);
 
-	void LoadAnimation(Application::Mesh& a_Mesh, String a_AnimationPath, League::Animation::OnLoadFunction a_OnLoadFunction = nullptr, void* a_UserData = nullptr);
+	void LoadAnimation(Application::Mesh& a_Mesh, std::string a_AnimationPath, League::Animation::OnLoadFunction a_OnLoadFunction = nullptr, void* a_UserData = nullptr);
 
 	const Texture& GetDefaultTexture() const;
 
@@ -44,8 +44,8 @@ private:
 
 	bool Update(double a_DT);
 
-	using OnMeshLoadFunction = void(*)(String a_SkinPath, String a_SkeletonPath, Application::Mesh* a_Mesh, void* a_UserData);
-	void LoadMesh(String a_SkinPath, String a_SkeletonPath, OnMeshLoadFunction a_OnLoadFunction = nullptr, void* a_UserData = nullptr);
+	using OnMeshLoadFunction = void(*)(std::string a_SkinPath, std::string a_SkeletonPath, Application::Mesh* a_Mesh, void* a_UserData);
+	void LoadMesh(std::string a_SkinPath, std::string a_SkeletonPath, OnMeshLoadFunction a_OnLoadFunction = nullptr, void* a_UserData = nullptr);
 
 	Window m_Window;
 

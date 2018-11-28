@@ -8,7 +8,7 @@
 #include <glm/matrix.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include <string.hpp>
+#include <string>
 
 class ShaderProgram;
 class BaseShaderVariable 

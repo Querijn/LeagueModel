@@ -9,14 +9,14 @@ void EmscriptenFile::Load(EmscriptenFile::OnLoadFunction a_OnLoadCallback, void*
 	//m_OnLoad = nullptr;
 	m_ArgData = a_Argument;
 
-	auto t_Name = m_Name.Get();
+	auto t_Name = m_Name.c_str();
 	emscripten_async_wget_data(t_Name, (void*)this, OnLoad, OnLoadFailed);
 }
 
 void EmscriptenFile::OnLoad(void* a_Argument, void* a_Data, int a_Size)
 {
 	auto* t_File = (EmscriptenFile*)a_Argument;
-	auto t_FileName = t_File->GetName().Get();
+	auto t_FileName = t_File->GetName().c_str();
 
 	t_File->m_Data.resize(a_Size);
 	t_File->m_Size = a_Size;
@@ -29,7 +29,7 @@ void EmscriptenFile::OnLoad(void* a_Argument, void* a_Data, int a_Size)
 void EmscriptenFile::OnLoadFailed(void* a_Argument)
 {
 	auto* t_File = (EmscriptenFile*)a_Argument;
-	auto t_FileName = t_File->GetName().Get();
+	auto t_FileName = t_File->GetName().c_str();
 
 	t_File->m_Size = 0;
 	if (t_File->m_OnLoadArg) t_File->m_OnLoadArg(t_File, EmscriptenFile::LoadState::NotFound, t_File->m_ArgData);
@@ -51,7 +51,7 @@ const std::vector<uint8_t>& EmscriptenFile::GetData() const
 	return m_Data;
 }
 
-String EmscriptenFile::GetName() const
+std::string EmscriptenFile::GetName() const
 {
 	return m_Name;
 }

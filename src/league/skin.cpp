@@ -1,16 +1,16 @@
 #include "skin.hpp"
-#include <string.hpp>
+#include <string>
 
 struct SubMeshHeader
 {
-	String Material = "";
+	std::string Material = "";
 	uint32_t VertexOffset;
 	uint32_t VertexCount;
 	uint32_t IndexOffset;
 	uint32_t IndexCount;
 };
 
-void League::Skin::Load(String a_FilePath, OnLoadFunction a_OnLoadFunction, void * a_Argument)
+void League::Skin::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction, void * a_Argument)
 {
 	auto* t_File = FileSystem::GetFile(a_FilePath);
 

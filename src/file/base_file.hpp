@@ -1,5 +1,5 @@
 #pragma once
-#include <string.hpp>
+#include <string>
 
 enum FileLoadState
 {
@@ -12,9 +12,9 @@ enum FileLoadState
 class BaseFile
 {
 public:
-	BaseFile(String a_FileName) : m_Name(a_FileName) {}
+	BaseFile(std::string a_FileName) : m_Name(a_FileName) {}
 
 protected:
-	String m_Name;
+	std::string m_Name;
 	size_t m_Size;
 };
