@@ -164,7 +164,7 @@ inline size_t League::Bin::GetSizeByType(ValueStorage::Type a_Type)
 		return sizeof(uint8_t) * 4;
 
 	default:
-		__debugbreak();
+		throw 0;
 	}
 }
 
@@ -249,11 +249,11 @@ void League::Bin::ValueStorage::DebugPrint()
 		return;
 
 	case ValueStorage::Type::S64:
-		printf("int64 = %d\n", Read<int64_t>());
+		printf("int64 = %lld\n", Read<int64_t>());
 		return;
 
 	case ValueStorage::Type::U64:
-		printf("uint64 = %d\n", Read<uint64_t>());
+		printf("uint64 = %llu\n", Read<uint64_t>());
 		return;
 
 	case ValueStorage::Type::Float:
@@ -439,7 +439,7 @@ std::string League::Bin::ValueStorage::GetAsJSON(bool a_ForceToString, bool a_Ex
 	}
 
 	default:
-		__debugbreak();
+		throw 0;
 	}
 
 	if (a_ForceToString)
@@ -563,6 +563,9 @@ const League::Bin::ValueStorage* League::Bin::ValueStorage::Get(std::string a_Na
 			if (t_Value.GetHash() != 0 && t_Value.GetHash() == t_Hash)
 				return &t_Value;
 	}
+
+	default:
+		break;
 	}
 
 	return nullptr;
@@ -692,7 +695,7 @@ void League::Bin::ValueStorage::FetchDataFromFile(File* a_File, size_t& a_Offset
 		break;
 
 	default:
-		__debugbreak();
+		throw 0;
 	}
 }
 
