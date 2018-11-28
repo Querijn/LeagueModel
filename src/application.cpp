@@ -59,7 +59,7 @@ void Application::Init()
 	LoadDefaultTexture();
 	LoadShaders();
 
-	LoadSkin("data/output/data/characters/poppy/skins/skin0.bin");
+	LoadSkin("data/output/data/characters/poppy/skins/skin0.bin", "data/output/data/characters/poppy/animations/skin0.bin");
 	UpdateViewMatrix();
 
 	Platform::SetMainLoop([]() 
@@ -74,59 +74,124 @@ void Application::Init()
 	});
 }
 
-void Application::LoadSkin(String a_BinPath)
-{
-	League::Bin t_Bin;
-	t_Bin.Load(a_BinPath, [](League::Bin& a_Bin, void* a_UserData)
-	{
-		auto t_MeshProperties = a_Bin.Get("skinMeshProperties");
-		if (!t_MeshProperties) return;
-
-		auto t_SkeletonValue = t_MeshProperties->Get("skeleton");
-		if (!t_SkeletonValue) return;
-		String t_Data = (const char*)(t_SkeletonValue->GetData());
-		String t_Skeleton = "data/output/" + t_Data;
-
-		auto t_SkinValue = t_MeshProperties->Get("simpleSkin");
-		if (!t_SkinValue) return;
-		String t_Data2 = (const char*)t_SkinValue->GetData();
-		String t_Skin = "data/output/" + String(t_Data2);
-
-		auto t_TextureValue = t_MeshProperties->Get("texture");
-		if (!t_TextureValue) return;
-		String* t_Texture = new String("data/output/" + String((char*)t_TextureValue->GetData()));
-
-		Application::Instance->LoadMesh(t_Skin, t_Skeleton, [](String a_SkinPath, String a_SkeletonPath, Application::Mesh* a_Mesh, void* a_UserData)
-		{
-			if (a_Mesh == nullptr) return;
-			String* t_Texture = (String*)a_UserData;
-
-			a_Mesh->SubMeshes[0].SetTexture(*t_Texture);
-
-			Instance->LoadAnimation(*a_Mesh, "data/141001/Dance.anm", [](League::Animation& a_Animation, void* a_UserData)
-			{
-				if (a_Animation.GetLoadState() != File::LoadState::Loaded)
-					return;
-
-				auto* t_Mesh = (Application::Mesh*)a_UserData;
-				t_Mesh->ApplyAnimation(a_Animation);
-			}, a_Mesh);
-
-			delete t_Texture;
-		}, t_Texture);
-	});
-}
-
-void Application::LoadMesh(String a_SkinPath, String a_SkeletonPath, OnMeshLoadFunction a_OnLoadFunction, void* a_UserData)
+void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath)
 {
 	struct LoadData
 	{
-		LoadData(String a_SkinPath, String a_SkeletonPath, OnMeshLoadFunction a_Function, void* a_Argument) :
+		LoadData(std::string a_SkinBinPath) : SkinBinPath(a_SkinBinPath) {}
+
+		std::string RootFolder;
+		std::string Texture;
+		std::string SkinBinPath;
+		std::string AnimationName;
+		bool FirstAnimationApplied = false;
+		size_t References = 0;
+		Application::Mesh* Target;
+	};
+	auto* t_LoadData = new LoadData(a_AnimationBinPath);
+
+	// Load in the BIN containing most of the information about the base mesh
+	League::Bin t_Bin;
+	t_Bin.Load(a_BinPath, [](League::Bin& a_Bin, void* a_UserData)
+	{
+		auto* t_LoadData = (LoadData*)a_UserData;
+		auto t_MeshProperties = a_Bin.Get("skinMeshProperties");
+		if (!t_MeshProperties)
+		{
+			delete t_LoadData;
+			return;
+		}
+
+		// TODO: Make dynamic
+		t_LoadData->RootFolder = "data/output/";
+
+		// Get the skeleton file
+		auto t_SkeletonValue = t_MeshProperties->Get("skeleton");
+		if (!t_SkeletonValue) return;
+		std::string t_Data = (const char*)(t_SkeletonValue->GetData());
+		std::string t_Skeleton = t_LoadData->RootFolder + t_Data;
+
+		// Get the skin file
+		auto t_SkinValue = t_MeshProperties->Get("simpleSkin");
+		if (!t_SkinValue) return;
+		std::string t_Data2 = (const char*)t_SkinValue->GetData();
+		std::string t_Skin = t_LoadData->RootFolder + std::string(t_Data2);
+
+		// Get the texture file
+		auto t_TextureValue = t_MeshProperties->Get("texture");
+		if (!t_TextureValue) return;
+		t_LoadData->Texture = t_LoadData->RootFolder + std::string((char*)t_TextureValue->GetData());
+
+		// Load the mesh (Skeleton + Skin)
+		Application::Instance->LoadMesh(t_Skin, t_Skeleton, [](std::string a_SkinPath, std::string a_SkeletonPath, Application::Mesh* a_Mesh, void* a_UserData)
+		{
+			auto* t_LoadData = (LoadData*)a_UserData;
+			if (a_Mesh == nullptr) return;
+
+			t_LoadData->Target = a_Mesh;
+
+			// Set the texture (async)
+			a_Mesh->SubMeshes[0].SetTexture(t_LoadData->Texture);
+
+			// Load all the animations
+			League::Bin t_Bin;
+			t_Bin.Load(t_LoadData->SkinBinPath, [](League::Bin& a_Bin, void* a_UserData)
+			{
+				auto* t_LoadData = (LoadData*)a_UserData;
+				if (a_Bin.GetLoadState() != File::LoadState::Loaded) return;
+
+				auto t_AnimationNames = a_Bin.Find([](const League::Bin::ValueStorage& a_ValueStorage, void* a_UserData)
+				{
+					return a_ValueStorage.GetType() == League::Bin::ValueStorage::Type::StringT && a_ValueStorage.Is("mAnimationFilePath");
+				});
+
+				t_LoadData->References++;
+				for (auto t_AnimationNameStorage : t_AnimationNames)
+				{
+					t_LoadData->References++;
+					t_LoadData->AnimationName = t_LoadData->RootFolder + (const char*)t_AnimationNameStorage->GetData();
+					Instance->LoadAnimation(*t_LoadData->Target, t_LoadData->AnimationName, [](League::Animation& a_Animation, void* a_UserData)
+					{
+						auto* t_LoadData = (LoadData*)a_UserData;
+						t_LoadData->References--;
+
+						if (a_Animation.GetLoadState() != File::LoadState::Loaded)
+							return;
+
+						if (t_LoadData->FirstAnimationApplied)
+						{
+							if (t_LoadData->References == 0)
+								delete t_LoadData;
+							return;
+						}
+
+						t_LoadData->Target->AddAnimationReference(t_LoadData->AnimationName, a_Animation);
+						t_LoadData->Target->ApplyAnimation(t_LoadData->AnimationName);
+						t_LoadData->FirstAnimationApplied = true;
+					}, t_LoadData);
+				}
+
+				t_LoadData->References--;
+
+				// For Windows everything loads synchronously, so this will be zero here
+				if (t_LoadData->References == 0)
+					delete t_LoadData;
+			}, t_LoadData);
+
+		}, t_LoadData);
+	}, t_LoadData);
+}
+
+void Application::LoadMesh(std::string a_SkinPath, std::string a_SkeletonPath, OnMeshLoadFunction a_OnLoadFunction, void* a_UserData)
+{
+	struct LoadData
+	{
+		LoadData(std::string a_SkinPath, std::string a_SkeletonPath, OnMeshLoadFunction a_Function, void* a_Argument) :
 			SkinPath(a_SkinPath), SkeletonPath(a_SkeletonPath), OnLoadFunction(a_Function), Argument(a_Argument)
 		{}
 
-		String SkinPath;
-		String SkeletonPath;
+		std::string SkinPath;
+		std::string SkeletonPath;
 		League::Skin* SkinTarget = nullptr;
 		OnMeshLoadFunction OnLoadFunction;
 		void* Argument;
@@ -204,7 +269,7 @@ void Application::LoadMesh(String a_SkinPath, String a_SkeletonPath, OnMeshLoadF
 	}, t_LoadData);
 }
 
-void Application::LoadAnimation(Application::Mesh & a_Mesh, String a_AnimationPath, League::Animation::OnLoadFunction a_OnLoadFunction, void * a_UserData)
+void Application::LoadAnimation(Application::Mesh & a_Mesh, std::string a_AnimationPath, League::Animation::OnLoadFunction a_OnLoadFunction, void * a_UserData)
 {
 	if (a_Mesh.Skeleton == nullptr)
 	{
@@ -217,12 +282,12 @@ void Application::LoadAnimation(Application::Mesh & a_Mesh, String a_AnimationPa
 
 	struct LoadData
 	{
-		LoadData(String a_AnimationPath, League::Animation::OnLoadFunction a_Function, void* a_Argument) :
+		LoadData(std::string a_AnimationPath, League::Animation::OnLoadFunction a_Function, void* a_Argument) :
 			AnimationPath(a_AnimationPath), OnLoadFunction(a_Function), Argument(a_Argument)
 		{}
 
-		String AnimationPath;
-		String SkeletonPath;
+		std::string AnimationPath;
+		std::string SkeletonPath;
 		League::Animation::OnLoadFunction OnLoadFunction;
 		void* Argument;
 	};
@@ -365,16 +430,6 @@ bool Application::Update(double a_DT)
 
 int main()
 {
-	League::Bin t_Bin;
-	t_Bin.Load("data/output/data/characters/poppy/poppy.bin", [](League::Bin& a_Bin, void* a_UserData)
-	{
-		if (a_Bin.GetLoadState() != File::LoadState::Loaded) return;
-
-		std::ofstream t_OutputJson("poppy.json");
-		t_OutputJson << a_Bin.GetAsJSON().Get();
-		t_OutputJson.close();
-	});
-
 	printf("LeagueModel Application built on %s at %s, calling new\n", __DATE__, __TIME__);
 	auto* t_Application = new Application();
 

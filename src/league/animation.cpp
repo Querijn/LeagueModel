@@ -1,6 +1,6 @@
 #include "animation.hpp"
 #include "skeleton.hpp"
-#include "string.hpp"
+#include <string>
 
 #include <bitset>
 #include <unordered_set>
@@ -75,8 +75,14 @@ void League::Animation::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunc
 		switch (t_Version)
 		{
 		default:
-			printf("League Animation tried to load unknown animation version (%d)\n", t_Version);
-			throw 0;
+		{
+			t_Animation->m_State = File::LoadState::FailedToLoad;
+			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Animation, t_LoadData->Argument);
+
+			FileSystem::CloseFile(*a_File);
+			delete t_LoadData;
+			return;
+		}
 
 		case 1:
 			t_Animation->m_State = t_Animation->LoadVersion1(t_BoneNameHashes, *a_File, t_Offset);

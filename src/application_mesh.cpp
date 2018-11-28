@@ -110,9 +110,9 @@ void ApplicationMesh::Draw(size_t a_SubMeshIndex, float a_Time, ShaderProgram& a
 
 	if (a_BoneTransforms)
 	{
-		if (Animation)
+		if (Animations[CurrentAnimation])
 		{
-			float t_AnimationDuration = Animation->GetDuration();
+			float t_AnimationDuration = Animations[CurrentAnimation]->GetDuration();
 			while (a_Time > t_AnimationDuration) a_Time -= t_AnimationDuration;
 
 			auto& t_Bones = Skeleton->GetBones();
@@ -165,7 +165,12 @@ void ApplicationMesh::SubMesh::SetTexture(std::string a_FilePath)
 	}, this);
 }
 
-void ApplicationMesh::ApplyAnimation(const League::Animation & a_Animation)
+void ApplicationMesh::AddAnimationReference(const std::string& a_Name, const League::Animation & a_Animation)
 {
-	Animation = &a_Animation;
+	Animations[a_Name] = &a_Animation;
+}
+
+void ApplicationMesh::ApplyAnimation(const std::string& a_Animation)
+{
+	CurrentAnimation = a_Animation;
 }
