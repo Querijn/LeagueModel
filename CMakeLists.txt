@@ -44,6 +44,7 @@ ADD_LEAGUEMODEL_SOURCE(File\\Emscripten						"src/file/emscripten_file.hpp"					
 ADD_LEAGUEMODEL_SOURCE(File\\Native							"src/file/native_file.hpp"						"src/file/native_file.cpp")
 
 ADD_LEAGUEMODEL_SOURCE(League\\Bin							"src/league/bin.hpp"							"src/league/bin.cpp")
+ADD_LEAGUEMODEL_SOURCE(League\\Bin\\ValueStorage			"src/league/bin_valuestorage.hpp"				"src/league/bin_valuestorage.cpp")
 ADD_LEAGUEMODEL_SOURCE(League\\Skin							"src/league/skin.hpp"							"src/league/skin.cpp")
 ADD_LEAGUEMODEL_SOURCE(League\\Skeleton						"src/league/skeleton.hpp"						"src/league/skeleton.cpp")
 ADD_LEAGUEMODEL_SOURCE(League\\Animation					"src/league/animation.hpp"						"src/league/animation.cpp")
