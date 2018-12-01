@@ -97,13 +97,13 @@ void League::Animation::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunc
 }
 
 
-glm::quat uncompressQuaternion(const uint16_t& t_DominantAxis, const uint16_t& t_X, const uint16_t& t_Y, const uint16_t& t_Z)
+glm::quat UncompressQuaternion(const uint16_t& t_DominantAxis, const uint16_t& a_X, const uint16_t& a_Y, const uint16_t& a_Z)
 {
-	float fx = sqrt(2.0f) * ((int)t_X - 16384) / 32768.0f;
-	float fy = sqrt(2.0f) * ((int)t_Y - 16384) / 32768.0f;
-	float fz = sqrt(2.0f) * ((int)t_Z - 16384) / 32768.0f;
+	float fx = sqrt(2.0f) * ((int)a_X - 16384) / 32768.0f;
+	float fy = sqrt(2.0f) * ((int)a_Y - 16384) / 32768.0f;
+	float fz = sqrt(2.0f) * ((int)a_Z - 16384) / 32768.0f;
 	float fw = sqrt(1.0f - fx * fx - fy * fy - fz * fz);
-
+	
 	glm::quat uq;
 
 	switch (t_DominantAxis)
@@ -140,29 +140,29 @@ glm::quat uncompressQuaternion(const uint16_t& t_DominantAxis, const uint16_t& t
 	return uq;
 }
 
-glm::vec3 uncompressVector(const glm::vec3& min, const glm::vec3& max, const uint16_t& t_X, const uint16_t& t_Y, const uint16_t& t_Z)
+glm::vec3 UncompressVec3(const glm::vec3& a_Min, const glm::vec3& a_Max, const uint16_t& a_X, const uint16_t& a_Y, const uint16_t& a_Z)
 {
-	glm::vec3 uv;
+	glm::vec3 t_Uncompressed;
 
-	uv = max - min;
+	t_Uncompressed = a_Max - a_Min;
 
-	uv.x *= (t_X / 65535.0f);
-	uv.y *= (t_Y / 65535.0f);
-	uv.z *= (t_Z / 65535.0f);
+	t_Uncompressed.x *= (a_X / 65535.0f);
+	t_Uncompressed.y *= (a_Y / 65535.0f);
+	t_Uncompressed.z *= (a_Z / 65535.0f);
 
-	uv = uv + min;
+	t_Uncompressed = t_Uncompressed + a_Min;
 
-	return uv;
+	return t_Uncompressed;
 }
 
-float uncompressTime(const uint16_t& ct, const float& animationLength)
+float UncompressTime(const uint16_t& a_CurrentTime, const float& a_AnimationLength)
 {
-	float ut;
+	float t_UncompressedTime;
 
-	ut = ct / 65535.0f;
-	ut = ut * animationLength;
+	t_UncompressedTime = a_CurrentTime / 65535.0f;
+	t_UncompressedTime = t_UncompressedTime * a_AnimationLength;
 
-	return ut;
+	return t_UncompressedTime;
 }
 
 const League::Animation::Bone* League::Animation::GetBone(std::string a_Name) const
@@ -292,21 +292,21 @@ File::LoadState League::Animation::LoadVersion1(const std::map<uint32_t, std::st
 
 		for (auto &t_CompressedTranslation : t_CompressedTranslations.at(i))
 		{
-			float t_Time = uncompressTime(t_CompressedTranslation.first, m_Duration);
+			float t_Time = UncompressTime(t_CompressedTranslation.first, m_Duration);
 
 			std::bitset<48> t_Mask = 0xFFFF;
 			uint16_t t_X = static_cast<uint16_t>((t_CompressedTranslation.second & t_Mask).to_ulong());
 			uint16_t t_Y = static_cast<uint16_t>((t_CompressedTranslation.second >> 16 & t_Mask).to_ulong());
 			uint16_t t_Z = static_cast<uint16_t>((t_CompressedTranslation.second >> 32 & t_Mask).to_ulong());
 
-			glm::vec3 t_Translation = uncompressVector(t_TranslationMin, t_TranslationMax, t_X, t_Y, t_Z);
+			glm::vec3 t_Translation = UncompressVec3(t_TranslationMin, t_TranslationMax, t_X, t_Y, t_Z);
 
 			t_BoneEntry.Translation.push_back(Bone::TranslationFrame(t_Time, t_Translation));
 		}
 
 		for (auto &t_CompressedRotation : t_CompressedRotations.at(i))
 		{
-			float t_Time = uncompressTime(t_CompressedRotation.first, m_Duration);
+			float t_Time = UncompressTime(t_CompressedRotation.first, m_Duration);
 
 			std::bitset<48> t_Mask = 0x7FFF;
 			uint16_t t_DominantAxis = static_cast<uint16_t>((t_CompressedRotation.second >> 45).to_ulong());
@@ -314,21 +314,21 @@ File::LoadState League::Animation::LoadVersion1(const std::map<uint32_t, std::st
 			uint16_t t_Y = static_cast<uint16_t>((t_CompressedRotation.second >> 15 & t_Mask).to_ulong());
 			uint16_t t_Z = static_cast<uint16_t>((t_CompressedRotation.second & t_Mask).to_ulong());
 
-			glm::quat t_Rotation = uncompressQuaternion(t_DominantAxis, t_X, t_Y, t_Z);
+			glm::quat t_Rotation = UncompressQuaternion(t_DominantAxis, t_X, t_Y, t_Z);
 
 			t_BoneEntry.Rotation.push_back(Bone::RotationFrame(t_Time, t_Rotation));
 		}
 
 		for (auto &t_CompressedScale : t_CompressedScales.at(i))
 		{
-			float t_Time = uncompressTime(t_CompressedScale.first, m_Duration);
+			float t_Time = UncompressTime(t_CompressedScale.first, m_Duration);
 
 			std::bitset<48> t_Mask = 0xFFFF;
 			uint16_t t_X = static_cast<uint16_t>((t_CompressedScale.second & t_Mask).to_ulong());
 			uint16_t t_Y = static_cast<uint16_t>((t_CompressedScale.second >> 16 & t_Mask).to_ulong());
 			uint16_t t_Z = static_cast<uint16_t>((t_CompressedScale.second >> 32 & t_Mask).to_ulong());
 
-			glm::vec3 t_Scale = uncompressVector(t_ScaleMin, t_ScaleMax, t_X, t_Y, t_Z);
+			glm::vec3 t_Scale = UncompressVec3(t_ScaleMin, t_ScaleMax, t_X, t_Y, t_Z);
 			t_BoneEntry.Scale.push_back(Bone::ScaleFrame(t_Time, t_Scale));
 		}
 

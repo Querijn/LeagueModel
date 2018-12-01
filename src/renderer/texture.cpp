@@ -123,7 +123,7 @@ File::LoadState Texture::UploadDDS(File* a_File)
 	unsigned int t_BlockSize = (t_Format == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT) ? 8 : 16;
 	unsigned int t_Height = t_Header.height;
 	unsigned int t_Width = t_Header.width;
-	std::vector<unsigned char> t_Buffer;
+	std::vector<uint8_t> t_Buffer;
 
 	for (unsigned int i = 0; i < std::max(1u, t_Header.mipMapCount); i++)
 	{
