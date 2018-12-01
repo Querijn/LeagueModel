@@ -22,16 +22,28 @@ public:
 	}
 
 	template<typename T>
-	bool Get(std::vector<T>& a_Element, size_t a_Offset)
+	bool Get(std::vector<T>& a_Element, size_t& a_Offset)
 	{
 		return false;
 	}
 
 	template<typename T>
-	bool Get(std::vector<T>& a_Element, size_t a_Count, size_t a_Offset)
+	bool Get(std::vector<T>& a_Element, size_t a_Count, size_t& a_Offset)
 	{
-		a_Element.resize(a_Count);
-		return Read((uint8_t*)a_Element.data(), a_Count * sizeof(T), a_Offset) == a_Count * sizeof(T);
+		a_Element.clear();
+
+		bool t_Worked = true;
+		for (int i = 0; i < a_Count; i++)
+		{
+			T t_Element;
+			if (Get(t_Element, a_Offset) != sizeof(T))
+				t_Worked = false;
+
+			auto t_Name = std::to_string(t_Element);
+			a_Element.push_back(t_Element);
+		}
+
+		return t_Worked;
 	}
 
 	const std::vector<uint8_t>& GetData() const;
