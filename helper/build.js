@@ -159,7 +159,17 @@ for (let include of includeFolders)
 
     const buildFiles = [];
 
-    const buildTime = isProduction ? buildInfoFile.productionBuildTime : buildInfoFile.developmentBuildTime;
+    let buildTime;
+    if (isProduction)
+    {
+        if (isWasm) buildTime = buildInfoFile.productionBuildTime;
+        else if (!isWasm) buildTime = buildInfoFile.productionBuildTimeJS;
+    }
+    else
+    {
+        if (isWasm) buildTime = buildInfoFile.developmentBuildTime;
+        else if (!isWasm) buildTime = buildInfoFile.developmentBuildTimeJS;
+    }
 
     let hasChanges = false;
     console.log(`Building ${sourceFiles.length} source files.`);
@@ -184,8 +194,17 @@ for (let include of includeFolders)
             await run(arg);
             hasChanges = true;
 
-            if (isProduction) buildInfoFile.productionBuildTime = new Date().getTime();
-            else buildInfoFile.developmentBuildTime = new Date().getTime();
+            if (isProduction)
+            {
+                if (isWasm) buildTime = buildInfoFile.productionBuildTime = new Date().getTime();
+                else if (!isWasm) buildTime = buildInfoFile.productionBuildTimeJS = new Date().getTime();
+            }
+            else
+            {
+                if (isWasm) buildTime = buildInfoFile.developmentBuildTime = new Date().getTime();
+                else if (!isWasm) buildTime = buildInfoFile.developmentBuildTimeJS = new Date().getTime();
+            }
+
             buildInfoFile.buildCount = sourceFiles.length;
         }
         catch (e) {
