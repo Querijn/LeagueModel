@@ -3,6 +3,7 @@
 #include <event_handler.hpp>
 #include <event_handler/events.hpp>
 
+#include <league/bin_valuestorage.hpp>
 #include <league/bin.hpp>
 #include <league/skin.hpp>
 #include <league/skeleton.hpp>
@@ -87,13 +88,16 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 		bool FirstAnimationApplied = false;
 		size_t References = 0;
 		Application::Mesh* Target;
+		League::Bin SkinBin;
+		League::Bin AnimationBin;
 	};
 	auto* t_LoadData = new LoadData(a_AnimationBinPath);
 
 	// Load in the BIN containing most of the information about the base mesh
-	League::Bin t_Bin;
-	t_Bin.Load(a_BinPath, [](League::Bin& a_Bin, void* a_UserData)
+	t_LoadData->SkinBin.Load(a_BinPath, [](League::Bin& a_Bin, void* a_UserData)
 	{
+		printf("Skin information is loaded!\n");
+
 		auto* t_LoadData = (LoadData*)a_UserData;
 		auto t_MeshProperties = a_Bin.Get("skinMeshProperties");
 		if (!t_MeshProperties)
@@ -102,54 +106,67 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 			return;
 		}
 
+		printf("Mesh properties are valid!\n");
+
 		// TODO: Make dynamic
 		t_LoadData->RootFolder = "data/output/";
 
 		// Get the skeleton file
-		auto t_SkeletonValue = t_MeshProperties->Get("skeleton");
+		auto t_SkeletonValue = (const League::StringValueStorage*)t_MeshProperties->GetChild("skeleton");
 		if (!t_SkeletonValue) return;
-		std::string t_Data = (const char*)(t_SkeletonValue->GetData());
-		std::string t_Skeleton = t_LoadData->RootFolder + t_Data;
+		std::string t_Skeleton = t_LoadData->RootFolder + t_SkeletonValue->Get();
 
 		// Get the skin file
-		auto t_SkinValue = t_MeshProperties->Get("simpleSkin");
+		auto t_SkinValue = (const League::StringValueStorage*)t_MeshProperties->GetChild("simpleSkin");
 		if (!t_SkinValue) return;
-		std::string t_Data2 = (const char*)t_SkinValue->GetData();
-		std::string t_Skin = t_LoadData->RootFolder + std::string(t_Data2);
+		std::string t_Skin = t_LoadData->RootFolder + t_SkinValue->Get();
 
 		// Get the texture file
-		auto t_TextureValue = t_MeshProperties->Get("texture");
+		auto t_TextureValue = (const League::StringValueStorage*)t_MeshProperties->GetChild("texture");
 		if (!t_TextureValue) return;
-		t_LoadData->Texture = t_LoadData->RootFolder + std::string((char*)t_TextureValue->GetData());
+		t_LoadData->Texture = t_LoadData->RootFolder + t_TextureValue->Get();
 
+		printf("Starting to load the mesh (%s and %s)..\n", t_Skin.c_str(), t_Skeleton.c_str());
+		
 		// Load the mesh (Skeleton + Skin)
 		Application::Instance->LoadMesh(t_Skin, t_Skeleton, [](std::string a_SkinPath, std::string a_SkeletonPath, Application::Mesh* a_Mesh, void* a_UserData)
 		{
+			printf("Mesh loaded!\n");
+
 			auto* t_LoadData = (LoadData*)a_UserData;
 			if (a_Mesh == nullptr) return;
 
 			t_LoadData->Target = a_Mesh;
 
+			printf("Loading texture %s..\n", t_LoadData->Texture.c_str());
 			// Set the texture (async)
 			a_Mesh->SubMeshes[0].SetTexture(t_LoadData->Texture);
 
+			printf("Requesting animation file..\n");
 			// Load all the animations
-			League::Bin t_Bin;
-			t_Bin.Load(t_LoadData->SkinBinPath, [](League::Bin& a_Bin, void* a_UserData)
+			t_LoadData->AnimationBin.Load(t_LoadData->SkinBinPath, [](League::Bin& a_Bin, void* a_UserData)
 			{
 				auto* t_LoadData = (LoadData*)a_UserData;
 				if (a_Bin.GetLoadState() != File::LoadState::Loaded) return;
 
+				// TODO: This currently kills the browser (Find())
+#if !defined(__EMSCRIPTEN__)
+				printf("Animation file is here! Trying to find all animation names..\n");
 				auto t_AnimationNames = a_Bin.Find([](const League::Bin::ValueStorage& a_ValueStorage, void* a_UserData)
 				{
-					return a_ValueStorage.GetType() == League::Bin::ValueStorage::Type::StringT && a_ValueStorage.Is("mAnimationFilePath");
+					if (a_ValueStorage.GetType() != League::Bin::ValueStorage::Type::String)
+						return false;
+
+					return a_ValueStorage.Is("mAnimationFilePath");
 				});
 
 				t_LoadData->References++;
 				for (auto t_AnimationNameStorage : t_AnimationNames)
 				{
 					t_LoadData->References++;
-					t_LoadData->AnimationName = t_LoadData->RootFolder + (const char*)t_AnimationNameStorage->GetData();
+
+					auto t_StringStorage = (const League::StringValueStorage*)t_AnimationNameStorage;
+					t_LoadData->AnimationName = t_LoadData->RootFolder + t_StringStorage->Get();
 					Instance->LoadAnimation(*t_LoadData->Target, t_LoadData->AnimationName, [](League::Animation& a_Animation, void* a_UserData)
 					{
 						auto* t_LoadData = (LoadData*)a_UserData;
@@ -158,6 +175,7 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 						if (a_Animation.GetLoadState() != File::LoadState::Loaded)
 							return;
 
+						t_LoadData->Target->AddAnimationReference(t_LoadData->AnimationName, a_Animation);
 						if (t_LoadData->FirstAnimationApplied)
 						{
 							if (t_LoadData->References == 0)
@@ -165,14 +183,14 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 							return;
 						}
 
-						t_LoadData->Target->AddAnimationReference(t_LoadData->AnimationName, a_Animation);
 						t_LoadData->Target->ApplyAnimation(t_LoadData->AnimationName);
 						t_LoadData->FirstAnimationApplied = true;
 					}, t_LoadData);
 				}
 
 				t_LoadData->References--;
-
+#endif
+				
 				// For Windows everything loads synchronously, so this will be zero here
 				if (t_LoadData->References == 0)
 					delete t_LoadData;
