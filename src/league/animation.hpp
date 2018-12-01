@@ -52,6 +52,7 @@ namespace League
 		File::LoadState m_State = File::LoadState::NotLoaded;
 
 		File::LoadState LoadVersion1(const std::map<uint32_t, std::string>& a_BoneNameHashes, File& a_File, size_t& a_Offset);
+		File::LoadState LoadVersion4(const std::map<uint32_t, std::string>& a_BoneNameHashes, File& a_File, size_t& a_Offset);
 
 		float m_FPS, m_Duration;
 		std::vector<Bone> m_Bones;
