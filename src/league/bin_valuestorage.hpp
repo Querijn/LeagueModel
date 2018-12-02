@@ -1,5 +1,6 @@
 #pragma once
 
+#include <league/bin.hpp>
 #include <file_system.hpp>
 
 #include <glm/glm.hpp>
@@ -46,7 +47,7 @@ namespace League
 			Padding = 24,
 		};
 
-		BaseValueStorage(Type a_Type, uint32_t a_Hash) : m_Hash(a_Hash), m_Type(a_Type) { }
+		BaseValueStorage(League::Bin& a_Bin, Type a_Type, uint32_t a_Hash) : m_Bin(a_Bin), m_Hash(a_Hash), m_Type(a_Type) { m_Bin.AddFlatValueStorage(this); }
 
 		virtual std::string DebugPrint() const = 0;
 		virtual std::string GetAsJSON(bool a_ExposeHash) const = 0;
@@ -64,12 +65,15 @@ namespace League
 
 		friend class League::Bin;
 	protected:
-		static BaseValueStorage* Create(Type a_Type, uint32_t a_Hash = 0);
-		static BaseValueStorage* Create(File* a_File, size_t& a_Offset);
+		static BaseValueStorage* Create(League::Bin& a_Bin, Type a_Type, uint32_t a_Hash = 0);
+		static BaseValueStorage* Create(League::Bin& a_Bin, File* a_File, size_t& a_Offset);
+		static BaseValueStorage* Create(BaseValueStorage& a_Parent, Type a_Type, uint32_t a_Hash = 0);
+		static BaseValueStorage* Create(BaseValueStorage& a_Parent, File* a_File, size_t& a_Offset);
 
 		std::string GetHashJSONPrefix() const; 
 
 	private:
+		League::Bin& m_Bin;
 		uint32_t m_Hash;
 		Type m_Type;
 	};
@@ -78,7 +82,7 @@ namespace League
 	class NumberValueStorage : public BaseValueStorage
 	{
 	public:
-		NumberValueStorage(Type a_Type, uint32_t a_Hash) : BaseValueStorage(a_Type, a_Hash) { }
+		NumberValueStorage(League::Bin& a_Bin, Type a_Type, uint32_t a_Hash) : BaseValueStorage(a_Bin, a_Type, a_Hash) { }
 
 		std::vector<const BaseValueStorage*> Find(FindConditionFunction a_Function, void * a_UserData) const override { return std::vector<const BaseValueStorage*>(); }
 
@@ -105,7 +109,7 @@ namespace League
 	class NumberVectorValueStorage : public BaseValueStorage
 	{
 	public:
-		NumberVectorValueStorage(Type a_Type, uint32_t a_Hash) : BaseValueStorage(a_Type, a_Hash) { }
+		NumberVectorValueStorage(League::Bin& a_Bin, Type a_Type, uint32_t a_Hash) : BaseValueStorage(a_Bin, a_Type, a_Hash) { }
 
 		std::vector<const BaseValueStorage*> Find(FindConditionFunction a_Function, void * a_UserData) const override { return std::vector<const BaseValueStorage*>(); }
 
@@ -165,7 +169,7 @@ namespace League
 	class StringValueStorage : public BaseValueStorage
 	{
 	public:
-		StringValueStorage(Type a_Type, uint32_t a_Hash) : BaseValueStorage(a_Type, a_Hash) { }
+		StringValueStorage(League::Bin& a_Bin, Type a_Type, uint32_t a_Hash) : BaseValueStorage(a_Bin, a_Type, a_Hash) { }
 
 		std::vector<const BaseValueStorage*> Find(FindConditionFunction a_Function, void * a_UserData) const override { return std::vector<const BaseValueStorage*>(); }
 
@@ -186,7 +190,7 @@ namespace League
 	class MatrixValueStorage : public BaseValueStorage
 	{
 	public:
-		MatrixValueStorage(Type a_Type, uint32_t a_Hash) : BaseValueStorage(a_Type, a_Hash) { }
+		MatrixValueStorage(League::Bin& a_Bin, Type a_Type, uint32_t a_Hash) : BaseValueStorage(a_Bin, a_Type, a_Hash) { }
 
 		std::vector<const BaseValueStorage*> Find(FindConditionFunction a_Function, void * a_UserData) const override { return std::vector<const BaseValueStorage*>(); }
 
@@ -207,7 +211,7 @@ namespace League
 	class ArrayValueStorage : public BaseValueStorage
 	{
 	public:
-		ArrayValueStorage(Type a_Type, uint32_t a_Hash) : BaseValueStorage(a_Type, a_Hash) { }
+		ArrayValueStorage(League::Bin& a_Bin, Type a_Type, uint32_t a_Hash) : BaseValueStorage(a_Bin, a_Type, a_Hash) { }
 
 		std::vector<const BaseValueStorage*> Find(FindConditionFunction a_Function, void * a_UserData) const override;
 
@@ -228,7 +232,7 @@ namespace League
 	class StructValueStorage : public ArrayValueStorage
 	{
 	public:
-		StructValueStorage(Type a_Type, uint32_t a_Hash) : ArrayValueStorage(a_Type, a_Hash) { }
+		StructValueStorage(League::Bin& a_Bin, Type a_Type, uint32_t a_Hash) : ArrayValueStorage(a_Bin, a_Type, a_Hash) { }
 
 		BaseValueStorage* GetChild(const std::string& a_Child) const override;
 
@@ -238,7 +242,7 @@ namespace League
 	class ContainerValueStorage : public ArrayValueStorage
 	{
 	public:
-		ContainerValueStorage(Type a_Type, uint32_t a_Hash) : ArrayValueStorage(a_Type, a_Hash) { }
+		ContainerValueStorage(League::Bin& a_Bin, Type a_Type, uint32_t a_Hash) : ArrayValueStorage(a_Bin, a_Type, a_Hash) { }
 
 		BaseValueStorage* GetChild(const std::string& a_Child) const override;
 
@@ -248,7 +252,7 @@ namespace League
 	class MapValueStorage : public BaseValueStorage
 	{
 	public:
-		MapValueStorage(Type a_Type, uint32_t a_Hash) : BaseValueStorage(a_Type, a_Hash) { }
+		MapValueStorage(League::Bin& a_Bin, Type a_Type, uint32_t a_Hash) : BaseValueStorage(a_Bin, a_Type, a_Hash) { }
 
 		std::vector<const BaseValueStorage*> Find(FindConditionFunction a_Function, void * a_UserData) const override;
 

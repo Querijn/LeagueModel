@@ -92,53 +92,63 @@ bool League::BaseValueStorage::Is(const std::string & a_Name) const
 	return FNV1Hash(a_Name) == m_Hash;
 }
 
-League::BaseValueStorage * League::BaseValueStorage::Create(Type a_Type, uint32_t a_Hash)
+League::BaseValueStorage * League::BaseValueStorage::Create(League::Bin& a_Bin, Type a_Type, uint32_t a_Hash)
 {
 	switch (a_Type)
 	{
-	case Bool: return new NumberValueStorage<bool>(a_Type, a_Hash);
-	case S8: return new NumberValueStorage<int8_t>(a_Type, a_Hash);
-	case U8: return new NumberValueStorage<uint8_t>(a_Type, a_Hash);
-	case S16: return new NumberValueStorage<int16_t>(a_Type, a_Hash);
-	case U16: return new NumberValueStorage<uint16_t>(a_Type, a_Hash);
-	case Link: return new NumberValueStorage<uint32_t>(a_Type, a_Hash);
-	case S32: return new NumberValueStorage<int32_t>(a_Type, a_Hash);
-	case U32: return new NumberValueStorage<uint32_t>(a_Type, a_Hash);
-	case S64: return new NumberValueStorage<int64_t>(a_Type, a_Hash);
-	case U64: return new NumberValueStorage<uint64_t>(a_Type, a_Hash);
-	case Float: return new NumberValueStorage<float>(a_Type, a_Hash);
-	case Hash: return new NumberValueStorage<uint32_t>(a_Type, a_Hash);
-	case Padding: return new NumberValueStorage<uint8_t>(a_Type, a_Hash);
+	case Bool: return new NumberValueStorage<bool>(a_Bin, a_Type, a_Hash);
+	case S8: return new NumberValueStorage<int8_t>(a_Bin, a_Type, a_Hash);
+	case U8: return new NumberValueStorage<uint8_t>(a_Bin, a_Type, a_Hash);
+	case S16: return new NumberValueStorage<int16_t>(a_Bin, a_Type, a_Hash);
+	case U16: return new NumberValueStorage<uint16_t>(a_Bin, a_Type, a_Hash);
+	case Link: return new NumberValueStorage<uint32_t>(a_Bin, a_Type, a_Hash);
+	case S32: return new NumberValueStorage<int32_t>(a_Bin, a_Type, a_Hash);
+	case U32: return new NumberValueStorage<uint32_t>(a_Bin, a_Type, a_Hash);
+	case S64: return new NumberValueStorage<int64_t>(a_Bin, a_Type, a_Hash);
+	case U64: return new NumberValueStorage<uint64_t>(a_Bin, a_Type, a_Hash);
+	case Float: return new NumberValueStorage<float>(a_Bin, a_Type, a_Hash);
+	case Hash: return new NumberValueStorage<uint32_t>(a_Bin, a_Type, a_Hash);
+	case Padding: return new NumberValueStorage<uint8_t>(a_Bin, a_Type, a_Hash);
 
-	case String: return new StringValueStorage(a_Type, a_Hash);
+	case String: return new StringValueStorage(a_Bin, a_Type, a_Hash);
 
-	case RGBA: return new NumberVectorValueStorage<glm::ivec4, glm::ivec4::value_type, uint8_t, 4>(a_Type, a_Hash);
-	case FVec2: return new NumberVectorValueStorage<glm::vec2, glm::vec2::value_type, float, 2>(a_Type, a_Hash);
-	case FVec3: return new NumberVectorValueStorage<glm::vec3, glm::vec3::value_type, float, 3>(a_Type, a_Hash);
-	case FVec4: return new NumberVectorValueStorage<glm::vec4, glm::vec4::value_type, float, 4>(a_Type, a_Hash);
-	case U16Vec3: return new NumberVectorValueStorage<glm::ivec3, glm::ivec3::value_type, uint16_t, 3>(a_Type, a_Hash);
+	case RGBA: return new NumberVectorValueStorage<glm::ivec4, glm::ivec4::value_type, uint8_t, 4>(a_Bin, a_Type, a_Hash);
+	case FVec2: return new NumberVectorValueStorage<glm::vec2, glm::vec2::value_type, float, 2>(a_Bin, a_Type, a_Hash);
+	case FVec3: return new NumberVectorValueStorage<glm::vec3, glm::vec3::value_type, float, 3>(a_Bin, a_Type, a_Hash);
+	case FVec4: return new NumberVectorValueStorage<glm::vec4, glm::vec4::value_type, float, 4>(a_Bin, a_Type, a_Hash);
+	case U16Vec3: return new NumberVectorValueStorage<glm::ivec3, glm::ivec3::value_type, uint16_t, 3>(a_Bin, a_Type, a_Hash);
 
 	case Struct:
 	case Embedded:
-		return new StructValueStorage(a_Type, a_Hash);
+		return new StructValueStorage(a_Bin, a_Type, a_Hash);
 
-	case Mat4: return new MatrixValueStorage(a_Type, a_Hash);
-	case Container: return new ContainerValueStorage(a_Type, a_Hash);
-	case Array: return new ArrayValueStorage(a_Type, a_Hash);
-	case Map: return new MapValueStorage(a_Type, a_Hash);
+	case Mat4: return new MatrixValueStorage(a_Bin, a_Type, a_Hash);
+	case Container: return new ContainerValueStorage(a_Bin, a_Type, a_Hash);
+	case Array: return new ArrayValueStorage(a_Bin, a_Type, a_Hash);
+	case Map: return new MapValueStorage(a_Bin, a_Type, a_Hash);
 
 	default: throw 0;
 	};
 }
 
-League::BaseValueStorage* League::BaseValueStorage::Create(File * a_File, size_t & a_Offset)
+League::BaseValueStorage* League::BaseValueStorage::Create(League::Bin& a_Bin, File * a_File, size_t & a_Offset)
 {
 	Type t_Type;
 	uint32_t t_Hash;
 	a_File->Get(t_Hash, a_Offset);
 	a_File->Get(t_Type, a_Offset);
 
-	return League::BaseValueStorage::Create(t_Type, t_Hash);
+	return League::BaseValueStorage::Create(a_Bin, t_Type, t_Hash);
+}
+
+League::BaseValueStorage* League::BaseValueStorage::Create(BaseValueStorage & a_Parent, Type a_Type, uint32_t a_Hash)
+{
+	return League::BaseValueStorage::Create(a_Parent.m_Bin, a_Type, a_Hash);
+}
+
+League::BaseValueStorage * League::BaseValueStorage::Create(BaseValueStorage & a_Parent, File * a_File, size_t & a_Offset)
+{
+	return League::BaseValueStorage::Create(a_Parent.m_Bin, a_File, a_Offset);
 }
 
 std::string League::BaseValueStorage::GetHashJSONPrefix() const
@@ -208,7 +218,7 @@ void League::StructValueStorage::FetchDataFromFile(File* a_File, size_t & a_Offs
 	m_Data.resize(t_Count);
 	for (int i = 0; i < t_Count; i++)
 	{
-		m_Data[i] = League::BaseValueStorage::Create(a_File, a_Offset);
+		m_Data[i] = League::BaseValueStorage::Create(*this, a_File, a_Offset);
 		m_Data[i]->FetchDataFromFile(a_File, a_Offset);
 	}
 }
@@ -237,7 +247,7 @@ void League::ContainerValueStorage::FetchDataFromFile(File * a_File, size_t & a_
 	m_Data.resize(t_Count);
 	for (int i = 0; i < t_Count; i++)
 	{
-		m_Data[i] = BaseValueStorage::Create(t_Type);
+		m_Data[i] = BaseValueStorage::Create(*this, t_Type);
 		m_Data[i]->FetchDataFromFile(a_File, a_Offset);
 	}
 }
@@ -281,7 +291,7 @@ void League::ArrayValueStorage::FetchDataFromFile(File * a_File, size_t & a_Offs
 	m_Data.resize(t_Count);
 	for (int i = 0; i < t_Count; i++)
 	{
-		m_Data[i] = League::BaseValueStorage::Create(t_Type);
+		m_Data[i] = League::BaseValueStorage::Create(*this, t_Type);
 		m_Data[i]->FetchDataFromFile(a_File, a_Offset);
 	}
 }
@@ -386,8 +396,8 @@ void League::MapValueStorage::FetchDataFromFile(File * a_File, size_t & a_Offset
 
 	for (int i = 0; i < t_Count; i++)
 	{
-		auto t_Key = BaseValueStorage::Create(t_KeyType);
-		auto t_Value = BaseValueStorage::Create(t_ValueType);
+		auto t_Key = BaseValueStorage::Create(*this, t_KeyType);
+		auto t_Value = BaseValueStorage::Create(*this, t_ValueType);
 
 		t_Key->FetchDataFromFile(a_File, a_Offset);
 		t_Value->FetchDataFromFile(a_File, a_Offset);

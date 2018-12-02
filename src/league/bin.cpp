@@ -107,7 +107,7 @@ void League::Bin::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction, 
 			auto& t_Vector = t_Bin->m_Values[t_Hash];
 			for (int j = 0; j < t_ValueCount; j++)
 			{
-				BaseValueStorage* t_Storage = League::BaseValueStorage::Create(a_File, t_Offset);
+				BaseValueStorage* t_Storage = League::BaseValueStorage::Create(*t_Bin, a_File, t_Offset);
 				t_Storage->FetchDataFromFile(a_File, t_Offset);
 				t_Vector.push_back(t_Storage);
 			}
@@ -153,19 +153,9 @@ std::string League::Bin::GetAsJSON() const
 std::vector<const League::BaseValueStorage*> League::Bin::Find(FindConditionFunction a_Function, void * a_UserData) const
 {
 	std::vector<const League::Bin::ValueStorage*> t_Results;
-	for (const auto& t_VectorReference : m_Values)
-	{
-		const auto& t_ValueVector = t_VectorReference.second;
-		for (int i = 0; i < t_ValueVector.size(); i++)
-		{
-			if (a_Function(*t_ValueVector[i], a_UserData))
-				t_Results.push_back(t_ValueVector[i]);
-
-			auto t_Results2 = t_ValueVector[i]->Find(a_Function, a_UserData);
-			if (t_Results2.size() != 0)
-				t_Results.insert(t_Results.end(), t_Results2.begin(), t_Results2.end());
-		}
-	}
+	for (const auto& t_Storage : m_FlatOverview)
+		if (a_Function(*t_Storage, a_UserData))
+			t_Results.push_back(t_Storage);
 
 	return t_Results;
 }
@@ -185,4 +175,9 @@ const League::Bin::ValueStorage * League::Bin::Get(std::string a_Name) const
 	}
 
 	return nullptr;
+}
+
+void League::Bin::AddFlatValueStorage(ValueStorage * a_Storage)
+{
+	m_FlatOverview.push_back(a_Storage);
 }
