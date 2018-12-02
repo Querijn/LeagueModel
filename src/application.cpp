@@ -149,8 +149,6 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 				auto* t_LoadData = (LoadData*)a_UserData;
 				if (a_Bin.GetLoadState() != File::LoadState::Loaded) return;
 
-				// TODO: This currently kills the browser (Find())
-#if !defined(__EMSCRIPTEN__)
 				printf("Animation file is here! Trying to find all animation names..\n");
 				auto t_AnimationNames = a_Bin.Find([](const League::Bin::ValueStorage& a_ValueStorage, void* a_UserData)
 				{
@@ -159,39 +157,42 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 
 					return a_ValueStorage.Is("mAnimationFilePath");
 				});
+				printf("Found all of them! We have %lu animations.\n", t_AnimationNames.size());
 
 				t_LoadData->References++;
 				for (auto t_AnimationNameStorage : t_AnimationNames)
 				{
-					t_LoadData->References++;
-
 					auto t_StringStorage = (const League::StringValueStorage*)t_AnimationNameStorage;
 					t_LoadData->AnimationName = t_LoadData->RootFolder + t_StringStorage->Get();
+
+					printf("Adding reference to \"%s\".\n", t_LoadData->AnimationName.c_str());
+					Instance->AddAnimationReference(*t_LoadData->Target, t_LoadData->AnimationName);
+
+					if (t_LoadData->FirstAnimationApplied) continue;
+					t_LoadData->References++;
 					Instance->LoadAnimation(*t_LoadData->Target, t_LoadData->AnimationName, [](League::Animation& a_Animation, void* a_UserData)
 					{
 						auto* t_LoadData = (LoadData*)a_UserData;
 						t_LoadData->References--;
 
 						if (a_Animation.GetLoadState() != File::LoadState::Loaded)
-							return;
-
-						t_LoadData->Target->AddAnimationReference(t_LoadData->AnimationName, a_Animation);
-						if (t_LoadData->FirstAnimationApplied)
 						{
 							if (t_LoadData->References == 0)
 								delete t_LoadData;
 							return;
 						}
 
+						t_LoadData->Target->AddAnimationReference(t_LoadData->AnimationName, a_Animation);
 						t_LoadData->Target->ApplyAnimation(t_LoadData->AnimationName);
-						t_LoadData->FirstAnimationApplied = true;
+						       
+						if (t_LoadData->References == 0)
+							delete t_LoadData;
 					}, t_LoadData);
+					t_LoadData->FirstAnimationApplied = true;
 				}
 
+				// On Windows it's all synchronous, so try to delete here
 				t_LoadData->References--;
-#endif
-				
-				// For Windows everything loads synchronously, so this will be zero here
 				if (t_LoadData->References == 0)
 					delete t_LoadData;
 			}, t_LoadData);
@@ -327,6 +328,11 @@ void Application::LoadAnimation(Application::Mesh & a_Mesh, std::string a_Animat
 		if (t_LoadData.OnLoadFunction) t_LoadData.OnLoadFunction(a_Animation, t_LoadData.Argument);
 		delete &t_LoadData;
 	}, t_LoadData);
+}
+
+void Application::AddAnimationReference(Application::Mesh & a_Mesh, const std::string & a_AnimationName)
+{
+	m_AvailableAnimations[&a_Mesh].push_back(a_AnimationName);
 }
 
 const Texture & Application::GetDefaultTexture() const

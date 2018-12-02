@@ -25,6 +25,7 @@ public:
 	void LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath);
 
 	void LoadAnimation(Application::Mesh& a_Mesh, std::string a_AnimationPath, League::Animation::OnLoadFunction a_OnLoadFunction = nullptr, void* a_UserData = nullptr);
+	void AddAnimationReference(Application::Mesh& a_Mesh, const std::string& a_AnimationName);
 
 	const Texture& GetDefaultTexture() const;
 
@@ -68,6 +69,7 @@ private:
 
 	std::vector<Mesh> m_Meshes;
 	std::vector<League::Animation*> m_Animations;
+	std::map<Mesh*, std::vector<std::string>> m_AvailableAnimations;
 
 	bool m_MouseIsDown = false;
 	glm::vec2 m_MousePosition;
