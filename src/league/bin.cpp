@@ -102,8 +102,6 @@ void League::Bin::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction, 
 			uint16_t t_ValueCount;
 			a_File->Get(t_ValueCount, t_Offset);
 
-			auto t_Name = GetStringByHash(t_Hash);
-
 			auto& t_Vector = t_Bin->m_Values[t_Hash];
 			for (int j = 0; j < t_ValueCount; j++)
 			{
