@@ -179,11 +179,7 @@ File::LoadState Texture::UploadRGB(File* a_File)
 
 	GL(glTexImage2D(GL_TEXTURE_2D, 0, t_Format, t_Width, t_Height, 0, t_Format, GL_UNSIGNED_BYTE, t_ImageData));
 
-#if defined(_WIN32)
 	stbi_image_free(t_ImageData);
-#elif defined(__EMSCRIPTEN__)
-	free(t_ImageData);
-#endif
 
 	return File::LoadState::Loaded;
 }
