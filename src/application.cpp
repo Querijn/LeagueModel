@@ -34,7 +34,7 @@ Application::Application(const char* a_Root) :
 {
 	Instance = this;
 
-	if (m_Root[m_Root.size() - 1] == '/')
+	if (m_Root[m_Root.size() - 1] != '/')
 		m_Root += "/";
 }
 
