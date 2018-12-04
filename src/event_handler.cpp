@@ -21,6 +21,17 @@ void EventHandler::Init()
 	m_Threads = new EventThread*[m_ThreadCount];
 	for (size_t i = 0; i < m_ThreadCount; i++)
 		m_Threads[i] = new EventThread();
+
+	std::atexit(EventHandler::CleanUp);
+}
+
+void EventHandler::CleanUp()
+{
+	for (size_t i = 0; i < m_ThreadCount; i++)
+		delete m_Threads[i];
+
+	for (auto t_Element : m_Queue)
+		delete t_Element;
 }
 
 void EventHandler::Run()

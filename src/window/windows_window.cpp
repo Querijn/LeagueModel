@@ -316,7 +316,7 @@ LRESULT WindowsWindow::WindowProcedure(HWND a_Window, UINT a_Message, WPARAM a_W
 	case WM_DESTROY:
 	case WM_QUIT:
 		t_Window->m_Quit = true;
-		return 0;
+		break;
 
 	case WM_SIZE:
 		if (a_WParam != SIZE_MAXHIDE && a_WParam != SIZE_MINIMIZED)

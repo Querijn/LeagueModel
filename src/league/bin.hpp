@@ -16,6 +16,8 @@ namespace League
 		using OnLoadFunction = void(*)(League::Bin& a_Bin, void* a_Argument);
 		using FindConditionFunction = bool(*)(const ValueStorage& a_Value, void* a_UserData);
 
+		~Bin();
+
 		void Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
 		std::string GetAsJSON() const;
 

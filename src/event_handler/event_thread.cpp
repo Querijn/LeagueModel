@@ -17,7 +17,11 @@ EventThread::EventThread() :
 
 EventThread::~EventThread()
 {
-	delete m_Thread;
+	if (m_Thread)
+	{
+		delete m_Thread;
+		m_Thread = nullptr;
+	}
 }
 
 void EventThread::Detach()

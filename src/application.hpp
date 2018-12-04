@@ -29,6 +29,14 @@ public:
 
 	const Texture& GetDefaultTexture() const;
 
+	Mesh* GetMeshUnsafe(const std::string& a_Name);
+
+	const Mesh* GetMesh(const std::string& a_Name) const;
+	std::vector<std::string> GetAnimationsForMesh(const Mesh& a_Mesh) const;
+	std::vector<std::string> GetAnimationsForMesh(const std::string& a_Name) const;
+
+	std::vector<std::string> GetSkinFiles() const;
+
 private:
 	void OnMouseDownEvent(const MouseDownEvent* a_Event);
 	void OnMouseUp(const MouseUpEvent* a_Event);
@@ -67,9 +75,9 @@ private:
 	glm::vec3 m_CameraPosition = glm::vec3(0, 0, 1);
 	float m_CameraDistance = 1000;
 
-	std::vector<Mesh> m_Meshes;
+	std::map<std::string, Mesh> m_Meshes;
 	std::vector<League::Animation*> m_Animations;
-	std::map<Mesh*, std::vector<std::string>> m_AvailableAnimations;
+	std::map<const Mesh*, std::vector<std::string>> m_AvailableAnimations;
 
 	bool m_MouseIsDown = false;
 	glm::vec2 m_MousePosition;

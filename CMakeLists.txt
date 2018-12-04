@@ -68,6 +68,8 @@ ADD_LEAGUEMODEL_SOURCE(Platform\\BasePlatform				"src/platform/base_platform.hpp
 ADD_LEAGUEMODEL_SOURCE(Platform\\WindowsPlatform			"src/platform/windows_platform.hpp"				"src/platform/windows_platform.cpp")
 ADD_LEAGUEMODEL_SOURCE(Platform\\EmscriptenPlatform			"src/platform/emscripten_platform.hpp"			"src/platform/emscripten_platform.cpp")
 
+ADD_LEAGUEMODEL_SOURCE(Profiling\\Memory					"src/profiling/memory.hpp"						"src/profiling/memory.cpp")
+
 ADD_LEAGUEMODEL_SOURCE(Helper								"src/helper.hpp"								"src/helper.cpp")
 
 ADD_LEAGUEMODEL_SOURCE(EventHandler							"src/event_handler.hpp"							"src/event_handler.cpp")

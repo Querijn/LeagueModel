@@ -1,10 +1,18 @@
 #include "bin.hpp"
 #include "bin_valuestorage.hpp"
 
+#include <profiling/memory.hpp>
+
 #include <cassert>
 
 uint32_t FNV1Hash(std::string a_String);
 std::string GetStringByHash(uint32_t a_Hash);
+
+League::Bin::~Bin()
+{
+	for (auto t_Element : m_FlatOverview)
+		Delete(t_Element);
+}
 
 void League::Bin::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction, void * a_Argument)
 {
@@ -20,7 +28,7 @@ void League::Bin::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction, 
 		OnLoadFunction OnLoadFunction;
 		void* Argument;
 	};
-	auto* t_LoadData = new LoadData(this, a_OnLoadFunction, a_Argument);
+	auto* t_LoadData = New(LoadData(this, a_OnLoadFunction, a_Argument));
 
 	t_File->Load([](File* a_File, File::LoadState a_LoadState, void* a_Argument)
 	{
@@ -33,7 +41,7 @@ void League::Bin::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction, 
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Bin, t_LoadData->Argument);
 
 			FileSystem::CloseFile(*a_File);
-			delete t_LoadData;
+			Delete(t_LoadData);
 			return;
 		}
 
@@ -46,7 +54,7 @@ void League::Bin::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction, 
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Bin, t_LoadData->Argument);
 
 			FileSystem::CloseFile(*a_File);
-			delete t_LoadData;
+			Delete(t_LoadData);
 			return;
 		}
 
@@ -58,7 +66,7 @@ void League::Bin::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction, 
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Bin, t_LoadData->Argument);
 
 			FileSystem::CloseFile(*a_File);
-			delete t_LoadData;
+			Delete(t_LoadData);
 			return;
 		}
 
@@ -117,7 +125,7 @@ void League::Bin::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction, 
 		if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Bin, t_LoadData->Argument);
 
 		FileSystem::CloseFile(*a_File);
-		delete t_LoadData;
+		Delete(t_LoadData);
 	}, t_LoadData);
 }
 

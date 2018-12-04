@@ -11,6 +11,8 @@
 
 #include <algorithm>
 
+#include <profiling/memory.hpp>
+
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
@@ -35,11 +37,12 @@ Application::~Application()
 {
 	for (auto t_Animation : m_Animations)
 	{
-		delete t_Animation;
+		Delete(t_Animation);
 		t_Animation = nullptr;
 	}
 
 	m_Animations.clear();
+	m_Meshes.clear();
 }
 
 void Application::Init()
@@ -60,7 +63,6 @@ void Application::Init()
 	LoadDefaultTexture();
 	LoadShaders();
 
-	LoadSkin("data/output/data/characters/poppy/skins/skin0.bin", "data/output/data/characters/poppy/animations/skin0.bin");
 	UpdateViewMatrix();
 
 	Platform::SetMainLoop([]() 
@@ -91,7 +93,7 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 		League::Bin SkinBin;
 		League::Bin AnimationBin;
 	};
-	auto* t_LoadData = new LoadData(a_AnimationBinPath);
+	auto* t_LoadData = New(LoadData(a_AnimationBinPath));
 
 	// Load in the BIN containing most of the information about the base mesh
 	t_LoadData->SkinBin.Load(a_BinPath, [](League::Bin& a_Bin, void* a_UserData)
@@ -102,7 +104,7 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 		auto t_MeshProperties = a_Bin.Get("skinMeshProperties");
 		if (!t_MeshProperties)
 		{
-			delete t_LoadData;
+			Delete(t_LoadData);
 			return;
 		}
 
@@ -113,17 +115,17 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 
 		// Get the skeleton file
 		auto t_SkeletonValue = (const League::StringValueStorage*)t_MeshProperties->GetChild("skeleton");
-		if (!t_SkeletonValue) return;
+		if (!t_SkeletonValue) { Delete(t_LoadData); return; }
 		std::string t_Skeleton = t_LoadData->RootFolder + t_SkeletonValue->Get();
 
 		// Get the skin file
 		auto t_SkinValue = (const League::StringValueStorage*)t_MeshProperties->GetChild("simpleSkin");
-		if (!t_SkinValue) return;
+		if (!t_SkinValue) { Delete(t_LoadData); return; }
 		std::string t_Skin = t_LoadData->RootFolder + t_SkinValue->Get();
 
 		// Get the texture file
 		auto t_TextureValue = (const League::StringValueStorage*)t_MeshProperties->GetChild("texture");
-		if (!t_TextureValue) return;
+		if (!t_TextureValue) { Delete(t_LoadData); return; }
 		t_LoadData->Texture = t_LoadData->RootFolder + t_TextureValue->Get();
 
 		printf("Starting to load the mesh (%s and %s)..\n", t_Skin.c_str(), t_Skeleton.c_str());
@@ -178,7 +180,7 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 						if (a_Animation.GetLoadState() != File::LoadState::Loaded)
 						{
 							if (t_LoadData->References == 0)
-								delete t_LoadData;
+								Delete(t_LoadData);
 							return;
 						}
 
@@ -186,7 +188,7 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 						t_LoadData->Target->ApplyAnimation(t_LoadData->AnimationName);
 						       
 						if (t_LoadData->References == 0)
-							delete t_LoadData;
+							Delete(t_LoadData);
 					}, t_LoadData);
 					t_LoadData->FirstAnimationApplied = true;
 				}
@@ -194,7 +196,7 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 				// On Windows it's all synchronous, so try to delete here
 				t_LoadData->References--;
 				if (t_LoadData->References == 0)
-					delete t_LoadData;
+					Delete(t_LoadData);
 			}, t_LoadData);
 
 		}, t_LoadData);
@@ -211,37 +213,34 @@ void Application::LoadMesh(std::string a_SkinPath, std::string a_SkeletonPath, O
 
 		std::string SkinPath;
 		std::string SkeletonPath;
-		League::Skin* SkinTarget = nullptr;
+		League::Skin SkinTarget;
 		OnMeshLoadFunction OnLoadFunction;
 		void* Argument;
 	};
-	auto* t_LoadData = new LoadData(a_SkinPath, a_SkeletonPath, a_OnLoadFunction, a_UserData);
+	auto* t_LoadData = New(LoadData(a_SkinPath, a_SkeletonPath, a_OnLoadFunction, a_UserData));
 
-	auto* t_Skin = new League::Skin();
-	t_Skin->Load(a_SkinPath, [](League::Skin& a_Skin, void* a_Argument)
+	t_LoadData->SkinTarget.Load(a_SkinPath, [](League::Skin& a_Skin, void* a_Argument)
 	{
 		auto& t_LoadData = *(LoadData*)a_Argument;
 		if (a_Skin.GetLoadState() != File::LoadState::Loaded)
 		{
 			if (t_LoadData.OnLoadFunction) t_LoadData.OnLoadFunction(t_LoadData.SkinPath, t_LoadData.SkeletonPath, nullptr, t_LoadData.Argument);
-			delete &a_Skin;
-			delete &t_LoadData;
+			Delete(&t_LoadData);
 			return;
 		}
 
-		t_LoadData.SkinTarget = &a_Skin;
 		auto* t_Skeleton = new League::Skeleton(a_Skin);
 		t_Skeleton->Load(t_LoadData.SkeletonPath, [](League::Skeleton& a_Skeleton, void* a_Argument)
 		{
 			auto& t_LoadData = *(LoadData*)a_Argument;
 			auto& t_Meshes = Instance->m_Meshes;
 			auto& t_ShaderProgram = Instance->m_ShaderProgram;
-			auto& t_Skin = *t_LoadData.SkinTarget;
+			auto& t_Skin = t_LoadData.SkinTarget;
 
 			// We can only start loading the mesh AFTER we load (or fail to load the skeleton), because the skeleton potentially modifies the bone indices
 			Mesh t_Mesh;
 			if (a_Skeleton.GetLoadState() == File::LoadState::Loaded)
-				t_Mesh.Skeleton = std::shared_ptr<League::Skeleton>(&a_Skeleton); // Now the mesh owns this pointer
+				t_Mesh.Skeleton = std::make_shared<League::Skeleton>(a_Skeleton); // Now the mesh owns this pointer
 			else
 			{
 				// Data is worthless to us, delete
@@ -276,13 +275,10 @@ void Application::LoadMesh(std::string a_SkinPath, std::string a_SkeletonPath, O
 				t_Mesh.SubMeshes.push_back(t_Submesh);
 			}
 
-			t_Meshes.push_back(t_Mesh);
+			t_Meshes[t_LoadData.SkinPath] = t_Mesh;
+			if (t_LoadData.OnLoadFunction) t_LoadData.OnLoadFunction(t_LoadData.SkinPath, t_LoadData.SkeletonPath, &t_Meshes[t_LoadData.SkinPath], t_LoadData.Argument);
 
-			auto& t_MeshReference = t_Meshes.back();
-			if (t_LoadData.OnLoadFunction) t_LoadData.OnLoadFunction(t_LoadData.SkinPath, t_LoadData.SkeletonPath, &t_MeshReference, t_LoadData.Argument);
-
-			delete &t_Skin;
-			delete &t_LoadData;
+			Delete(&t_LoadData);
 		}, &t_LoadData);
 
 	}, t_LoadData);
@@ -310,23 +306,23 @@ void Application::LoadAnimation(Application::Mesh & a_Mesh, std::string a_Animat
 		League::Animation::OnLoadFunction OnLoadFunction;
 		void* Argument;
 	};
-	auto* t_LoadData = new LoadData(a_AnimationPath, a_OnLoadFunction, a_UserData);
+	auto* t_LoadData = New(LoadData(a_AnimationPath, a_OnLoadFunction, a_UserData));
 
-	auto* t_Animation = new League::Animation(*a_Mesh.Skeleton);
+	auto* t_Animation = New(League::Animation(*a_Mesh.Skeleton));
 	t_Animation->Load(a_AnimationPath, [](League::Animation& a_Animation, void* a_Argument)
 	{
 		auto& t_LoadData = *(LoadData*)a_Argument;
 		if (a_Animation.GetLoadState() != File::LoadState::Loaded)
 		{
 			if (t_LoadData.OnLoadFunction) t_LoadData.OnLoadFunction(a_Animation, t_LoadData.Argument);
-			delete &t_LoadData;
-			delete &a_Animation;
+			Delete(&t_LoadData);
+			Delete(&a_Animation);
 			return;
 		}
 
 		Instance->m_Animations.push_back(&a_Animation);
 		if (t_LoadData.OnLoadFunction) t_LoadData.OnLoadFunction(a_Animation, t_LoadData.Argument);
-		delete &t_LoadData;
+		Delete(&t_LoadData);
 	}, t_LoadData);
 }
 
@@ -338,6 +334,52 @@ void Application::AddAnimationReference(Application::Mesh & a_Mesh, const std::s
 const Texture & Application::GetDefaultTexture() const
 {
 	return m_DefaultTexture;
+}
+
+Application::Mesh * Application::GetMeshUnsafe(const std::string & a_Name)
+{
+	auto t_Index = m_Meshes.find(a_Name);
+	if (t_Index == m_Meshes.end())
+		return nullptr;
+
+	return &t_Index->second;
+}
+
+const Application::Mesh * Application::GetMesh(const std::string & a_Name) const
+{
+	auto t_Index = m_Meshes.find(a_Name);
+	if (t_Index == m_Meshes.end())
+		return nullptr;
+
+	return &t_Index->second;
+}
+
+std::vector<std::string> Application::GetAnimationsForMesh(const Mesh & a_Mesh) const
+{
+	auto t_Index = m_AvailableAnimations.find(&a_Mesh);
+	if (t_Index == m_AvailableAnimations.end())
+		return std::vector<std::string>();
+
+	return t_Index->second;
+}
+
+std::vector<std::string> Application::GetAnimationsForMesh(const std::string & a_Name) const
+{
+	auto t_Mesh = GetMesh(a_Name);
+	if (t_Mesh == nullptr)
+		return std::vector<std::string>();
+
+	return GetAnimationsForMesh(*t_Mesh);
+}
+
+std::vector<std::string> Application::GetSkinFiles() const
+{
+	std::vector<std::string> t_Results;
+
+	for (auto& t_MeshInfo : m_Meshes)
+		t_Results.push_back(t_MeshInfo.first);
+
+	return t_Results;
 }
 
 void Application::OnMouseDownEvent(const MouseDownEvent * a_Event)
@@ -438,15 +480,20 @@ bool Application::Update(double a_DT)
 		m_Window.SwapBuffers();
 		return m_Window.RunFrame();
 	}
-	auto& t_DrawMesh = m_Meshes.back();
 
-	if (t_DrawMesh.SubMeshes.size() == 0)
+	for (auto& t_MeshInfo : m_Meshes)
 	{
-		m_Window.SwapBuffers();
-		return m_Window.RunFrame();
+		auto& t_DrawMesh = t_MeshInfo.second;
+		if (t_DrawMesh.SubMeshes.size() == 0)
+		{
+			m_Window.SwapBuffers();
+			return m_Window.RunFrame();
+		}
+
+		*m_MVPUniform = m_ProjectionMatrix * m_ViewMatrix * t_DrawMesh.SubMeshes[0].GetTransformMatrix();
+		t_DrawMesh.Draw(0, m_Time += a_DT, m_ShaderProgram, *m_MVPUniform, m_TextureUniform ? &m_TextureUniform->Get() : nullptr, m_BoneArrayUniform ? &m_BoneArrayUniform->Get() : nullptr);
+		break;
 	}
-	*m_MVPUniform = m_ProjectionMatrix * m_ViewMatrix * t_DrawMesh.SubMeshes[0].GetTransformMatrix();
-	t_DrawMesh.Draw(0, m_Time += a_DT, m_ShaderProgram, *m_MVPUniform, m_TextureUniform ? &m_TextureUniform->Get() : nullptr, m_BoneArrayUniform ? &m_BoneArrayUniform->Get() : nullptr);
 
 	m_Window.SwapBuffers();
 	return m_Window.RunFrame();
@@ -456,9 +503,8 @@ int main()
 {
 	printf("LeagueModel Application built on %s at %s, calling new\n", __DATE__, __TIME__);
 	auto* t_Application = new Application();
-
-	printf("Initialising\n");
 	Application::Instance->Init();
 
-	printf("End of main()\n");
+	delete Application::Instance;
+	Memory::Expose();
 }

@@ -1,4 +1,5 @@
 #include "bin_valuestorage.hpp"
+#include "profiling/memory.hpp"
 
 #include <glm/glm.hpp>
 
@@ -92,40 +93,46 @@ bool League::BaseValueStorage::Is(const std::string & a_Name) const
 	return FNV1Hash(a_Name) == m_Hash;
 }
 
+using U16Vec3Storage = League::NumberVectorValueStorage<glm::ivec3, glm::ivec3::value_type, uint16_t, 3>;
+using FVec4Storage = League::NumberVectorValueStorage<glm::vec4, glm::vec4::value_type, float, 4>;
+using FVec3Storage = League::NumberVectorValueStorage<glm::vec3, glm::vec3::value_type, float, 3>;
+using FVec2Storage = League::NumberVectorValueStorage<glm::vec2, glm::vec2::value_type, float, 2>;
+using RGBAStorage = League::NumberVectorValueStorage<glm::ivec4, glm::ivec4::value_type, uint8_t, 4>;
+
 League::BaseValueStorage * League::BaseValueStorage::Create(League::Bin& a_Bin, Type a_Type, uint32_t a_Hash)
 {
 	switch (a_Type)
 	{
-	case Bool: return new NumberValueStorage<bool>(a_Bin, a_Type, a_Hash);
-	case S8: return new NumberValueStorage<int8_t>(a_Bin, a_Type, a_Hash);
-	case U8: return new NumberValueStorage<uint8_t>(a_Bin, a_Type, a_Hash);
-	case S16: return new NumberValueStorage<int16_t>(a_Bin, a_Type, a_Hash);
-	case U16: return new NumberValueStorage<uint16_t>(a_Bin, a_Type, a_Hash);
-	case Link: return new NumberValueStorage<uint32_t>(a_Bin, a_Type, a_Hash);
-	case S32: return new NumberValueStorage<int32_t>(a_Bin, a_Type, a_Hash);
-	case U32: return new NumberValueStorage<uint32_t>(a_Bin, a_Type, a_Hash);
-	case S64: return new NumberValueStorage<int64_t>(a_Bin, a_Type, a_Hash);
-	case U64: return new NumberValueStorage<uint64_t>(a_Bin, a_Type, a_Hash);
-	case Float: return new NumberValueStorage<float>(a_Bin, a_Type, a_Hash);
-	case Hash: return new NumberValueStorage<uint32_t>(a_Bin, a_Type, a_Hash);
-	case Padding: return new NumberValueStorage<uint8_t>(a_Bin, a_Type, a_Hash);
+	case Bool: return New(NumberValueStorage<bool>(a_Bin, a_Type, a_Hash));
+	case S8: return New(NumberValueStorage<int8_t>(a_Bin, a_Type, a_Hash));
+	case U8: return New(NumberValueStorage<uint8_t>(a_Bin, a_Type, a_Hash));
+	case S16: return New(NumberValueStorage<int16_t>(a_Bin, a_Type, a_Hash));
+	case U16: return New(NumberValueStorage<uint16_t>(a_Bin, a_Type, a_Hash));
+	case Link: return New(NumberValueStorage<uint32_t>(a_Bin, a_Type, a_Hash));
+	case S32: return New(NumberValueStorage<int32_t>(a_Bin, a_Type, a_Hash));
+	case U32: return New(NumberValueStorage<uint32_t>(a_Bin, a_Type, a_Hash));
+	case S64: return New(NumberValueStorage<int64_t>(a_Bin, a_Type, a_Hash));
+	case U64: return New(NumberValueStorage<uint64_t>(a_Bin, a_Type, a_Hash));
+	case Float: return New(NumberValueStorage<float>(a_Bin, a_Type, a_Hash));
+	case Hash: return New(NumberValueStorage<uint32_t>(a_Bin, a_Type, a_Hash));
+	case Padding: return New(NumberValueStorage<uint8_t>(a_Bin, a_Type, a_Hash));
 
-	case String: return new StringValueStorage(a_Bin, a_Type, a_Hash);
+	case String: return New(StringValueStorage(a_Bin, a_Type, a_Hash));
 
-	case RGBA: return new NumberVectorValueStorage<glm::ivec4, glm::ivec4::value_type, uint8_t, 4>(a_Bin, a_Type, a_Hash);
-	case FVec2: return new NumberVectorValueStorage<glm::vec2, glm::vec2::value_type, float, 2>(a_Bin, a_Type, a_Hash);
-	case FVec3: return new NumberVectorValueStorage<glm::vec3, glm::vec3::value_type, float, 3>(a_Bin, a_Type, a_Hash);
-	case FVec4: return new NumberVectorValueStorage<glm::vec4, glm::vec4::value_type, float, 4>(a_Bin, a_Type, a_Hash);
-	case U16Vec3: return new NumberVectorValueStorage<glm::ivec3, glm::ivec3::value_type, uint16_t, 3>(a_Bin, a_Type, a_Hash);
+	case RGBA: return New(RGBAStorage(a_Bin, a_Type, a_Hash));
+	case FVec2: return New(FVec2Storage(a_Bin, a_Type, a_Hash));
+	case FVec3: return New(FVec3Storage(a_Bin, a_Type, a_Hash));
+	case FVec4: return New(FVec4Storage(a_Bin, a_Type, a_Hash));
+	case U16Vec3: return New(U16Vec3Storage(a_Bin, a_Type, a_Hash));
 
 	case Struct:
 	case Embedded:
-		return new StructValueStorage(a_Bin, a_Type, a_Hash);
+		return New(StructValueStorage(a_Bin, a_Type, a_Hash));
 
-	case Mat4: return new MatrixValueStorage(a_Bin, a_Type, a_Hash);
-	case Container: return new ContainerValueStorage(a_Bin, a_Type, a_Hash);
-	case Array: return new ArrayValueStorage(a_Bin, a_Type, a_Hash);
-	case Map: return new MapValueStorage(a_Bin, a_Type, a_Hash);
+	case Mat4: return New(MatrixValueStorage(a_Bin, a_Type, a_Hash));
+	case Container: return New(ContainerValueStorage(a_Bin, a_Type, a_Hash));
+	case Array: return New(ArrayValueStorage(a_Bin, a_Type, a_Hash));
+	case Map: return New(MapValueStorage(a_Bin, a_Type, a_Hash));
 
 	default: throw 0;
 	};

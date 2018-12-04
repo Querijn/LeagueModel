@@ -12,6 +12,7 @@ class EventHandler
 {
 public:
 	static void Init();
+	static void CleanUp();
 
 	template<typename T, typename... TArgs>
 	static void EmitEvent(TArgs... a_Args)
