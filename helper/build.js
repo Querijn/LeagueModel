@@ -12,6 +12,8 @@ const baseBuildFolder = "build/web_";
 const procArgs = process.argv.filter((v, i) => i >= 2);
 const isProduction = procArgs[0] && procArgs[0].toLowerCase().startsWith("prod");
 const isWasm = !procArgs.includes("no-wasm");
+const noSkip = procArgs.includes("no-skip");
+const alwaysCombine = procArgs.includes("combine");
 const buildFolder = baseBuildFolder + (isProduction ? "prod" : "dev") + (!isWasm ? "_js/" : "/");
 const foldersToCopy = [ "data/" ];
 console.log(`Running a ${isProduction ? "production" : "develop"} build ${isWasm ? "as WebAssembly" : "without WebAssembly"}.`);
@@ -20,9 +22,9 @@ const devShell = "helper/dev_index.html";
 const prodShell = "helper/prod_index.html";
 const shellFile = isProduction ? prodShell : devShell;
 
-const requiredArgs = [ "-std=c++11", "-s", "FULL_ES2=1", "-Werror", "-s", "ASSERTIONS=2", "-s", "DEMANGLE_SUPPORT=1",  "-s", "ALLOW_MEMORY_GROWTH=1", "-s", "SAFE_HEAP=1" ]; // , "--shell-file", shellFile ];
-const devArgs = [ "-g4", "--source-map-base", "http://localhost:8080/", ];
-const prodArgs = [ "-Os", "--closure", "1", "-Walmost-asm" ];
+const requiredArgs = [ "-std=c++11", "-s", "FULL_ES2=1", "-Werror", "--bind", "-s", "ASSERTIONS=2", "-s", "DEMANGLE_SUPPORT=1",  "-s", "ALLOW_MEMORY_GROWTH=1", "--shell-file", shellFile ];
+const devArgs = [ "-g4", "--source-map-base", "http://localhost:8080/", "-s", "SAFE_HEAP=1" ];
+const prodArgs = [ "-Os", "--closure", "1", ];
 
 function fileBackedObject(path) {
     const contents = fs.readFileSync(path, "utf8");
@@ -110,6 +112,9 @@ function getModifyTime(file) {
 }
 
 function shouldBuild(sourceFile, buildFileTime) {
+    
+    if (noSkip) return true;
+
     const latestChange = getModifyTime(sourceFile);
     if (latestChange > buildFileTime)
         return true;
@@ -213,7 +218,7 @@ for (let include of includeFolders)
         }
     }
 
-    if (!hasChanges && sourceFiles.length == buildInfoFile.buildCount) {
+    if (!alwaysCombine && !hasChanges && sourceFiles.length == buildInfoFile.buildCount) {
         console.log("No changes detected, skipping final combine.");
         return;
     }
