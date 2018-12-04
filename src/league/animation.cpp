@@ -186,7 +186,7 @@ File::LoadState League::Animation::LoadVersion1(const std::map<uint32_t, std::st
 
 	a_Offset += 8;
 
-	size_t t_FrameCount, t_BoneCount;
+	uint32_t t_FrameCount, t_BoneCount;
 	a_File.Read((uint8_t*)(&t_BoneCount), 4, a_Offset);
 	int32_t t_EntryCount;
 	a_File.Read((uint8_t*)(&t_EntryCount), 4, a_Offset);
