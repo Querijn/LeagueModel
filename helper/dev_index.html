@@ -1,0 +1,20 @@
+<html>
+  <head>
+    <title>LeagueModel</title>
+  <body>
+    <canvas id='canvas' width='256' height='256'></canvas>
+    <select id="champ-select">
+    </select>
+    <button onclick='LoadSkin();'>
+      Load!
+    </button>
+    <script src="data/interface.js"></script>
+    <script type='text/javascript'>
+      var Module = {
+        print: (function() { return function(text) { console.log(text); }; })(),
+        canvas: document.getElementById('canvas')
+      };
+    </script>
+    {{{ SCRIPT }}}
+  </body>
+</html>
