@@ -17,6 +17,8 @@ namespace League
 	{
 	public:
 		using FindConditionFunction = bool(*)(const BaseValueStorage& a_Value, void* a_UserData);
+
+		virtual ~BaseValueStorage() {}
 		
 		enum Type : uint8_t
 		{

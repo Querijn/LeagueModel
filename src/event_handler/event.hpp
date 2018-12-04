@@ -190,6 +190,7 @@ public:
 	using ListenerFunction = EventListenerFunction;
 
 	Event();
+	virtual ~Event() {}
 
 	virtual const char* GetName() const = 0;
 	void Run();

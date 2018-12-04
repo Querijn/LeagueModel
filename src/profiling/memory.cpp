@@ -1,6 +1,7 @@
 #include "memory.hpp"
 
 #include <cstdio>
+#include <string>
 
 #if defined(NDEBUG) && !defined(DEBUG_MEMORY)
 
@@ -27,7 +28,7 @@ void Memory::Expose()
 	if (m_Data == nullptr) return;
 
 	for (auto& t_Data : *m_Data)
-		printf("%s:%d leaked a %s!\n", t_Data.second.File.c_str(), t_Data.second.Line, t_Data.second.Name.c_str());
+		printf("%s:%zu leaked a %s!\n", t_Data.second.File.c_str(), t_Data.second.Line, t_Data.second.Name.c_str());
 
 	delete m_Data;
 	m_Data = nullptr;
@@ -37,7 +38,7 @@ void Memory::DeletePointerInfo(const char * a_File, size_t a_Line, const char * 
 {
 	if (m_Data == nullptr) return;
 
-	auto& t_Data = m_Data->find(a_Pointer);
+	const auto& t_Data = m_Data->find(a_Pointer);
 	if (t_Data == m_Data->end()) return;
 
 	m_Data->erase(t_Data);

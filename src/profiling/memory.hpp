@@ -1,5 +1,8 @@
 #pragma once
 
+#include <stddef.h>
+#include <typeinfo>
+
 #if defined(NDEBUG) && !defined(DEBUG_MEMORY)
 
 #define New(t) new t
