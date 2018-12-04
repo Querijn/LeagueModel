@@ -17,7 +17,7 @@ public:
 	using Mesh = ApplicationMesh;
 	static Application* Instance;
 
-	Application();
+	Application(const char* a_Root);
 	~Application();
 	
 	void Init();
@@ -36,6 +36,8 @@ public:
 	std::vector<std::string> GetAnimationsForMesh(const std::string& a_Name) const;
 
 	std::vector<std::string> GetSkinFiles() const;
+
+	const std::string& GetAssetRoot() const;
 
 private:
 	void OnMouseDownEvent(const MouseDownEvent* a_Event);
@@ -81,6 +83,7 @@ private:
 
 	bool m_MouseIsDown = false;
 	glm::vec2 m_MousePosition;
+	std::string m_Root;
 
 	float m_Time = 0.0f;
 };

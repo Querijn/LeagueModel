@@ -24,11 +24,13 @@
 Application* Application::Instance = nullptr;
 double g_LastTime = 0;
 
-Application::Application() :
+Application::Application(const char* a_Root) :
 	m_Window(Window::WindowSettings()),
 
 	m_VertexShader(Shader::Type::Vertex),
-	m_FragmentShader(Shader::Type::Fragment)
+	m_FragmentShader(Shader::Type::Fragment),
+
+	m_Root(a_Root)
 {
 	Instance = this;
 }
@@ -83,7 +85,6 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 	{
 		LoadData(std::string a_SkinBinPath) : SkinBinPath(a_SkinBinPath) {}
 
-		std::string RootFolder;
 		std::string Texture;
 		std::string SkinBinPath;
 		std::string AnimationName;
@@ -110,23 +111,22 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 
 		printf("Mesh properties are valid!\n");
 
-		// TODO: Make dynamic
-		t_LoadData->RootFolder = "data/output/";
+		const auto& t_Root = Application::Instance->GetAssetRoot();
 
 		// Get the skeleton file
 		auto t_SkeletonValue = (const League::StringValueStorage*)t_MeshProperties->GetChild("skeleton");
 		if (!t_SkeletonValue) { Delete(t_LoadData); return; }
-		std::string t_Skeleton = t_LoadData->RootFolder + t_SkeletonValue->Get();
+		std::string t_Skeleton = t_Root + t_SkeletonValue->Get();
 
 		// Get the skin file
 		auto t_SkinValue = (const League::StringValueStorage*)t_MeshProperties->GetChild("simpleSkin");
 		if (!t_SkinValue) { Delete(t_LoadData); return; }
-		std::string t_Skin = t_LoadData->RootFolder + t_SkinValue->Get();
+		std::string t_Skin = t_Root + t_SkinValue->Get();
 
 		// Get the texture file
 		auto t_TextureValue = (const League::StringValueStorage*)t_MeshProperties->GetChild("texture");
 		if (!t_TextureValue) { Delete(t_LoadData); return; }
-		t_LoadData->Texture = t_LoadData->RootFolder + t_TextureValue->Get();
+		t_LoadData->Texture = t_Root + t_TextureValue->Get();
 
 		printf("Starting to load the mesh (%s and %s)..\n", t_Skin.c_str(), t_Skeleton.c_str());
 		
@@ -161,11 +161,13 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 				});
 				printf("Found all of them! We have %lu animations.\n", t_AnimationNames.size());
 
+				const auto& t_Root = Application::Instance->GetAssetRoot();
+
 				t_LoadData->References++;
 				for (auto t_AnimationNameStorage : t_AnimationNames)
 				{
 					auto t_StringStorage = (const League::StringValueStorage*)t_AnimationNameStorage;
-					t_LoadData->AnimationName = t_LoadData->RootFolder + t_StringStorage->Get();
+					t_LoadData->AnimationName = t_Root + t_StringStorage->Get();
 
 					printf("Adding reference to \"%s\".\n", t_LoadData->AnimationName.c_str());
 					Instance->AddAnimationReference(*t_LoadData->Target, t_LoadData->AnimationName);
@@ -382,6 +384,11 @@ std::vector<std::string> Application::GetSkinFiles() const
 	return t_Results;
 }
 
+const std::string & Application::GetAssetRoot() const
+{
+	return m_Root;
+}
+
 void Application::OnMouseDownEvent(const MouseDownEvent * a_Event)
 {
 	if (a_Event->Button != Mouse::Button::Left) return;
@@ -502,9 +509,12 @@ bool Application::Update(double a_DT)
 int main()
 {
 	printf("LeagueModel Application built on %s at %s, calling new\n", __DATE__, __TIME__);
-	auto* t_Application = new Application();
+	auto* t_Application = new Application("data/output");
 	Application::Instance->Init();
 
-	delete Application::Instance;
-	Memory::Expose();
+	std::atexit([]()
+	{
+		delete Application::Instance;
+		Memory::Expose();
+	});
 }
