@@ -71,6 +71,7 @@ ADD_LEAGUEMODEL_SOURCE(Platform\\EmscriptenPlatform			"src/platform/emscripten_p
 ADD_LEAGUEMODEL_SOURCE(Profiling\\Memory					"src/profiling/memory.hpp"						"src/profiling/memory.cpp")
 
 ADD_LEAGUEMODEL_SOURCE(Helper								"src/helper.hpp"								"src/helper.cpp")
+ADD_LEAGUEMODEL_SOURCE(WebInterface							"src/web_interface.hpp"							"src/web_interface.cpp")
 
 ADD_LEAGUEMODEL_SOURCE(EventHandler							"src/event_handler.hpp"							"src/event_handler.cpp")
 ADD_LEAGUEMODEL_SOURCE(EventHandler\\Event					"src/event_handler/event.hpp"					"src/event_handler/event.cpp")
