@@ -46,6 +46,14 @@ public:
 		return t_Worked;
 	}
 
+	// This function doesn't always work due to alignment. Don't use for anything that isn't POD.
+	template<typename T>
+	bool GetBuffer(std::vector<T>& a_Element, size_t a_Count, size_t& a_Offset)
+	{
+		a_Element.resize(a_Count);
+		return Read((uint8_t*)a_Element.data(), a_Count * sizeof(T), a_Offset) == a_Count * sizeof(T);
+	}
+
 	const std::vector<uint8_t>& GetData() const;
 	std::string GetName() const;
 

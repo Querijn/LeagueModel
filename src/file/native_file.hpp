@@ -36,6 +36,14 @@ public:
 		return Read((uint8_t*)a_Element.data(), a_Count * sizeof(T), a_Offset) == a_Count * sizeof(T);
 	}
 
+	// Same as above but this one forces the aligned read for platforms that don't support x86-esque alignment
+	template<typename T>
+	bool GetBuffer(std::vector<T>& a_Element, size_t a_Count, size_t& a_Offset)
+	{
+		a_Element.resize(a_Count);
+		return Read((uint8_t*)a_Element.data(), a_Count * sizeof(T), a_Offset) == a_Count * sizeof(T);
+	}
+
 	friend class FileSystem;
 protected:
 	NativeFile(std::string a_FileName) : BaseFile(a_FileName) {}
