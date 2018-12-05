@@ -1,6 +1,7 @@
 #include <renderer/opengl.hpp>
 #include <renderer/texture.hpp>
 
+#include <profiling/memory.hpp>
 #include <dds.h>
 
 #include <algorithm>
@@ -19,7 +20,7 @@ void Texture::Load(std::string a_ImagePath, Texture::OnLoadFunction a_OnLoadFunc
 		OnLoadFunction OnLoadFunction;
 		void* Argument;
 	};
-	auto* t_LoadData = new LoadData(this, a_OnLoadFunction, a_Argument);
+	auto* t_LoadData = New(LoadData(this, a_OnLoadFunction, a_Argument));
 		
 	t_File->Load([](File* a_File, File::LoadState a_LoadState, void* a_Argument)
 	{
@@ -31,7 +32,7 @@ void Texture::Load(std::string a_ImagePath, Texture::OnLoadFunction a_OnLoadFunc
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Texture, t_LoadData->Argument);
 
 			FileSystem::CloseFile(*a_File);
-			delete t_LoadData;
+			Delete(t_LoadData);
 			return;
 		}
 
@@ -46,7 +47,7 @@ void Texture::Load(std::string a_ImagePath, Texture::OnLoadFunction a_OnLoadFunc
 
 		if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Texture, t_LoadData->Argument);
 		FileSystem::CloseFile(*a_File);
-		delete t_LoadData;
+		Delete(t_LoadData);
 	}, t_LoadData);
 }
 
