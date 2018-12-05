@@ -12,6 +12,7 @@ const baseBuildFolder = "build/web_";
 const procArgs = process.argv.filter((v, i) => i >= 2);
 const isProduction = procArgs[0] && procArgs[0].toLowerCase().startsWith("prod");
 const isWasm = !procArgs.includes("no-wasm");
+const copyData = procArgs.includes("copy-data");
 const noSkip = procArgs.includes("no-skip");
 const alwaysCombine = procArgs.includes("combine");
 const buildFolder = baseBuildFolder + (isProduction ? "prod" : "dev") + (!isWasm ? "_js/" : "/");
@@ -236,8 +237,10 @@ for (let include of includeFolders)
         console.error(e);
     }
 
-    for (let folder of foldersToCopy) {
-        console.log(`Copying folder "${folder}" to "${buildFolder}"`);
-        fs.copySync(folder, buildFolder + folder);
+    if (copyData) {
+        for (let folder of foldersToCopy) {
+            console.log(`Copying folder "${folder}" to "${buildFolder}"`);
+            fs.copySync(folder, buildFolder + folder);
+        }
     }
 })();
