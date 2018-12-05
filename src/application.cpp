@@ -68,6 +68,7 @@ void Application::Init()
 	LoadDefaultTexture();
 	LoadShaders();
 
+	LoadSkin("data/output/data/characters/poppy/skins/skin0.bin", "data/output/data/characters/poppy/animations/skin0.bin");
 	UpdateViewMatrix();
 
 	Platform::SetMainLoop([]() 
