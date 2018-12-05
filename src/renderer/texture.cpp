@@ -121,6 +121,9 @@ File::LoadState Texture::UploadDDS(File* a_File)
 	GL(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
 	SetDefaultParameters();
 
+	auto t_Name = a_File->GetName();
+	printf("Texture ID for '%s': %u", t_Name.c_str(), m_ID);
+
 	unsigned int t_BlockSize = (t_Format == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT) ? 8 : 16;
 	unsigned int t_Height = t_Header.height;
 	unsigned int t_Width = t_Header.width;

@@ -155,13 +155,19 @@ glm::mat4 ApplicationMesh::SubMesh::GetTransformMatrix() const
 
 void ApplicationMesh::SubMesh::SetTexture(std::string a_FilePath)
 {
+	printf("Attempting to load texture %s\n", a_FilePath.c_str());
 	Image.Load(a_FilePath, [](Texture& a_Texture, void* a_UserData)
 	{
 		auto& t_SubMesh = *(SubMesh*)a_UserData;
-		if (a_Texture.GetLoadState() != File::LoadState::Loaded) return;
+		if (a_Texture.GetLoadState() != File::LoadState::Loaded)
+		{
+			printf("Texture %s.\n", a_Texture.GetLoadState() != File::LoadState::FailedToLoad ? "failed to load" : "was not found");
+			return;
+		}
 
 		t_SubMesh.HasImage = true;
 		t_SubMesh.Image = a_Texture;
+		printf("Texture loaded!\n");
 	}, this);
 }
 

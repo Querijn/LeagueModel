@@ -136,25 +136,22 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 		// Load the mesh (Skeleton + Skin)
 		Application::Instance->LoadMesh(t_Skin, t_Skeleton, [](std::string a_SkinPath, std::string a_SkeletonPath, Application::Mesh* a_Mesh, void* a_UserData)
 		{
-			printf("Mesh loaded!\n");
-
 			auto* t_LoadData = (LoadData*)a_UserData;
 			if (a_Mesh == nullptr) return;
 
 			t_LoadData->Target = a_Mesh;
 
-			printf("Loading texture %s..\n", t_LoadData->Texture.c_str());
+			printf("Mesh loaded, loading texture %s..\n", t_LoadData->Texture.c_str());
 			// Set the texture (async)
-			a_Mesh->SubMeshes[0].SetTexture(t_LoadData->Texture);
+			for (int i = 0; i < a_Mesh->SubMeshes.size(); i++)
+				a_Mesh->SubMeshes[i].SetTexture(t_LoadData->Texture);
 
-			printf("Requesting animation file..\n");
 			// Load all the animations
 			t_LoadData->AnimationBin.Load(t_LoadData->SkinBinPath, [](League::Bin& a_Bin, void* a_UserData)
 			{
 				auto* t_LoadData = (LoadData*)a_UserData;
 				if (a_Bin.GetLoadState() != File::LoadState::Loaded) return;
 
-				printf("Animation file is here! Trying to find all animation names..\n");
 				auto t_AnimationNames = a_Bin.Find([](const League::Bin::ValueStorage& a_ValueStorage, void* a_UserData)
 				{
 					if (a_ValueStorage.GetType() != League::Bin::ValueStorage::Type::String)
@@ -162,7 +159,7 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 
 					return a_ValueStorage.Is("mAnimationFilePath");
 				});
-				printf("Found all of them! We have %lu animations.\n", t_AnimationNames.size());
+				printf("Found all of the animations! We have %lu animations.\n", t_AnimationNames.size());
 
 				const auto& t_Root = Application::Instance->GetAssetRoot();
 
@@ -172,7 +169,6 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 					auto t_StringStorage = (const League::StringValueStorage*)t_AnimationNameStorage;
 					t_LoadData->AnimationName = t_Root + t_StringStorage->Get();
 
-					printf("Adding reference to \"%s\".\n", t_LoadData->AnimationName.c_str());
 					Instance->AddAnimationReference(*t_LoadData->Target, t_LoadData->AnimationName);
 
 					if (t_LoadData->FirstAnimationApplied) continue;
