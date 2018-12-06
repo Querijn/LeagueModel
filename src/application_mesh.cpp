@@ -124,7 +124,7 @@ void ApplicationMesh::Draw(size_t a_SubMeshIndex, float a_Time, ShaderProgram& a
 			auto& t_Bones = Skeleton->GetBones();
 			a_BoneTransforms->resize(t_Bones.size());
 			for (int i = 0; i < a_BoneTransforms->size(); i++)
-				(*a_BoneTransforms)[i] = glm::identity<glm::mat4>();
+				a_BoneTransforms->at(i) = glm::identity<glm::mat4>();
 		}
 	}
 
@@ -135,7 +135,7 @@ void ApplicationMesh::Draw(size_t a_SubMeshIndex, float a_Time, ShaderProgram& a
 void ApplicationMesh::SetupAnimation(std::vector<glm::mat4>& a_BoneTransforms, float a_Time)
 {
 	glm::mat4 t_InverseRoot = glm::identity<glm::mat4>();
-	auto t_Bones = Animations[CurrentAnimation]->GetBones();
+	const auto& t_Bones = Animations[CurrentAnimation]->GetBones();
 
 	for (size_t i = 0; i < t_Bones.size(); i++)
 	{
