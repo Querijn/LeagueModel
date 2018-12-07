@@ -147,6 +147,13 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 			for (int i = 0; i < a_Mesh->SubMeshes.size(); i++)
 				a_Mesh->SubMeshes[i].SetTexture(t_LoadData->Texture);
 
+			if (a_Mesh->Skeleton == nullptr)
+			{
+				if (t_LoadData->References == 0)
+					Delete(t_LoadData);
+				return;
+			}
+
 			// Load all the animations
 			t_LoadData->AnimationBin.Load(t_LoadData->AnimationBinPath, [](League::Bin& a_Bin, void* a_UserData)
 			{
