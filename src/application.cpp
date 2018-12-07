@@ -87,10 +87,10 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 {
 	struct LoadData
 	{
-		LoadData(std::string a_SkinBinPath) : SkinBinPath(a_SkinBinPath) {}
+		LoadData(std::string a_AnimationBinPath) : AnimationBinPath(a_AnimationBinPath) {}
 
 		std::string Texture;
-		std::string SkinBinPath;
+		std::string AnimationBinPath;
 		std::string AnimationName;
 		bool FirstAnimationApplied = false;
 		size_t References = 0;
@@ -148,7 +148,7 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 				a_Mesh->SubMeshes[i].SetTexture(t_LoadData->Texture);
 
 			// Load all the animations
-			t_LoadData->AnimationBin.Load(t_LoadData->SkinBinPath, [](League::Bin& a_Bin, void* a_UserData)
+			t_LoadData->AnimationBin.Load(t_LoadData->AnimationBinPath, [](League::Bin& a_Bin, void* a_UserData)
 			{
 				auto* t_LoadData = (LoadData*)a_UserData;
 				if (a_Bin.GetLoadState() != File::LoadState::Loaded) return;
