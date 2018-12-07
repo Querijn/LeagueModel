@@ -108,7 +108,7 @@ void ApplicationMesh::Draw(size_t a_SubMeshIndex, float a_Time, ShaderProgram& a
 
 	if (a_Diffuse) *a_Diffuse = t_Submesh.HasImage ? t_Submesh.Image : Application::Instance->GetDefaultTexture();
 
-	if (a_BoneTransforms)
+	if (Skeleton && a_BoneTransforms)
 	{
 		if (Animations[CurrentAnimation])
 		{
