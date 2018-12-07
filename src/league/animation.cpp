@@ -5,6 +5,8 @@
 #include <bitset>
 #include <unordered_set>
 
+uint32_t StringToHash(const std::string& a_String);
+
 League::Animation::Animation(Skeleton & a_Skeleton) :
 	m_Skeleton(a_Skeleton)
 {
@@ -86,6 +88,10 @@ void League::Animation::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunc
 
 		case 1:
 			t_Animation->m_State = t_Animation->LoadVersion1(t_BoneNameHashes, *a_File, t_Offset);
+			break;
+
+		case 3:
+			t_Animation->m_State = t_Animation->LoadVersion3(t_BoneNameHashes, *a_File, t_Offset);
 			break;
 
 		case 4:
@@ -337,6 +343,71 @@ File::LoadState League::Animation::LoadVersion1(const std::map<uint32_t, std::st
 		}
 
 		m_Bones.push_back(t_BoneEntry);
+	}
+
+	return File::LoadState::Loaded;
+}
+
+File::LoadState League::Animation::LoadVersion3(const std::map<uint32_t, std::string>& a_BoneNameHashes, File & a_File, size_t & a_Offset)
+{
+	a_Offset += 4;
+	uint32_t numBones, numFrames;
+
+	a_File.Read((uint8_t*)(&numBones), 4, a_Offset);
+	a_File.Read((uint8_t*)(&numFrames), 4, a_Offset);
+
+	uint32_t t_FPS;
+	a_File.Get(t_FPS, a_Offset);
+	m_FPS = t_FPS;
+	
+	float frameDelay = 1.0f / m_FPS;
+	m_Duration = frameDelay * numFrames;
+
+	m_Bones.resize(numBones);
+
+	for (int i = 0; i < numBones; ++i)
+	{
+		char Name[32];
+		a_File.Read((uint8_t*)Name, 32, a_Offset);
+
+		unsigned int boneHash = StringToHash(Name);
+
+		if (a_BoneNameHashes.find(boneHash) != a_BoneNameHashes.end())
+		{
+			m_Bones.at(i).Name = a_BoneNameHashes.at(boneHash);
+		}
+
+		else
+		{
+			m_Bones.at(i).Name = Name;
+		}
+
+		a_Offset += 4;
+
+		m_Bones.at(i).Translation.resize(numFrames);
+		m_Bones.at(i).Rotation.resize(numFrames);
+		m_Bones.at(i).Scale.resize(numFrames);
+
+		float cumulativeFrameDelay = 0.0f;
+
+		for (int j = 0; j < numFrames; ++j)
+		{
+			m_Bones.at(i).Rotation.at(j).Time = cumulativeFrameDelay;
+			m_Bones.at(i).Translation.at(j).Time = cumulativeFrameDelay;
+			m_Bones.at(i).Scale.at(j).Time = cumulativeFrameDelay;
+
+			a_File.Read((uint8_t*)(&m_Bones.at(i).Rotation.at(j).FrameData.x), 4, a_Offset);
+			a_File.Read((uint8_t*)(&m_Bones.at(i).Rotation.at(j).FrameData.y), 4, a_Offset);
+			a_File.Read((uint8_t*)(&m_Bones.at(i).Rotation.at(j).FrameData.z), 4, a_Offset);
+			a_File.Read((uint8_t*)(&m_Bones.at(i).Rotation.at(j).FrameData.w), 4, a_Offset);
+
+			a_File.Read((uint8_t*)(&m_Bones.at(i).Translation.at(j).FrameData.x), 4, a_Offset);
+			a_File.Read((uint8_t*)(&m_Bones.at(i).Translation.at(j).FrameData.y), 4, a_Offset);
+			a_File.Read((uint8_t*)(&m_Bones.at(i).Translation.at(j).FrameData.z), 4, a_Offset);
+
+			m_Bones.at(i).Scale.at(j).FrameData[0] = m_Bones.at(i).Scale.at(j).FrameData[1] = m_Bones.at(i).Scale.at(j).FrameData[2] = 1.0f;
+			cumulativeFrameDelay += frameDelay;
+		}
 	}
 
 	return File::LoadState::Loaded;
