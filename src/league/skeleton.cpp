@@ -1,5 +1,6 @@
 #include "league/skeleton.hpp"
 #include "league/skin.hpp"
+#include <profiling/memory.hpp>
 
 #include <map>
 
@@ -7,6 +8,26 @@
 #include <glm/gtx/transform.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/compatibility.hpp>
+
+uint32_t StringToHash(const std::string& s)
+{
+	unsigned int hash = 0;
+	unsigned int temp = 0;
+
+	for (auto& c : s)
+	{
+		hash = (hash << 4) + tolower(c);
+		temp = hash & 0xf0000000;
+
+		if (temp != 0)
+		{
+			hash = hash ^ (temp >> 24);
+			hash = hash ^ temp;
+		}
+	}
+
+	return hash;
+}
 
 League::Skeleton::Skeleton(League::Skin & a_Skin) :
 	m_Skin(a_Skin)
@@ -37,7 +58,7 @@ void League::Skeleton::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunct
 		OnLoadFunction OnLoadFunction;
 		void* Argument;
 	};
-	auto* t_LoadData = new LoadData(this, a_OnLoadFunction, a_Argument);
+	auto* t_LoadData = New(LoadData(this, a_OnLoadFunction, a_Argument));
 
 	t_File->Load([](File* a_File, File::LoadState a_LoadState, void* a_Argument)
 	{
@@ -50,7 +71,7 @@ void League::Skeleton::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunct
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Skeleton, t_LoadData->Argument);
 
 			FileSystem::CloseFile(*a_File);
-			delete t_LoadData;
+			Delete(t_LoadData);
 			return;
 		}
 
@@ -65,25 +86,17 @@ void League::Skeleton::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunct
 		{
 		case Skeleton::Type::Classic:
 			t_State = t_Skeleton->ReadClassic(*a_File, t_Offset);
+			break;
 
 		case Skeleton::Type::Version2:
 			t_State = t_Skeleton->ReadVersion2(*a_File, t_Offset);
+			break;
 		};
-
-		// Post process if successful
-		if (t_State == File::LoadState::Loaded)
-		{
-			for (auto& t_Bone : t_Skeleton->m_Bones)
-			{
-				if (t_Bone.ParentID != -1) continue;
-				RecursiveInvertGlobalMatrices(glm::identity<glm::mat4>(), t_Bone);
-			}
-		}
-
+		
 		t_Skeleton->m_State = t_State;
 		if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Skeleton, t_LoadData->Argument);
 		FileSystem::CloseFile(*a_File);
-		delete t_LoadData;
+		Delete(t_LoadData);
 	}, t_LoadData);
 }
 
@@ -103,8 +116,66 @@ const League::Skeleton::Bone* League::Skeleton::GetBone(std::string a_Name) cons
 
 File::LoadState League::Skeleton::ReadClassic(File& a_File, size_t& a_Offset)
 {
-	printf("We haven't tested classic skeletons yet!\n");
-	throw 0; // Not yet tested
+	uint32_t t_Version;
+	a_File.Get(t_Version, a_Offset);
+
+	a_Offset += sizeof(uint32_t);
+
+	uint32_t t_BoneCount;
+	a_File.Get(t_BoneCount, a_Offset);
+
+	m_Bones.resize(t_BoneCount);
+
+	char t_Name[32];
+	for (int i = 0; i < t_BoneCount; i++)
+	{
+		auto& t_Bone = m_Bones[i];
+
+		a_File.Read((uint8_t*)t_Name, 32, a_Offset);
+		t_Bone.Hash = StringToHash(t_Name);
+		t_Bone.Name = t_Name;
+
+		t_Bone.ID = i;
+		a_File.Read((uint8_t*)(&t_Bone.ParentID), 4, a_Offset);
+		if (t_Bone.ParentID >= 0)
+		{
+			t_Bone.Parent = &m_Bones[t_Bone.ParentID];
+			t_Bone.Parent->Children.push_back(&t_Bone);
+		}
+		else t_Bone.Parent = nullptr;
+
+		float t_Scale;
+		a_File.Get(t_Scale, a_Offset);
+
+		for (int y = 0; y < 3; y++)
+			for (int x = 0; x < 4; x++)
+				a_File.Get(t_Bone.GlobalMatrix[x][y], a_Offset);
+
+		t_Bone.GlobalMatrix[3][3] = 1.0f;
+		t_Bone.InverseGlobalMatrix = glm::inverse(t_Bone.GlobalMatrix);
+	}
+
+	std::vector<uint32_t> t_BoneIndices;
+	if (m_Skin.m_Major == 0 || m_Skin.m_Major == 1)
+	{
+		__debugbreak(); // TODO
+	}
+
+	else if (m_Skin.m_Major == 2)
+	{
+		uint32_t t_BoneIndexCount;
+		a_File.Get(t_BoneIndexCount, a_Offset);
+
+		a_File.Get(t_BoneIndices, t_BoneIndexCount, a_Offset);
+	}
+
+	// Fix the bone indices on the skin
+	for (auto& t_IndexVector : m_Skin.m_BoneIndices)
+		for (int i = 0; i < t_IndexVector.length(); i++)
+			t_IndexVector[i] = t_BoneIndices[t_IndexVector[i]];
+
+	return File::LoadState::Loaded;
+
 }
 
 File::LoadState League::Skeleton::ReadVersion2(File& a_File, size_t& a_Offset)
@@ -227,6 +298,12 @@ File::LoadState League::Skeleton::ReadVersion2(File& a_File, size_t& a_Offset)
 	for (auto& t_IndexVector : m_Skin.m_BoneIndices)
 		for (int i = 0; i < t_IndexVector.length(); i++)
 			t_IndexVector[i] = t_BoneIndices[t_IndexVector[i]];
+
+	for (auto& t_Bone : m_Bones)
+	{
+		if (t_Bone.ParentID != -1) continue;
+		RecursiveInvertGlobalMatrices(glm::identity<glm::mat4>(), t_Bone);
+	}
 
 	return File::LoadState::Loaded;
 }
