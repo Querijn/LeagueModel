@@ -214,6 +214,10 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 
 void Application::LoadMesh(std::string a_SkinPath, std::string a_SkeletonPath, OnMeshLoadFunction a_OnLoadFunction, void* a_UserData)
 {
+	m_Meshes.clear();
+	m_Animations.clear();
+	m_AvailableAnimations.clear();
+
 	struct LoadData
 	{
 		LoadData(std::string a_SkinPath, std::string a_SkeletonPath, OnMeshLoadFunction a_Function, void* a_Argument) :
