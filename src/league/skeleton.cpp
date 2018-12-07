@@ -158,7 +158,9 @@ File::LoadState League::Skeleton::ReadClassic(File& a_File, size_t& a_Offset)
 	std::vector<uint32_t> t_BoneIndices;
 	if (m_Skin.m_Major == 0 || m_Skin.m_Major == 1)
 	{
-		__debugbreak(); // TODO
+		t_BoneIndices.resize(t_BoneCount);
+		for (int i = 0; i < t_BoneCount; i++)
+			t_BoneIndices[i] = i;
 	}
 
 	else if (m_Skin.m_Major == 2)
