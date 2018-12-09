@@ -68,7 +68,7 @@ void Application::Init()
 	LoadDefaultTexture();
 	LoadShaders();
 
-	LoadSkin("data/output/data/characters/poppy/skins/skin0.bin", "data/output/data/characters/poppy/animations/skin0.bin");
+	LoadSkin("data/output/data/characters/neeko/skins/skin0.bin", "data/output/data/characters/neeko/animations/skin0.bin");
 	UpdateViewMatrix();
 
 	Platform::SetMainLoop([]() 
@@ -103,12 +103,18 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 	// Load in the BIN containing most of the information about the base mesh
 	t_LoadData->SkinBin.Load(a_BinPath, [](League::Bin& a_Bin, void* a_UserData)
 	{
+		if (a_Bin.GetLoadState() != File::LoadState::Loaded)
+		{
+			printf("Skin information bin %s!\n", a_Bin.GetLoadState() != File::LoadState::FailedToLoad ? "was not found" : "failed to load");
+			return;
+		}
 		printf("Skin information is loaded!\n");
 
 		auto* t_LoadData = (LoadData*)a_UserData;
 		auto t_MeshProperties = a_Bin.Get("skinMeshProperties");
 		if (!t_MeshProperties)
 		{
+			printf("Mesh properties are missing..\n");
 			Delete(t_LoadData);
 			return;
 		}
