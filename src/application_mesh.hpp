@@ -13,7 +13,7 @@ class ApplicationMesh
 public:
 	void AddAnimationReference(const std::string& a_Name, const League::Animation& a_Animation);
 	void ApplyAnimation(const std::string& a_Animation);
-	void Draw(size_t a_SubMeshIndex, float a_Time, ShaderProgram& a_Program, glm::mat4& a_MVP, Texture* a_Diffuse, std::vector<glm::mat4>* a_BoneTransforms);
+	void Draw(size_t a_SubMeshIndex, float a_Time, ShaderProgram& a_Program, glm::mat4& a_VP, Texture* a_Diffuse, std::vector<glm::mat4>* a_BoneTransforms);
 
 	std::shared_ptr<League::Skeleton> Skeleton = nullptr;
 	std::map<std::string, const League::Animation*> Animations;

@@ -94,7 +94,7 @@ void ApplicationMesh::SetupHierarchy(const glm::mat4& a_InverseRoot, std::vector
 		SetupHierarchy(a_InverseRoot, a_Bones, *t_Child, t_GlobalTransform, a_Time);
 };
 
-void ApplicationMesh::Draw(size_t a_SubMeshIndex, float a_Time, ShaderProgram& a_Program, glm::mat4& a_MVP, Texture* a_Diffuse, std::vector<glm::mat4>* a_BoneTransforms)
+void ApplicationMesh::Draw(size_t a_SubMeshIndex, float a_Time, ShaderProgram& a_Program, glm::mat4& a_VP, Texture* a_Diffuse, std::vector<glm::mat4>* a_BoneTransforms)
 {
 	a_Program.Use();
 
@@ -108,11 +108,14 @@ void ApplicationMesh::Draw(size_t a_SubMeshIndex, float a_Time, ShaderProgram& a
 
 	if (a_Diffuse) *a_Diffuse = t_Submesh.HasImage ? t_Submesh.Image : Application::Instance->GetDefaultTexture();
 
+	glm::vec4 t_Center(0);
+
 	if (Skeleton && a_BoneTransforms)
 	{
-		if (Animations[CurrentAnimation])
+		const auto& t_AnimationIndex = Animations.find(CurrentAnimation);
+		if (t_AnimationIndex != Animations.end())
 		{
-			float t_AnimationDuration = Animations[CurrentAnimation]->GetDuration();
+			float t_AnimationDuration = t_AnimationIndex->second->GetDuration();
 			while (a_Time > t_AnimationDuration) a_Time -= t_AnimationDuration;
 
 			auto& t_Bones = Skeleton->GetBones();
@@ -127,6 +130,8 @@ void ApplicationMesh::Draw(size_t a_SubMeshIndex, float a_Time, ShaderProgram& a
 				a_BoneTransforms->at(i) = glm::identity<glm::mat4>();
 		}
 	}
+
+	a_VP *= t_Submesh.GetTransformMatrix();
 
 	a_Program.Update();
 	t_Submesh.IndexBuffer->Draw();
@@ -178,5 +183,38 @@ void ApplicationMesh::AddAnimationReference(const std::string& a_Name, const Lea
 
 void ApplicationMesh::ApplyAnimation(const std::string& a_Animation)
 {
+	const auto& t_AnimationIndex = Animations.find(a_Animation);
+	if (t_AnimationIndex == Animations.end()) return;
+
 	CurrentAnimation = a_Animation;
+	const auto& t_Animation = Animations[CurrentAnimation];
+	const auto& t_Bones = t_Animation->GetBones();
+
+	glm::vec3 t_Highest(-9e9), t_Lowest(9e9);
+	size_t t_Count = 0;
+	for (auto& t_Bone : t_Bones)
+	{
+		for (auto& t_Translation : t_Bone.Translation)
+		{
+			if (t_Translation.FrameData.x > t_Highest.x)
+				t_Highest.x = t_Translation.FrameData.x;
+			if (t_Translation.FrameData.y > t_Highest.y)
+				t_Highest.y = t_Translation.FrameData.y;
+			if (t_Translation.FrameData.z > t_Highest.z)
+				t_Highest.z = t_Translation.FrameData.z;
+
+			if (t_Translation.FrameData.x < t_Lowest.x)
+				t_Lowest.x = t_Translation.FrameData.x;
+			if (t_Translation.FrameData.y < t_Lowest.y)
+				t_Lowest.y = t_Translation.FrameData.y;
+			if (t_Translation.FrameData.z < t_Lowest.z)
+				t_Lowest.z = t_Translation.FrameData.z;
+
+			t_Count++;
+		}
+	}
+
+	t_Highest = -(t_Highest + t_Lowest) * 0.5f;
+	for (auto& t_Mesh : SubMeshes)
+		t_Mesh.Position.y = t_Highest.y;
 }

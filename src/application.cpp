@@ -285,8 +285,6 @@ void Application::LoadMesh(std::string a_SkinPath, std::string a_SkeletonPath, O
 			{
 				Application::Mesh::SubMesh t_Submesh;
 
-				t_Submesh.Position -= (t_BoundingBox.Min + t_BoundingBox.Max) * 0.5f;
-
 				t_Submesh.IndexBuffer = &t_ShaderProgram.GetIndexBuffer<uint16_t>();
 				auto& t_SkinMesh = t_SkinMeshes[i];
 				t_Submesh.IndexBuffer->Upload(t_SkinMesh.Indices, t_SkinMesh.IndexCount);
@@ -514,7 +512,7 @@ bool Application::Update(double a_DT)
 			return m_Window.RunFrame();
 		}
 
-		*m_MVPUniform = m_ProjectionMatrix * m_ViewMatrix * t_DrawMesh.SubMeshes[0].GetTransformMatrix();
+		*m_MVPUniform = m_ProjectionMatrix * m_ViewMatrix;
 		t_DrawMesh.Draw(0, m_Time += a_DT, m_ShaderProgram, *m_MVPUniform, m_TextureUniform ? &m_TextureUniform->Get() : nullptr, m_BoneArrayUniform ? &m_BoneArrayUniform->Get() : nullptr);
 		break;
 	}
