@@ -190,31 +190,22 @@ void ApplicationMesh::ApplyAnimation(const std::string& a_Animation)
 	const auto& t_Animation = Animations[CurrentAnimation];
 	const auto& t_Bones = t_Animation->GetBones();
 
-	glm::vec3 t_Highest(-9e9), t_Lowest(9e9);
+	float t_HighestY(-9e9), t_LowestY(9e9);
 	size_t t_Count = 0;
 	for (auto& t_Bone : t_Bones)
 	{
 		for (auto& t_Translation : t_Bone.Translation)
 		{
-			if (t_Translation.FrameData.x > t_Highest.x)
-				t_Highest.x = t_Translation.FrameData.x;
-			if (t_Translation.FrameData.y > t_Highest.y)
-				t_Highest.y = t_Translation.FrameData.y;
-			if (t_Translation.FrameData.z > t_Highest.z)
-				t_Highest.z = t_Translation.FrameData.z;
-
-			if (t_Translation.FrameData.x < t_Lowest.x)
-				t_Lowest.x = t_Translation.FrameData.x;
-			if (t_Translation.FrameData.y < t_Lowest.y)
-				t_Lowest.y = t_Translation.FrameData.y;
-			if (t_Translation.FrameData.z < t_Lowest.z)
-				t_Lowest.z = t_Translation.FrameData.z;
+			if (t_Translation.FrameData.y > t_HighestY)
+				t_HighestY = t_Translation.FrameData.y;
+			else if (t_Translation.FrameData.y < t_LowestY)
+				t_LowestY = t_Translation.FrameData.y;
 
 			t_Count++;
 		}
 	}
 
-	t_Highest = -(t_Highest + t_Lowest) * 0.5f;
+	t_HighestY = -(t_HighestY + t_LowestY) * 0.5f;
 	for (auto& t_Mesh : SubMeshes)
-		t_Mesh.Position.y = t_Highest.y;
+		t_Mesh.Position.y = t_HighestY;
 }
