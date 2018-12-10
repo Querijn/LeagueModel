@@ -512,9 +512,11 @@ bool Application::Update(double a_DT)
 			return m_Window.RunFrame();
 		}
 
-		*m_MVPUniform = m_ProjectionMatrix * m_ViewMatrix;
-		t_DrawMesh.Draw(0, m_Time += a_DT, m_ShaderProgram, *m_MVPUniform, m_TextureUniform ? &m_TextureUniform->Get() : nullptr, m_BoneArrayUniform ? &m_BoneArrayUniform->Get() : nullptr);
-		break;
+		*m_MVPUniform = m_ProjectionMatrix * m_ViewMatrix * glm::translate(t_DrawMesh.Center);
+
+		m_Time += a_DT;
+		for (int i = 0; i < t_DrawMesh.SubMeshes.size(); i++)
+			t_DrawMesh.Draw(i, m_Time, m_ShaderProgram, *m_MVPUniform, m_TextureUniform ? &m_TextureUniform->Get() : nullptr, m_BoneArrayUniform ? &m_BoneArrayUniform->Get() : nullptr);
 	}
 
 	m_Window.SwapBuffers();
