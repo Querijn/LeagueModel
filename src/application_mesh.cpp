@@ -42,12 +42,14 @@ glm::quat Interpolate(glm::quat a_Low, glm::quat a_High, float a_Progress)
 }
 
 template<typename T>
-T FindNearestTime(const std::vector<League::Animation::Bone::Frame<T>>& a_Vector, float a_Time)
+T FindNearestTime(const std::vector<League::Animation::Bone::Frame<T>>& a_Vector, float a_Time, size_t& i)
 {
 	auto t_Min = a_Vector[0];
 	auto t_Max = a_Vector[a_Vector.size() - 1];
 
-	for (size_t i = 0; i < a_Vector.size(); i++)
+	if (i >= a_Vector.size()) i = 0;
+
+	for (; i < a_Vector.size(); i++)
 	{
 		const auto& t_Current = a_Vector[i];
 
@@ -57,15 +59,11 @@ T FindNearestTime(const std::vector<League::Animation::Bone::Frame<T>>& a_Vector
 			continue;
 		}
 
-		if (t_Current.Time > a_Time)
-		{
-			t_Max = t_Current;
-			break;
-		}
-
-		printf("Yikes! FindNearestTime could not find a time compatible with this animation!\n");
-		throw 0; // Should not happen
+		t_Max = t_Current;
+		break;
 	}
+
+	i--;
 
 	float t_Div = t_Max.Time - t_Min.Time;
 	float t_LerpValue = (t_Div == 0) ? 1 : (a_Time - t_Min.Time) / t_Div;
@@ -79,9 +77,9 @@ void ApplicationMesh::SetupHierarchy(const glm::mat4& a_InverseRoot, std::vector
 	const auto* t_AnimBone = Animations[CurrentAnimation]->GetBone(a_SkeletonBone.Name);
 	if (t_AnimBone != nullptr)
 	{
-		glm::vec3 t_Translation = FindNearestTime(t_AnimBone->Translation, a_Time);
-		glm::quat t_Rotation = FindNearestTime(t_AnimBone->Rotation, a_Time);
-		glm::vec3 t_Scale = FindNearestTime(t_AnimBone->Scale, a_Time);
+		glm::vec3 t_Translation = FindNearestTime(t_AnimBone->Translation, a_Time, TranslationIndex);
+		glm::quat t_Rotation = FindNearestTime(t_AnimBone->Rotation, a_Time, RotationIndex);
+		glm::vec3 t_Scale = FindNearestTime(t_AnimBone->Scale, a_Time, ScaleIndex);
 
 		auto t_LocalTransform = glm::translate(t_Translation) * glm::mat4_cast(t_Rotation) * glm::scale(t_Scale);
 		t_GlobalTransform = a_Parent * t_LocalTransform;

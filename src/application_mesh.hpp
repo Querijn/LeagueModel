@@ -41,8 +41,13 @@ public:
 	};
 
 	std::vector<SubMesh> SubMeshes;
+	glm::vec3 Center = glm::vec3(0.0);
 
 private:
 	void SetupAnimation(std::vector<glm::mat4>& a_BoneTransforms, float a_Time);
 	void SetupHierarchy(const glm::mat4& a_InverseRoot, std::vector<glm::mat4>& a_Bones, const League::Skeleton::Bone& a_SkeletonBone, const glm::mat4& a_Parent, float a_Time);
+
+	size_t TranslationIndex = 0;
+	size_t RotationIndex = 0;
+	size_t ScaleIndex = 0;
 };
