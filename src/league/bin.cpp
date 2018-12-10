@@ -138,18 +138,18 @@ std::string League::Bin::GetAsJSON() const
 	{
 		if (t_First == false) t_Return += ",";
 
-		t_Return += "\"" + GetStringByHash(t_MapPair.first) + "\": {"; // Hash
+		t_Return += "\"" + GetStringByHash(t_MapPair.first) + "\": ["; // Hash
 
 		bool t_First2 = true;
 		for (int i = 0; i < t_MapPair.second.size(); i++)
 		{
 			if (t_First2 == false) t_Return += ",";
-			t_Return += t_MapPair.second[i]->GetAsJSON(false/*, true*/);
+			t_Return += t_MapPair.second[i]->GetAsJSON(false, false);
 
 			t_First2 = false;
 		}
 		
-		t_Return += "}";
+		t_Return += " ]";
 		t_First = false;
 	}
 

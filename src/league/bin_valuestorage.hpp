@@ -52,7 +52,7 @@ namespace League
 		BaseValueStorage(League::Bin& a_Bin, Type a_Type, uint32_t a_Hash) : m_Bin(a_Bin), m_Hash(a_Hash), m_Type(a_Type) { m_Bin.AddFlatValueStorage(this); }
 
 		virtual std::string DebugPrint() const = 0;
-		virtual std::string GetAsJSON(bool a_ExposeHash) const = 0;
+		virtual std::string GetAsJSON(bool a_ExposeHash, bool a_IsHash) const = 0;
 		bool Is(const std::string& a_Name) const;
 
 		virtual std::vector<const BaseValueStorage*> Find(FindConditionFunction a_Function, void * a_UserData) const = 0;
@@ -89,8 +89,10 @@ namespace League
 		std::vector<const BaseValueStorage*> Find(FindConditionFunction a_Function, void * a_UserData) const override { return std::vector<const BaseValueStorage*>(); }
 
 		std::string DebugPrint() const override { return std::to_string(m_Data); }
-		std::string GetAsJSON(bool a_ExposeHash) const override
+		std::string GetAsJSON(bool a_ExposeHash, bool a_IsHash) const override
 		{
+			if (a_IsHash)
+				return "\"" + std::to_string(m_Data) + "\"";
 			if (a_ExposeHash)
 				return GetHashJSONPrefix() + std::to_string(m_Data);
 			else return std::to_string(m_Data);
@@ -105,6 +107,27 @@ namespace League
 
 	private:
 		T m_Data;
+	};
+
+	class HashValueStorage : public BaseValueStorage
+	{
+	public:
+		HashValueStorage(League::Bin& a_Bin, Type a_Type, uint32_t a_Hash) : BaseValueStorage(a_Bin, a_Type, a_Hash) { }
+
+		std::vector<const BaseValueStorage*> Find(FindConditionFunction a_Function, void * a_UserData) const override { return std::vector<const BaseValueStorage*>(); }
+
+		std::string DebugPrint() const override;
+		std::string GetAsJSON(bool a_ExposeHash, bool a_IsHash) const override;
+
+		BaseValueStorage* GetChild(const std::string& a_Child) const override { return nullptr; }
+		BaseValueStorage* GetChild(size_t a_Index) const override { return nullptr; }
+
+		std::string Get() const;
+
+		void FetchDataFromFile(File* a_File, size_t& a_Offset) override { a_File->Get(m_Data, a_Offset); }
+
+	private:
+		uint32_t m_Data;
 	};
 
 	template<typename T, typename StorageType, typename FileType, int ElementCount>
@@ -130,7 +153,7 @@ namespace League
 			return t_Result + " }";
 		}
 
-		std::string GetAsJSON(bool a_ExposeHash) const override
+		std::string GetAsJSON(bool a_ExposeHash, bool a_IsHash) const override
 		{
 			std::string t_Result = "[ ";
 
@@ -176,7 +199,7 @@ namespace League
 		std::vector<const BaseValueStorage*> Find(FindConditionFunction a_Function, void * a_UserData) const override { return std::vector<const BaseValueStorage*>(); }
 
 		std::string DebugPrint() const override;
-		std::string GetAsJSON(bool a_ExposeHash) const override;
+		std::string GetAsJSON(bool a_ExposeHash, bool a_IsHash) const override;
 
 		BaseValueStorage* GetChild(const std::string& a_Child) const override { return nullptr; }
 		BaseValueStorage* GetChild(size_t a_Index) const override { return nullptr; }
@@ -197,7 +220,7 @@ namespace League
 		std::vector<const BaseValueStorage*> Find(FindConditionFunction a_Function, void * a_UserData) const override { return std::vector<const BaseValueStorage*>(); }
 
 		std::string DebugPrint() const override;
-		std::string GetAsJSON(bool a_ExposeHash) const override;
+		std::string GetAsJSON(bool a_ExposeHash, bool a_IsHash) const override;
 
 		BaseValueStorage* GetChild(const std::string& a_Child) const override { return nullptr; }
 		BaseValueStorage* GetChild(size_t a_Index) const override { return nullptr; }
@@ -218,7 +241,7 @@ namespace League
 		std::vector<const BaseValueStorage*> Find(FindConditionFunction a_Function, void * a_UserData) const override;
 
 		std::string DebugPrint() const override;
-		std::string GetAsJSON(bool a_ExposeHash) const override;
+		std::string GetAsJSON(bool a_ExposeHash, bool a_IsHash) const override;
 
 		virtual BaseValueStorage* GetChild(const std::string& a_Child) const override { return nullptr; }
 		BaseValueStorage* GetChild(size_t a_Index) const override;
@@ -235,6 +258,8 @@ namespace League
 	{
 	public:
 		StructValueStorage(League::Bin& a_Bin, Type a_Type, uint32_t a_Hash) : ArrayValueStorage(a_Bin, a_Type, a_Hash) { }
+
+		std::string GetAsJSON(bool a_ExposeHash, bool a_IsHash) const override;
 
 		BaseValueStorage* GetChild(const std::string& a_Child) const override;
 
@@ -259,7 +284,7 @@ namespace League
 		std::vector<const BaseValueStorage*> Find(FindConditionFunction a_Function, void * a_UserData) const override;
 
 		std::string DebugPrint() const override;
-		std::string GetAsJSON(bool a_ExposeHash) const override;
+		std::string GetAsJSON(bool a_ExposeHash, bool a_IsHash) const override;
 
 		BaseValueStorage* GetChild(const std::string& a_Child) const override;
 		BaseValueStorage* GetChild(size_t a_Index) const override { return nullptr; }

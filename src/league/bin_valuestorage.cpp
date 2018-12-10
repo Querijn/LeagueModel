@@ -15,10 +15,25 @@ uint32_t FNV1Hash(std::string a_String)
 	return t_Hash;
 }
 
+void AddToPublicHashMap(const std::string& a_String)
+{
+	auto t_Hash = std::to_string(FNV1Hash(a_String));
+	auto t_Index = m_HashMap.find(t_Hash);
+	if (t_Index != m_HashMap.end() && a_String != t_Index->second)
+	{
+		printf("Woah! I found a hash collision between %s and %s!", a_String.c_str(), t_Index->second.c_str());
+		return;
+	}
+
+	m_HashMap[t_Hash] = a_String;
+}
+
+bool g_Initialised = false;
+void InitExtraBinHashMap();
 void InitBinHashMap()
 {
-	if (m_HashMap.size() != 0) return;
-
+	if (g_Initialised) return;
+	AddToPublicHashMap("swapChildren");
 	auto* t_File = FileSystem::GetFile("data/cdtb/cdragontoolbox/hashes.bin.txt");
 	t_File->Load([](File* a_File, File::LoadState a_LoadState, void* a_UserData)
 	{
@@ -28,7 +43,7 @@ void InitBinHashMap()
 			return;
 		}
 
-		static const size_t t_ReadLength = 1024;
+		static const size_t t_ReadLength = 65536;
 		size_t t_Offset = 0;
 		std::string t_String(t_ReadLength, '\0');
 
@@ -64,6 +79,58 @@ void InitBinHashMap()
 			}
 		} while (!t_WasEnd);
 	});
+
+	InitExtraBinHashMap();
+	g_Initialised = true;
+}
+
+void InitExtraBinHashMap()
+{
+	auto* t_File = FileSystem::GetFile("D:/hashes.game.txt");
+	t_File->Load([](File* a_File, File::LoadState a_LoadState, void* a_UserData)
+	{
+		if (a_LoadState != File::LoadState::Loaded)
+		{
+			FileSystem::CloseFile(*a_File);
+			return;
+		}
+
+		static const size_t t_ReadLength = 65536;
+		size_t t_Offset = 0;
+		std::string t_String(t_ReadLength, '\0');
+
+		bool t_WasEnd = false;
+		do
+		{
+			t_WasEnd = a_File->Read((uint8_t*)t_String.c_str(), t_ReadLength, t_Offset) != t_ReadLength;
+
+			size_t i;
+			for (i = 0; i < t_ReadLength; i++)
+			{
+				// Check for end of buffer
+				size_t t_NewLineOffset = t_String.find('\n', i);
+				if (t_NewLineOffset == std::string::npos)
+				{
+					size_t t_Diff = t_ReadLength - i;
+					std::string t_DebugLine = t_String.substr(i, t_Diff);
+					t_Offset -= t_Diff;
+					break;
+				}
+
+				// Make sure to handle \r cases
+				bool t_HasCaretReturn = t_String[t_NewLineOffset - 1] == '\r';
+				size_t t_LineLength = t_NewLineOffset - i - (t_HasCaretReturn ? 1 : 0);
+				std::string t_Line = t_String.substr(i, t_LineLength);
+
+				size_t t_HashEnd = t_Line.find(' '); // Should always be 8
+				std::string t_Value = t_Line.substr(t_HashEnd + 1);
+				std::string t_Hash = std::to_string(FNV1Hash(t_Value));
+
+				m_HashMap[t_Hash.c_str()] = t_Value.c_str();
+				i = t_NewLineOffset;
+			}
+		} while (!t_WasEnd);
+	});
 }
 
 std::string NumberToHexString(uint32_t a_Number)
@@ -85,7 +152,7 @@ std::string GetStringByHash(uint32_t a_Hash)
 	if (t_Index != m_HashMap.end())
 		return t_Index->second;
 
-	return NumberToHexString(a_Hash);
+	return NumberToHexString(a_Hash) + " (I'm a hash!)";
 }
 
 bool League::BaseValueStorage::Is(const std::string & a_Name) const
@@ -114,7 +181,7 @@ League::BaseValueStorage * League::BaseValueStorage::Create(League::Bin& a_Bin, 
 	case S64: return New(NumberValueStorage<int64_t>(a_Bin, a_Type, a_Hash));
 	case U64: return New(NumberValueStorage<uint64_t>(a_Bin, a_Type, a_Hash));
 	case Float: return New(NumberValueStorage<float>(a_Bin, a_Type, a_Hash));
-	case Hash: return New(NumberValueStorage<uint32_t>(a_Bin, a_Type, a_Hash));
+	case Hash: return New(HashValueStorage(a_Bin, a_Type, a_Hash));
 	case Padding: return New(NumberValueStorage<uint8_t>(a_Bin, a_Type, a_Hash));
 
 	case String: return New(StringValueStorage(a_Bin, a_Type, a_Hash));
@@ -168,11 +235,12 @@ std::string League::StringValueStorage::DebugPrint() const
 	return m_Data;
 }
 
-std::string League::StringValueStorage::GetAsJSON(bool a_ExposeHash) const
+std::string League::StringValueStorage::GetAsJSON(bool a_ExposeHash, bool a_IsHash) const
 {
-	if (a_ExposeHash)
-		return GetHashJSONPrefix() + m_Data;
-	else return m_Data;
+	std::string t_Result = "\"" + m_Data + "\"";
+	if (a_ExposeHash && !a_IsHash)
+		return GetHashJSONPrefix() + t_Result;
+	else return t_Result;
 }
 
 void League::StringValueStorage::FetchDataFromFile(File * a_File, size_t & a_Offset)
@@ -182,6 +250,8 @@ void League::StringValueStorage::FetchDataFromFile(File * a_File, size_t & a_Off
 
 	m_Data = std::string(t_StringLength, '\0');
 	a_File->Read((uint8_t*)m_Data.c_str(), t_StringLength, a_Offset);
+
+	AddToPublicHashMap(m_Data);
 }
 
 std::vector<const League::BaseValueStorage*> League::ArrayValueStorage::Find(FindConditionFunction a_Function, void * a_UserData) const
@@ -199,6 +269,20 @@ std::vector<const League::BaseValueStorage*> League::ArrayValueStorage::Find(Fin
 	}
 
 	return t_Results;
+}
+
+std::string League::StructValueStorage::GetAsJSON(bool a_ExposeHash, bool a_IsHash) const
+{
+	std::string t_Result = (a_ExposeHash ? GetHashJSONPrefix() : "") + " { ";
+	bool t_First = true;
+	for (const auto& t_Values : m_Data)
+	{
+		if (!t_First) t_Result += ", ";
+		t_Result += t_Values->GetAsJSON(true, false);
+		t_First = false;
+	}
+
+	return t_Result + " }";
 }
 
 League::BaseValueStorage * League::StructValueStorage::GetChild(const std::string & a_Child) const
@@ -267,19 +351,19 @@ std::string League::ArrayValueStorage::DebugPrint() const
 	return t_Result + ")";
 }
 
-std::string League::ArrayValueStorage::GetAsJSON(bool a_ExposeHash) const
+std::string League::ArrayValueStorage::GetAsJSON(bool a_ExposeHash, bool a_IsHash) const
 {
-	std::string t_Result = "[ ";
+	std::string t_Result = (a_ExposeHash ? GetHashJSONPrefix() : "") + "[ ";
 	bool t_First = true;
 	for (int i = 0; i < m_Data.size(); i++)
 	{
-		if (!t_First) t_Result += ",";
-		t_Result += m_Data[i]->GetAsJSON(false);
+		if (!t_First) t_Result += ", ";
+		t_Result += m_Data[i]->GetAsJSON(false, false);
 
 		t_First = false;
 	}
 
-	return t_Result + "]";
+	return t_Result + " ]";
 }
 
 League::BaseValueStorage * League::ArrayValueStorage::GetChild(size_t a_Index) const
@@ -311,11 +395,9 @@ std::string League::MatrixValueStorage::DebugPrint() const
 	{
 		t_Result += "\n";
 
-		bool t_First = true;
 		for (int y = 0; y < 4; y++)
 		{
-			t_Result += t_First ? "\t" : ",";
-
+			if (!t_First) t_Result += ", ";
 			t_Result += std::to_string(m_Data[x][y]);
 
 			t_First = false;
@@ -327,9 +409,22 @@ std::string League::MatrixValueStorage::DebugPrint() const
 	return t_Result + ")";
 }
 
-std::string League::MatrixValueStorage::GetAsJSON(bool a_ExposeHash) const
+std::string League::MatrixValueStorage::GetAsJSON(bool a_ExposeHash, bool a_IsHash) const
 {
-	return std::string();
+	std::string t_Result = (a_ExposeHash ? GetHashJSONPrefix() : "") + "[ ";
+	bool t_First = true;
+	for (int x = 0; x < 4; x++)
+	{
+		for (int y = 0; y < 4; y++)
+		{
+			if (!t_First) t_Result += ", ";
+			t_Result += std::to_string(m_Data[x][y]);
+
+			t_First = false;
+		}
+	}
+
+	return t_Result + " ]";
 }
 
 void League::MatrixValueStorage::FetchDataFromFile(File * a_File, size_t & a_Offset)
@@ -361,9 +456,19 @@ std::string League::MapValueStorage::DebugPrint() const
 	return std::string();
 }
 
-std::string League::MapValueStorage::GetAsJSON(bool a_ExposeHash) const
+std::string League::MapValueStorage::GetAsJSON(bool a_ExposeHash, bool a_IsHash) const
 {
-	return std::string();
+	std::string t_Result = (a_ExposeHash ? GetHashJSONPrefix() : "") + "{ ";
+	bool t_First = true;
+	for (const auto& t_MapElement : m_Data)
+	{
+		if (!t_First) t_Result += ", ";
+		t_Result += t_MapElement.first->GetAsJSON(false, true) + ": ";
+		t_Result += t_MapElement.second->GetAsJSON(false, false);
+		t_First = false;
+	}
+
+	return t_Result + " }";
 }
 
 League::BaseValueStorage * League::MapValueStorage::GetChild(const std::string & a_Child) const
@@ -410,4 +515,25 @@ void League::MapValueStorage::FetchDataFromFile(File * a_File, size_t & a_Offset
 		t_Value->FetchDataFromFile(a_File, a_Offset);
 		m_Data[t_Key] = t_Value;
 	}
+}
+
+std::string League::HashValueStorage::DebugPrint() const
+{
+	return GetStringByHash(m_Data);
+}
+
+std::string League::HashValueStorage::GetAsJSON(bool a_ExposeHash, bool a_IsHash) const
+{
+	std::string t_Result = "\"" + GetStringByHash(m_Data) + "\"";
+	if (a_IsHash)
+		return t_Result;
+
+	if (a_ExposeHash)
+		return GetHashJSONPrefix() + t_Result;
+	else return t_Result;
+}
+
+std::string League::HashValueStorage::Get() const
+{
+	return GetStringByHash(m_Data);
 }
