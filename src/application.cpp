@@ -103,14 +103,15 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 	// Load in the BIN containing most of the information about the base mesh
 	t_LoadData->SkinBin.Load(a_BinPath, [](League::Bin& a_Bin, void* a_UserData)
 	{
+		auto* t_LoadData = (LoadData*)a_UserData;
 		if (a_Bin.GetLoadState() != File::LoadState::Loaded)
 		{
 			printf("Skin information bin %s!\n", a_Bin.GetLoadState() != File::LoadState::FailedToLoad ? "was not found" : "failed to load");
+			Delete(t_LoadData);
 			return;
 		}
 		printf("Skin information is loaded!\n");
 
-		auto* t_LoadData = (LoadData*)a_UserData;
 		auto t_MeshProperties = a_Bin.Get("skinMeshProperties");
 		if (!t_MeshProperties)
 		{
