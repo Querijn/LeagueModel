@@ -205,7 +205,7 @@ void ApplicationMesh::ApplyAnimation(const std::string& a_Animation)
 		}
 	}
 
-	t_HighestY = -(t_HighestY + t_LowestY) * 0.5f;
-	for (auto& t_Mesh : SubMeshes)
-		t_Mesh.Position.y = t_HighestY;
+	if (abs(t_HighestY) + abs(t_LowestY) < 400)
+		Center.y = -(t_HighestY + t_LowestY) * 0.5f;
+	else Center.y = -75;
 }
