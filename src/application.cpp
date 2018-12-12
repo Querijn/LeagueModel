@@ -68,7 +68,7 @@ void Application::Init()
 	LoadDefaultTexture();
 	LoadShaders();
 
-	LoadSkin("data/output/data/characters/teemo/skins/skin14.bin", "data/output/data/characters/teemo/animations/skin14.bin");
+	LoadSkin("data/output/data/characters/neeko/skins/skin0.bin", "data/output/data/characters/neeko/animations/skin0.bin");
 	UpdateViewMatrix();
 
 	Platform::SetMainLoop([]() 
@@ -168,23 +168,63 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 				return;
 			}
 
+			const League::BaseValueStorage* t_MaterialOverrides = nullptr;
 			auto t_InitialMeshesToHide = t_LoadData->SkinBin.Find([](const League::BaseValueStorage& a_Value, void* a_UserData) { return a_Value.Is("initialSubmeshToHide"); });
-			t_LoadData->SubMeshes = a_Skin.GetMeshes();
-			for (size_t i = 0; i < t_LoadData->SubMeshes.size(); i++)
+			if (t_InitialMeshesToHide.size() != 0)
 			{
-				const auto& t_Submesh = t_LoadData->SubMeshes[i];
-				bool t_ShouldHide = false;
-				for (auto& t_SubmeshToHide : t_InitialMeshesToHide)
+				t_LoadData->SubMeshes = a_Skin.GetMeshes();
+				for (size_t i = 0; i < t_LoadData->SubMeshes.size(); i++)
 				{
-					if (t_Submesh.MaterialName != t_SubmeshToHide->DebugPrint())
-						continue;
+					const auto& t_Submesh = t_LoadData->SubMeshes[i];
+					bool t_ShouldHide = false;
+					for (auto& t_SubmeshToHide : t_InitialMeshesToHide)
+					{
+						if (t_Submesh.MaterialName != t_SubmeshToHide->DebugPrint())
+							continue;
 
-					t_ShouldHide = true;
-					break;
+						t_ShouldHide = true;
+						break;
+					}
+
+					a_Mesh->SubMeshes[i].Visible = !t_ShouldHide;
+					a_Mesh->SubMeshes[i].InitialVisibility = !t_ShouldHide;
 				}
 
-				a_Mesh->SubMeshes[i].Visible = !t_ShouldHide;
-				a_Mesh->SubMeshes[i].InitialVisibility = !t_ShouldHide;
+				// Little hack to improve finding the materialOverride
+				t_MaterialOverrides = t_InitialMeshesToHide[0]->GetParent()->GetChild("materialOverride");
+			}
+
+			// Search for the material overrides, if needed
+			if (t_MaterialOverrides == nullptr)
+			{
+				auto t_Results = t_LoadData->SkinBin.Find([](const League::BaseValueStorage& a_Value, void* a_UserData) { return a_Value.Is("materialOverride"); });
+				if (t_Results.size() != 0)
+					t_MaterialOverrides = t_Results[0];
+			}
+
+			// Process material overrides
+			if (t_MaterialOverrides != nullptr)
+			{
+				const auto& t_Root = Application::Instance->GetAssetRoot();
+				auto t_Materials = (const League::ContainerValueStorage*)t_MaterialOverrides;
+				for (const auto& t_Material : t_Materials->Get())
+				{
+					auto t_TextureStorage = t_Material->GetChild("texture");
+					auto t_SubmeshNameStorage = t_Material->GetChild("submesh");
+					if (t_TextureStorage == nullptr || t_SubmeshNameStorage == nullptr)
+						continue;
+
+					auto t_Texture = t_TextureStorage->DebugPrint();
+					auto t_SubmeshName = t_SubmeshNameStorage->DebugPrint();
+					for (int i = 0; i < t_LoadData->SubMeshes.size(); i++)
+					{
+						if (t_LoadData->SubMeshes[i].MaterialName == t_SubmeshName)
+						{
+							t_LoadData->Target->SubMeshes[i].SetTexture(t_Root + t_Texture);
+							break;
+						}
+					}
+				}
 			}
 
 			// Load all the animations
@@ -204,7 +244,15 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 					if (a_ValueStorage.GetType() != League::Bin::ValueStorage::Type::String)
 						return false;
 
-					return a_ValueStorage.Is("mAnimationFilePath");
+					if (!a_ValueStorage.Is("mAnimationFilePath"))
+						return false;
+
+					auto t_Value = a_ValueStorage.DebugPrint();
+
+					if (t_Value.find("Recall") == std::string::npos)
+						return false;
+
+					return true;
 				});
 				printf("Found all of the animations! We have %lu animations.\n", t_AnimationNames.size());
 
