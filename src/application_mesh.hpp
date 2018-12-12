@@ -16,6 +16,7 @@ public:
 	{
 	public:
 		AnimationEvent(ApplicationMesh& a_Mesh) : m_Parent(a_Mesh) {}
+		virtual ~AnimationEvent() {}
 
 		virtual void Reset() = 0;
 		virtual void Update(float a_Time) = 0;

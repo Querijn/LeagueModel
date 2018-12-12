@@ -157,9 +157,6 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 			t_LoadData->Target = a_Mesh;
 
 			printf("Mesh loaded, loading texture %s..\n", t_LoadData->Texture.c_str());
-			// Set the texture (async)
-			for (int i = 0; i < a_Mesh->SubMeshes.size(); i++)
-				a_Mesh->SubMeshes[i].SetTexture(t_LoadData->Texture);
 
 			if (a_Mesh->Skeleton == nullptr)
 			{
@@ -205,6 +202,7 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 			// Process material overrides
 			if (t_MaterialOverrides != nullptr)
 			{
+				std::vector<size_t> t_MeshesWithMaterial;
 				const auto& t_Root = Application::Instance->GetAssetRoot();
 				auto t_Materials = (const League::ContainerValueStorage*)t_MaterialOverrides;
 				for (const auto& t_Material : t_Materials->Get())
@@ -221,10 +219,16 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 						if (t_LoadData->SubMeshes[i].MaterialName == t_SubmeshName)
 						{
 							t_LoadData->Target->SubMeshes[i].SetTexture(t_Root + t_Texture);
+							t_MeshesWithMaterial.push_back(i);
 							break;
 						}
 					}
 				}
+
+				// Set the texture (async)
+				for (int i = 0; i < a_Mesh->SubMeshes.size(); i++)
+					if (std::find(t_MeshesWithMaterial.begin(), t_MeshesWithMaterial.end(), i) == t_MeshesWithMaterial.end())
+						a_Mesh->SubMeshes[i].SetTexture(t_LoadData->Texture);
 			}
 
 			// Load all the animations
@@ -281,7 +285,6 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 
 						for (auto t_EventMember : t_EventMembers)
 						{
-
 							// This should be the mesh swap event
 							auto t_Event = t_EventMember->GetParent();
 							auto t_JSON = t_Event->GetAsJSON(false, false);
