@@ -204,15 +204,7 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 					if (a_ValueStorage.GetType() != League::Bin::ValueStorage::Type::String)
 						return false;
 
-					if (!a_ValueStorage.Is("mAnimationFilePath"))
-						return false;
-					
-					auto t_Value = a_ValueStorage.DebugPrint();
-					
-					if (t_Value.find("Recall") == std::string::npos)
-						return false;
-
-					return true;
+					return a_ValueStorage.Is("mAnimationFilePath");
 				});
 				printf("Found all of the animations! We have %lu animations.\n", t_AnimationNames.size());
 
