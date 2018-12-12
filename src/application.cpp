@@ -200,9 +200,9 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 			}
 
 			// Process material overrides
+			std::vector<size_t> t_MeshesWithMaterial;
 			if (t_MaterialOverrides != nullptr)
 			{
-				std::vector<size_t> t_MeshesWithMaterial;
 				const auto& t_Root = Application::Instance->GetAssetRoot();
 				auto t_Materials = (const League::ContainerValueStorage*)t_MaterialOverrides;
 				for (const auto& t_Material : t_Materials->Get())
@@ -224,12 +224,11 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 						}
 					}
 				}
-
-				// Set the texture (async)
-				for (int i = 0; i < a_Mesh->SubMeshes.size(); i++)
-					if (std::find(t_MeshesWithMaterial.begin(), t_MeshesWithMaterial.end(), i) == t_MeshesWithMaterial.end())
-						a_Mesh->SubMeshes[i].SetTexture(t_LoadData->Texture);
 			}
+			// Set the texture (async)
+			for (int i = 0; i < a_Mesh->SubMeshes.size(); i++)
+				if (std::find(t_MeshesWithMaterial.begin(), t_MeshesWithMaterial.end(), i) == t_MeshesWithMaterial.end())
+					a_Mesh->SubMeshes[i].SetTexture(t_LoadData->Texture);
 
 			// Load all the animations
 			t_LoadData->AnimationBin.Load(t_LoadData->AnimationBinPath, [](League::Bin& a_Bin, void* a_UserData)
@@ -248,15 +247,7 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 					if (a_ValueStorage.GetType() != League::Bin::ValueStorage::Type::String)
 						return false;
 
-					if (!a_ValueStorage.Is("mAnimationFilePath"))
-						return false;
-
-					auto t_Value = a_ValueStorage.DebugPrint();
-
-					if (t_Value.find("Recall") == std::string::npos)
-						return false;
-
-					return true;
+					return a_ValueStorage.Is("mAnimationFilePath");
 				});
 				printf("Found all of the animations! We have %lu animations.\n", t_AnimationNames.size());
 
