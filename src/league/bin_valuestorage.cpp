@@ -3,6 +3,8 @@
 
 #include <glm/glm.hpp>
 
+#include <algorithm>
+
 std::map<std::string, std::string> m_HashMap;
 void InitExtraBinHashMap();
 void InitBinHashMap();
@@ -48,13 +50,16 @@ void AddToPublicHashMap(const std::string& a_String)
 {
 	auto t_Hash = NumberToHexString(FNV1Hash(a_String));
 	auto t_Index = m_HashMap.find(t_Hash);
-	if (t_Index != m_HashMap.end() && a_String != t_Index->second)
+
+	auto t_String = a_String;
+	std::transform(t_String.begin(), t_String.end(), t_String.begin(), ::tolower);
+	if (t_Index != m_HashMap.end() && t_String != t_Index->second)
 	{
-		printf("Woah! I found a hash collision between %s and %s!", a_String.c_str(), t_Index->second.c_str());
+		printf("Woah! I found a hash collision between %s and %s!\n", a_String.c_str(), t_Index->second.c_str());
 		return;
 	}
 
-	m_HashMap[t_Hash] = a_String;
+	m_HashMap[t_Hash] = t_String;
 }
 
 bool g_Initialised = false;
