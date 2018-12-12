@@ -4,6 +4,8 @@
 #include <glm/glm.hpp>
 
 std::map<std::string, std::string> m_HashMap;
+void InitExtraBinHashMap();
+void InitBinHashMap();
 
 uint32_t FNV1Hash(std::string a_String)
 {
@@ -15,9 +17,36 @@ uint32_t FNV1Hash(std::string a_String)
 	return t_Hash;
 }
 
+std::string NumberToHexString(uint32_t a_Number)
+{
+	static const size_t t_Size = sizeof(uint32_t) << 1;
+	static const char* t_Digits = "0123456789abcdef";
+	std::string t_Result(t_Size, '0');
+	for (size_t i = 0, j = (t_Size - 1) * 4; i < t_Size; ++i, j -= 4)
+		t_Result[i] = t_Digits[(a_Number >> j) & 0x0f];
+
+	return t_Result;
+}
+
+std::string GetStringByHash(uint32_t a_Hash)
+{
+	InitBinHashMap();
+
+	auto t_Index = m_HashMap.find(NumberToHexString(a_Hash));
+	if (t_Index != m_HashMap.end())
+		return t_Index->second;
+
+	return NumberToHexString(a_Hash) + " (I'm a hash!)";
+}
+
+bool League::BaseValueStorage::Is(const std::string & a_Name) const
+{
+	return FNV1Hash(a_Name) == m_Hash;
+}
+
 void AddToPublicHashMap(const std::string& a_String)
 {
-	auto t_Hash = std::to_string(FNV1Hash(a_String));
+	auto t_Hash = NumberToHexString(FNV1Hash(a_String));
 	auto t_Index = m_HashMap.find(t_Hash);
 	if (t_Index != m_HashMap.end() && a_String != t_Index->second)
 	{
@@ -29,11 +58,10 @@ void AddToPublicHashMap(const std::string& a_String)
 }
 
 bool g_Initialised = false;
-void InitExtraBinHashMap();
 void InitBinHashMap()
 {
 	if (g_Initialised) return;
-	AddToPublicHashMap("swapChildren");
+
 	auto* t_File = FileSystem::GetFile("data/cdtb/cdragontoolbox/hashes.bin.txt");
 	t_File->Load([](File* a_File, File::LoadState a_LoadState, void* a_UserData)
 	{
@@ -131,33 +159,6 @@ void InitExtraBinHashMap()
 			}
 		} while (!t_WasEnd);
 	});
-}
-
-std::string NumberToHexString(uint32_t a_Number)
-{
-	static const size_t t_Size = sizeof(uint32_t) << 1;
-	static const char* t_Digits = "0123456789abcdef";
-	std::string t_Result(t_Size, '0');
-	for (size_t i = 0, j = (t_Size - 1) * 4; i < t_Size; ++i, j -= 4)
-		t_Result[i] = t_Digits[(a_Number >> j) & 0x0f];
-
-	return t_Result;
-}
-
-std::string GetStringByHash(uint32_t a_Hash)
-{
-	InitBinHashMap();
-
-	auto t_Index = m_HashMap.find(NumberToHexString(a_Hash));
-	if (t_Index != m_HashMap.end())
-		return t_Index->second;
-
-	return NumberToHexString(a_Hash) + " (I'm a hash!)";
-}
-
-bool League::BaseValueStorage::Is(const std::string & a_Name) const
-{
-	return FNV1Hash(a_Name) == m_Hash;
 }
 
 using U16Vec3Storage = League::NumberVectorValueStorage<glm::ivec3, glm::ivec3::value_type, uint16_t, 3>;
