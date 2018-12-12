@@ -12,6 +12,8 @@ struct SubMeshHeader
 	uint32_t IndexCount;
 };
 
+void AddToPublicHashMap(const std::string& a_String);
+
 void League::Skin::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction, void * a_Argument)
 {
 	auto* t_File = FileSystem::GetFile(a_FilePath);
@@ -83,6 +85,7 @@ void League::Skin::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction,
 				char t_MaterialName[64];
 				a_File->Read((uint8_t*)t_MaterialName, 64, t_Offset);
 				t_Mesh.Material = t_MaterialName;
+				AddToPublicHashMap(t_MaterialName);
 
 				a_File->Get(t_Mesh.VertexOffset, t_Offset);
 				a_File->Get(t_Mesh.VertexCount, t_Offset);

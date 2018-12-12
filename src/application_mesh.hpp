@@ -5,18 +5,48 @@
 
 #include <map>
 #include <string>
+#include <vector>
 
 namespace League { class Animation; }
 
 class ApplicationMesh
 {
 public:
+	class AnimationEvent
+	{
+	public:
+		AnimationEvent(ApplicationMesh& a_Mesh) : m_Parent(a_Mesh) {}
+
+		virtual void Reset() = 0;
+		virtual void Update(float a_Time) = 0;
+
+	protected:
+		ApplicationMesh& m_Parent;
+	};
+
+	class SwapMeshAnimationEvent : public AnimationEvent
+	{
+	public:
+		SwapMeshAnimationEvent(ApplicationMesh& a_Mesh, float a_TriggerFrame, const std::vector<size_t>& a_ToShow, const std::vector<size_t>& a_ToHide);
+
+		void Reset() override;
+		void Update(float a_Frame) override;
+
+	private:
+		bool m_Triggered = false;
+		float m_TriggerFrame;
+		std::vector<size_t> m_SubmeshesToShow, m_SubmeshesToHide;
+	};
+
+	~ApplicationMesh();
+
 	void AddAnimationReference(const std::string& a_Name, const League::Animation& a_Animation);
 	void ApplyAnimation(const std::string& a_Animation);
-	void Draw(size_t a_SubMeshIndex, float a_Time, ShaderProgram& a_Program, glm::mat4& a_VP, Texture* a_Diffuse, std::vector<glm::mat4>* a_BoneTransforms);
+	void Draw(float a_Time, ShaderProgram& a_Program, glm::mat4& a_VP, Texture* a_Diffuse, std::vector<glm::mat4>* a_BoneTransforms);
 
 	std::shared_ptr<League::Skeleton> Skeleton = nullptr;
 	std::map<std::string, const League::Animation*> Animations;
+	std::map<std::string, std::vector<AnimationEvent*>> AnimationEvents;
 	std::string CurrentAnimation;
 
 	VertexBuffer<glm::vec3>* PositionBuffer;
@@ -31,6 +61,9 @@ public:
 		void SetTexture(std::string a_FilePath);
 
 		IndexBuffer<uint16_t>* IndexBuffer;
+
+		bool InitialVisibility = true;
+		bool Visible = true;
 
 		bool HasImage = false;
 		Texture Image;

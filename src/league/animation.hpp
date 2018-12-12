@@ -48,6 +48,7 @@ namespace League
 
 		const Animation::Bone* GetBone(std::string a_Name) const;
 		float GetDuration() const { return m_Duration; }
+		float GetFPS() const { return m_FPS; }
 	private:
 		File::LoadState m_State = File::LoadState::NotLoaded;
 

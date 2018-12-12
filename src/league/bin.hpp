@@ -22,6 +22,7 @@ namespace League
 		std::string GetAsJSON() const;
 
 		File::LoadState GetLoadState() const { return m_State; }
+		const std::vector<std::string>& GetLinkedFiles() const { return m_LinkedFiles; }
 
 		std::vector<const ValueStorage*> Find(FindConditionFunction a_Function, void* a_UserData = nullptr) const;
 		const ValueStorage* Get(std::string a_Name) const;

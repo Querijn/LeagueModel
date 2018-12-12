@@ -113,7 +113,7 @@ void League::Bin::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction, 
 			auto& t_Vector = t_Bin->m_Values[t_Hash];
 			for (int j = 0; j < t_ValueCount; j++)
 			{
-				BaseValueStorage* t_Storage = League::BaseValueStorage::Create(*t_Bin, a_File, t_Offset);
+				BaseValueStorage* t_Storage = League::BaseValueStorage::Create(*t_Bin, a_File, t_Offset, nullptr);
 				t_Storage->FetchDataFromFile(a_File, t_Offset);
 				t_Vector.push_back(t_Storage);
 			}

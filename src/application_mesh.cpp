@@ -42,14 +42,12 @@ glm::quat Interpolate(glm::quat a_Low, glm::quat a_High, float a_Progress)
 }
 
 template<typename T>
-T FindNearestTime(const std::vector<League::Animation::Bone::Frame<T>>& a_Vector, float a_Time, size_t& i)
+T FindNearestTime(const std::vector<League::Animation::Bone::Frame<T>>& a_Vector, float a_Time, size_t& a_Index)
 {
 	auto t_Min = a_Vector[0];
 	auto t_Max = a_Vector[a_Vector.size() - 1];
 
-	if (i >= a_Vector.size()) i = 0;
-
-	for (; i < a_Vector.size(); i++)
+	for (int i = 0; i < a_Vector.size(); i++)
 	{
 		const auto& t_Current = a_Vector[i];
 
@@ -62,8 +60,6 @@ T FindNearestTime(const std::vector<League::Animation::Bone::Frame<T>>& a_Vector
 		t_Max = t_Current;
 		break;
 	}
-
-	i--;
 
 	float t_Div = t_Max.Time - t_Min.Time;
 	float t_LerpValue = (t_Div == 0) ? 1 : (a_Time - t_Min.Time) / t_Div;
@@ -92,7 +88,7 @@ void ApplicationMesh::SetupHierarchy(const glm::mat4& a_InverseRoot, std::vector
 		SetupHierarchy(a_InverseRoot, a_Bones, *t_Child, t_GlobalTransform, a_Time);
 };
 
-void ApplicationMesh::Draw(size_t a_SubMeshIndex, float a_Time, ShaderProgram& a_Program, glm::mat4& a_VP, Texture* a_Diffuse, std::vector<glm::mat4>* a_BoneTransforms)
+void ApplicationMesh::Draw(float a_Time, ShaderProgram& a_Program, glm::mat4& a_VP, Texture* a_Diffuse, std::vector<glm::mat4>* a_BoneTransforms)
 {
 	a_Program.Use();
 
@@ -102,37 +98,49 @@ void ApplicationMesh::Draw(size_t a_SubMeshIndex, float a_Time, ShaderProgram& a
 	if (BoneIndexBuffer) BoneIndexBuffer->Use();
 	if (BoneWeightBuffer) BoneWeightBuffer->Use();
 
-	auto& t_Submesh = SubMeshes[a_SubMeshIndex];
-
-	if (a_Diffuse) *a_Diffuse = t_Submesh.HasImage ? t_Submesh.Image : Application::Instance->GetDefaultTexture();
-
-	glm::vec4 t_Center(0);
-
-	if (Skeleton && a_BoneTransforms)
+	for (auto& t_Submesh : SubMeshes)
 	{
-		const auto& t_AnimationIndex = Animations.find(CurrentAnimation);
-		if (t_AnimationIndex != Animations.end())
-		{
-			float t_AnimationDuration = t_AnimationIndex->second->GetDuration();
-			while (a_Time > t_AnimationDuration) a_Time -= t_AnimationDuration;
+		if (t_Submesh.Visible == false) continue;
 
-			auto& t_Bones = Skeleton->GetBones();
-			a_BoneTransforms->resize(t_Bones.size());
-			SetupAnimation(*a_BoneTransforms, a_Time);
-		}
-		else
+		if (a_Diffuse) *a_Diffuse = t_Submesh.HasImage ? t_Submesh.Image : Application::Instance->GetDefaultTexture();
+
+		glm::vec4 t_Center(0);
+
+		if (Skeleton && a_BoneTransforms)
 		{
-			auto& t_Bones = Skeleton->GetBones();
-			a_BoneTransforms->resize(t_Bones.size());
-			for (int i = 0; i < a_BoneTransforms->size(); i++)
-				a_BoneTransforms->at(i) = glm::identity<glm::mat4>();
+			const auto& t_AnimationIndex = Animations.find(CurrentAnimation);
+			if (t_AnimationIndex != Animations.end())
+			{
+				float t_AnimationDuration = t_AnimationIndex->second->GetDuration();
+				while (a_Time > t_AnimationDuration)
+				{
+					a_Time -= t_AnimationDuration;
+					for (auto t_AnimationEvent : AnimationEvents[CurrentAnimation])
+						t_AnimationEvent->Reset();
+				}
+
+				float t_FPS = t_AnimationIndex->second->GetFPS();
+				for (auto t_AnimationEvent : AnimationEvents[CurrentAnimation])
+					t_AnimationEvent->Update(a_Time * t_FPS);
+
+				auto& t_Bones = Skeleton->GetBones();
+				a_BoneTransforms->resize(t_Bones.size());
+				SetupAnimation(*a_BoneTransforms, a_Time);
+			}
+			else
+			{
+				auto& t_Bones = Skeleton->GetBones();
+				a_BoneTransforms->resize(t_Bones.size());
+				for (int i = 0; i < a_BoneTransforms->size(); i++)
+					a_BoneTransforms->at(i) = glm::identity<glm::mat4>();
+			}
 		}
+
+		a_VP *= t_Submesh.GetTransformMatrix();
+
+		a_Program.Update();
+		t_Submesh.IndexBuffer->Draw();
 	}
-
-	a_VP *= t_Submesh.GetTransformMatrix();
-
-	a_Program.Update();
-	t_Submesh.IndexBuffer->Draw();
 }
 
 void ApplicationMesh::SetupAnimation(std::vector<glm::mat4>& a_BoneTransforms, float a_Time)
@@ -174,6 +182,14 @@ void ApplicationMesh::SubMesh::SetTexture(std::string a_FilePath)
 	}, this);
 }
 
+ApplicationMesh::~ApplicationMesh()
+{
+	for (auto t_AnimationEventList : AnimationEvents)
+		for (auto t_AnimationEvent : t_AnimationEventList.second)
+			delete t_AnimationEvent;
+	AnimationEvents.clear();
+}
+
 void ApplicationMesh::AddAnimationReference(const std::string& a_Name, const League::Animation & a_Animation)
 {
 	Animations[a_Name] = &a_Animation;
@@ -206,4 +222,28 @@ void ApplicationMesh::ApplyAnimation(const std::string& a_Animation)
 	if (abs(t_HighestY) + abs(t_LowestY) < 400)
 		Center.y = -(t_HighestY + t_LowestY) * 0.5f;
 	else Center.y = -75;
+}
+
+ApplicationMesh::SwapMeshAnimationEvent::SwapMeshAnimationEvent(ApplicationMesh & a_Mesh, float a_TriggerFrame, const std::vector<size_t>& a_ToShow, const std::vector<size_t>& a_ToHide) :
+	AnimationEvent(a_Mesh), m_TriggerFrame(a_TriggerFrame), m_SubmeshesToShow(a_ToShow), m_SubmeshesToHide(a_ToHide)
+{
+}
+
+void ApplicationMesh::SwapMeshAnimationEvent::Reset()
+{
+	for (size_t i = 0; i < m_Parent.SubMeshes.size(); i++)
+		m_Parent.SubMeshes[i].Visible = m_Parent.SubMeshes[i].InitialVisibility;
+	m_Triggered = false;
+}
+
+void ApplicationMesh::SwapMeshAnimationEvent::Update(float a_Frame)
+{
+	if (a_Frame < m_TriggerFrame || m_Triggered) return;
+	m_Triggered = true;
+
+	for (size_t i = 0; i < m_SubmeshesToHide.size(); i++)
+		m_Parent.SubMeshes[m_SubmeshesToHide[i]].Visible = false;
+
+	for (size_t i = 0; i < m_SubmeshesToShow.size(); i++)
+		m_Parent.SubMeshes[m_SubmeshesToShow[i]].Visible = true;
 }

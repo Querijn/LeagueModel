@@ -167,63 +167,63 @@ using FVec3Storage = League::NumberVectorValueStorage<glm::vec3, glm::vec3::valu
 using FVec2Storage = League::NumberVectorValueStorage<glm::vec2, glm::vec2::value_type, float, 2>;
 using RGBAStorage = League::NumberVectorValueStorage<glm::ivec4, glm::ivec4::value_type, uint8_t, 4>;
 
-League::BaseValueStorage * League::BaseValueStorage::Create(League::Bin& a_Bin, Type a_Type, uint32_t a_Hash)
+League::BaseValueStorage * League::BaseValueStorage::Create(League::Bin& a_Bin, Type a_Type, uint32_t a_Hash, BaseValueStorage* a_Parent)
 {
 	switch (a_Type)
 	{
-	case Bool: return New(NumberValueStorage<bool>(a_Bin, a_Type, a_Hash));
-	case S8: return New(NumberValueStorage<int8_t>(a_Bin, a_Type, a_Hash));
-	case U8: return New(NumberValueStorage<uint8_t>(a_Bin, a_Type, a_Hash));
-	case S16: return New(NumberValueStorage<int16_t>(a_Bin, a_Type, a_Hash));
-	case U16: return New(NumberValueStorage<uint16_t>(a_Bin, a_Type, a_Hash));
-	case Link: return New(NumberValueStorage<uint32_t>(a_Bin, a_Type, a_Hash));
-	case S32: return New(NumberValueStorage<int32_t>(a_Bin, a_Type, a_Hash));
-	case U32: return New(NumberValueStorage<uint32_t>(a_Bin, a_Type, a_Hash));
-	case S64: return New(NumberValueStorage<int64_t>(a_Bin, a_Type, a_Hash));
-	case U64: return New(NumberValueStorage<uint64_t>(a_Bin, a_Type, a_Hash));
-	case Float: return New(NumberValueStorage<float>(a_Bin, a_Type, a_Hash));
-	case Hash: return New(HashValueStorage(a_Bin, a_Type, a_Hash));
-	case Padding: return New(NumberValueStorage<uint8_t>(a_Bin, a_Type, a_Hash));
+	case Bool: return New(NumberValueStorage<bool>(a_Bin, a_Parent, a_Type, a_Hash));
+	case S8: return New(NumberValueStorage<int8_t>(a_Bin, a_Parent, a_Type, a_Hash));
+	case U8: return New(NumberValueStorage<uint8_t>(a_Bin, a_Parent, a_Type, a_Hash));
+	case S16: return New(NumberValueStorage<int16_t>(a_Bin, a_Parent, a_Type, a_Hash));
+	case U16: return New(NumberValueStorage<uint16_t>(a_Bin, a_Parent, a_Type, a_Hash));
+	case Link: return New(NumberValueStorage<uint32_t>(a_Bin, a_Parent, a_Type, a_Hash));
+	case S32: return New(NumberValueStorage<int32_t>(a_Bin, a_Parent, a_Type, a_Hash));
+	case U32: return New(NumberValueStorage<uint32_t>(a_Bin, a_Parent, a_Type, a_Hash));
+	case S64: return New(NumberValueStorage<int64_t>(a_Bin, a_Parent, a_Type, a_Hash));
+	case U64: return New(NumberValueStorage<uint64_t>(a_Bin, a_Parent, a_Type, a_Hash));
+	case Float: return New(NumberValueStorage<float>(a_Bin, a_Parent, a_Type, a_Hash));
+	case Hash: return New(HashValueStorage(a_Bin, a_Parent, a_Type, a_Hash));
+	case Padding: return New(NumberValueStorage<uint8_t>(a_Bin, a_Parent, a_Type, a_Hash));
 
-	case String: return New(StringValueStorage(a_Bin, a_Type, a_Hash));
+	case String: return New(StringValueStorage(a_Bin, a_Parent, a_Type, a_Hash));
 
-	case RGBA: return New(RGBAStorage(a_Bin, a_Type, a_Hash));
-	case FVec2: return New(FVec2Storage(a_Bin, a_Type, a_Hash));
-	case FVec3: return New(FVec3Storage(a_Bin, a_Type, a_Hash));
-	case FVec4: return New(FVec4Storage(a_Bin, a_Type, a_Hash));
-	case U16Vec3: return New(U16Vec3Storage(a_Bin, a_Type, a_Hash));
+	case RGBA: return New(RGBAStorage(a_Bin, a_Parent, a_Type, a_Hash));
+	case FVec2: return New(FVec2Storage(a_Bin, a_Parent, a_Type, a_Hash));
+	case FVec3: return New(FVec3Storage(a_Bin, a_Parent, a_Type, a_Hash));
+	case FVec4: return New(FVec4Storage(a_Bin, a_Parent, a_Type, a_Hash));
+	case U16Vec3: return New(U16Vec3Storage(a_Bin, a_Parent, a_Type, a_Hash));
 
 	case Struct:
 	case Embedded:
-		return New(StructValueStorage(a_Bin, a_Type, a_Hash));
+		return New(StructValueStorage(a_Bin, a_Parent, a_Type, a_Hash));
 
-	case Mat4: return New(MatrixValueStorage(a_Bin, a_Type, a_Hash));
-	case Container: return New(ContainerValueStorage(a_Bin, a_Type, a_Hash));
-	case Array: return New(ArrayValueStorage(a_Bin, a_Type, a_Hash));
-	case Map: return New(MapValueStorage(a_Bin, a_Type, a_Hash));
+	case Mat4: return New(MatrixValueStorage(a_Bin, a_Parent, a_Type, a_Hash));
+	case Container: return New(ContainerValueStorage(a_Bin, a_Parent, a_Type, a_Hash));
+	case Array: return New(ArrayValueStorage(a_Bin, a_Parent, a_Type, a_Hash));
+	case Map: return New(MapValueStorage(a_Bin, a_Parent, a_Type, a_Hash));
 
 	default: throw 0;
 	};
 }
 
-League::BaseValueStorage* League::BaseValueStorage::Create(League::Bin& a_Bin, File * a_File, size_t & a_Offset)
+League::BaseValueStorage* League::BaseValueStorage::Create(League::Bin& a_Bin, File * a_File, size_t & a_Offset, BaseValueStorage* a_Parent)
 {
 	Type t_Type;
 	uint32_t t_Hash;
 	a_File->Get(t_Hash, a_Offset);
 	a_File->Get(t_Type, a_Offset);
 
-	return League::BaseValueStorage::Create(a_Bin, t_Type, t_Hash);
+	return League::BaseValueStorage::Create(a_Bin, t_Type, t_Hash, a_Parent);
 }
 
 League::BaseValueStorage* League::BaseValueStorage::Create(BaseValueStorage & a_Parent, Type a_Type, uint32_t a_Hash)
 {
-	return League::BaseValueStorage::Create(a_Parent.m_Bin, a_Type, a_Hash);
+	return League::BaseValueStorage::Create(a_Parent.m_Bin, a_Type, a_Hash, &a_Parent);
 }
 
 League::BaseValueStorage * League::BaseValueStorage::Create(BaseValueStorage & a_Parent, File * a_File, size_t & a_Offset)
 {
-	return League::BaseValueStorage::Create(a_Parent.m_Bin, a_File, a_Offset);
+	return League::BaseValueStorage::Create(a_Parent.m_Bin, a_File, a_Offset, &a_Parent);
 }
 
 std::string League::BaseValueStorage::GetHashJSONPrefix() const

@@ -2,10 +2,13 @@
 #include "skeleton.hpp"
 #include <string>
 
+#include <profiling/memory.hpp>
+
 #include <bitset>
 #include <unordered_set>
 
 uint32_t StringToHash(const std::string& a_String);
+void AddToPublicHashMap(const std::string& a_String);
 
 League::Animation::Animation(Skeleton & a_Skeleton) :
 	m_Skeleton(a_Skeleton)
@@ -24,7 +27,7 @@ void League::Animation::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunc
 		OnLoadFunction OnLoadFunction;
 		void* Argument;
 	};
-	auto* t_LoadData = new LoadData(this, a_OnLoadFunction, a_Argument);
+	auto* t_LoadData = New(LoadData(this, a_OnLoadFunction, a_Argument));
 
 	auto* t_File = FileSystem::GetFile(a_FilePath);
 	t_File->Load([](File* a_File, File::LoadState a_LoadState, void* a_Argument)
@@ -38,7 +41,7 @@ void League::Animation::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunc
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Animation, t_LoadData->Argument);
 
 			FileSystem::CloseFile(*a_File);
-			delete t_LoadData;
+			Delete(t_LoadData);
 			return;
 		}
 
@@ -52,7 +55,7 @@ void League::Animation::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunc
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Animation, t_LoadData->Argument);
 
 			FileSystem::CloseFile(*a_File);
-			delete t_LoadData;
+			Delete(t_LoadData);
 			return;
 		}
 
@@ -70,7 +73,7 @@ void League::Animation::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunc
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Animation, t_LoadData->Argument);
 
 			FileSystem::CloseFile(*a_File);
-			delete t_LoadData;
+			Delete(t_LoadData);
 			return;
 		}
 
@@ -82,7 +85,7 @@ void League::Animation::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunc
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Animation, t_LoadData->Argument);
 
 			FileSystem::CloseFile(*a_File);
-			delete t_LoadData;
+			Delete(t_LoadData);
 			return;
 		}
 
@@ -106,7 +109,7 @@ void League::Animation::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunc
 		if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Animation, t_LoadData->Argument);
 
 		FileSystem::CloseFile(*a_File);
-		delete t_LoadData;
+		Delete(t_LoadData);
 	}, t_LoadData);
 }
 
@@ -304,6 +307,7 @@ File::LoadState League::Animation::LoadVersion1(const std::map<uint32_t, std::st
 
 		Bone t_BoneEntry;
 		t_BoneEntry.Name = t_Index->second;
+		AddToPublicHashMap(t_BoneEntry.Name);
 
 		for (auto &t_CompressedTranslation : t_CompressedTranslations[i])
 		{
@@ -381,6 +385,7 @@ File::LoadState League::Animation::LoadVersion3(const std::map<uint32_t, std::st
 		if (t_Index != a_BoneNameHashes.end())
 			m_Bones[i].Name = t_Index->second;
 		else m_Bones[i].Name = Name;
+		AddToPublicHashMap(m_Bones[i].Name);
 
 		a_Offset += 4;
 
@@ -494,6 +499,7 @@ File::LoadState League::Animation::LoadVersion4(const std::map<uint32_t, std::st
 
 		Bone t_Bone;
 		t_Bone.Name = t_NameHash->second;
+		AddToPublicHashMap(t_Bone.Name);
 
 		for (auto& t_Frame : t_BoneIndex.second)
 		{
@@ -590,6 +596,7 @@ File::LoadState League::Animation::LoadVersion5(const std::map<uint32_t, std::st
 		auto t_HashNameIndex = a_BoneNameHashes.find(t_HashEntries[j]);
 		if (t_HashNameIndex == a_BoneNameHashes.end()) continue;
 		t_Bone.Name = t_HashNameIndex->second;
+		AddToPublicHashMap(t_Bone.Name);
 		m_Bones.push_back(t_Bone);
 	}
 

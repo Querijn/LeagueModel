@@ -68,7 +68,7 @@ void Application::Init()
 	LoadDefaultTexture();
 	LoadShaders();
 
-	LoadSkin("data/output/data/characters/neeko/skins/skin0.bin", "data/output/data/characters/neeko/animations/skin0.bin");
+	LoadSkin("data/output/data/characters/teemo/skins/skin14.bin", "data/output/data/characters/teemo/animations/skin14.bin");
 	UpdateViewMatrix();
 
 	Platform::SetMainLoop([]() 
@@ -97,6 +97,7 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 		Application::Mesh* Target;
 		League::Bin SkinBin;
 		League::Bin AnimationBin;
+		std::vector<League::Skin::Mesh> SubMeshes;
 	};
 	auto* t_LoadData = New(LoadData(a_AnimationBinPath));
 
@@ -111,6 +112,12 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 			return;
 		}
 		printf("Skin information is loaded!\n");
+
+//#if defined(_DEBUG) && defined(_WIN32)
+//		std::ofstream t_File("skin.json");
+//		t_File << a_Bin.GetAsJSON();
+//		t_File.close();
+//#endif
 
 		auto t_MeshProperties = a_Bin.Get("skinMeshProperties");
 		if (!t_MeshProperties)
@@ -142,7 +149,7 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 		printf("Starting to load the mesh (%s and %s)..\n", t_Skin.c_str(), t_Skeleton.c_str());
 		
 		// Load the mesh (Skeleton + Skin)
-		Application::Instance->LoadMesh(t_Skin, t_Skeleton, [](std::string a_SkinPath, std::string a_SkeletonPath, Application::Mesh* a_Mesh, void* a_UserData)
+		Application::Instance->LoadMesh(t_Skin, t_Skeleton, [](std::string a_SkinPath, std::string a_SkeletonPath, Application::Mesh* a_Mesh, League::Skin& a_Skin, void* a_UserData)
 		{
 			auto* t_LoadData = (LoadData*)a_UserData;
 			if (a_Mesh == nullptr) return;
@@ -161,18 +168,51 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 				return;
 			}
 
+			auto t_InitialMeshesToHide = t_LoadData->SkinBin.Find([](const League::BaseValueStorage& a_Value, void* a_UserData) { return a_Value.Is("initialSubmeshToHide"); });
+			t_LoadData->SubMeshes = a_Skin.GetMeshes();
+			for (size_t i = 0; i < t_LoadData->SubMeshes.size(); i++)
+			{
+				const auto& t_Submesh = t_LoadData->SubMeshes[i];
+				bool t_ShouldHide = false;
+				for (auto& t_SubmeshToHide : t_InitialMeshesToHide)
+				{
+					if (t_Submesh.MaterialName != t_SubmeshToHide->DebugPrint())
+						continue;
+
+					t_ShouldHide = true;
+					break;
+				}
+
+				a_Mesh->SubMeshes[i].Visible = !t_ShouldHide;
+				a_Mesh->SubMeshes[i].InitialVisibility = !t_ShouldHide;
+			}
+
 			// Load all the animations
 			t_LoadData->AnimationBin.Load(t_LoadData->AnimationBinPath, [](League::Bin& a_Bin, void* a_UserData)
 			{
 				auto* t_LoadData = (LoadData*)a_UserData;
 				if (a_Bin.GetLoadState() != File::LoadState::Loaded) return;
 
+//#if defined(_DEBUG) && defined(_WIN32)
+//				std::ofstream t_File("animation.json");
+//				t_File << a_Bin.GetAsJSON();
+//				t_File.close();
+//#endif
+
 				auto t_AnimationNames = a_Bin.Find([](const League::Bin::ValueStorage& a_ValueStorage, void* a_UserData)
 				{
 					if (a_ValueStorage.GetType() != League::Bin::ValueStorage::Type::String)
 						return false;
 
-					return a_ValueStorage.Is("mAnimationFilePath");
+					if (!a_ValueStorage.Is("mAnimationFilePath"))
+						return false;
+					
+					auto t_Value = a_ValueStorage.DebugPrint();
+					
+					if (t_Value.find("Recall") == std::string::npos)
+						return false;
+
+					return true;
 				});
 				printf("Found all of the animations! We have %lu animations.\n", t_AnimationNames.size());
 
@@ -181,9 +221,73 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 				t_LoadData->References++;
 				for (auto t_AnimationNameStorage : t_AnimationNames)
 				{
-					auto t_StringStorage = (const League::StringValueStorage*)t_AnimationNameStorage;
-					t_LoadData->AnimationName = t_Root + t_StringStorage->Get();
+					const auto& t_StringStorage = *(const League::StringValueStorage*)t_AnimationNameStorage;
+					t_LoadData->AnimationName = t_Root + t_StringStorage.Get();
 
+					// Prepare events (Mesh Swapping)
+					{
+						auto t_AnimationResourceData = t_StringStorage.GetParent();
+						if (t_AnimationResourceData == nullptr) goto LoadAnimation;
+
+						auto t_AnimationInfoStructBase = t_AnimationResourceData->GetParent();
+						if (t_AnimationInfoStructBase == nullptr) goto LoadAnimation;
+
+						const auto& t_AnimationInfoStruct = *(const League::StructValueStorage*)t_AnimationInfoStructBase;
+						auto t_EventMap = t_AnimationInfoStruct.GetChild("mEventDataMap");
+						if (t_EventMap == nullptr) goto LoadAnimation;
+
+						// Find all events by one of its members.
+						auto t_EventMembers = t_EventMap->Find([](const League::BaseValueStorage& a_Value, void* a_UserData) { return a_Value.Is("mShowSubmeshList"); });
+
+						for (auto t_EventMember : t_EventMembers)
+						{
+
+							// This should be the mesh swap event
+							auto t_Event = t_EventMember->GetParent();
+							auto t_JSON = t_Event->GetAsJSON(false, false);
+
+							const auto* t_MeshesToShowElement = (const League::ContainerValueStorage*)t_EventMember; // Already found, no need to GetChild this
+							const auto* t_MeshesToHideElement = (const League::ContainerValueStorage*)t_Event->GetChild("mHideSubMeshList");
+							const auto* t_FrameElement = (const League::NumberValueStorage<float>*)t_Event->GetChild("mStartFrame");
+							if (t_FrameElement == nullptr || t_MeshesToShowElement == nullptr || t_MeshesToHideElement == nullptr) continue;
+
+							float t_Frame = t_FrameElement->Get();
+							std::vector<League::BaseValueStorage*> t_MeshesToShow = t_MeshesToShowElement->Get();
+							std::vector<League::BaseValueStorage*> t_MeshesToHide = t_MeshesToHideElement->Get();
+
+							std::vector<size_t> t_ToShow, t_ToHide;
+
+							for (auto& t_ShowMesh : t_MeshesToShow)
+							{
+								auto t_MeshName = t_ShowMesh->DebugPrint();
+								for (int i = 0; i < t_LoadData->SubMeshes.size(); i++)
+								{
+									if (t_LoadData->SubMeshes[i].MaterialName == t_MeshName)
+									{
+										t_ToShow.push_back(i);
+										break;
+									}
+								}
+							}
+
+							for (auto& t_HideMesh : t_MeshesToHide)
+							{
+								auto t_MeshName = t_HideMesh->DebugPrint();
+								for (int i = 0; i < t_LoadData->SubMeshes.size(); i++)
+								{
+									if (t_LoadData->SubMeshes[i].MaterialName == t_MeshName)
+									{
+										t_ToHide.push_back(i);
+										break;
+									}
+								}
+							}
+
+							t_LoadData->Target->AnimationEvents[t_LoadData->AnimationName].push_back(New(ApplicationMesh::SwapMeshAnimationEvent(*t_LoadData->Target, t_Frame, t_ToShow, t_ToHide)));
+						}
+					}
+
+					LoadAnimation:
 					Instance->AddAnimationReference(*t_LoadData->Target, t_LoadData->AnimationName);
 
 					if (t_LoadData->FirstAnimationApplied) continue;
@@ -244,7 +348,7 @@ void Application::LoadMesh(std::string a_SkinPath, std::string a_SkeletonPath, O
 		auto& t_LoadData = *(LoadData*)a_Argument;
 		if (a_Skin.GetLoadState() != File::LoadState::Loaded)
 		{
-			if (t_LoadData.OnLoadFunction) t_LoadData.OnLoadFunction(t_LoadData.SkinPath, t_LoadData.SkeletonPath, nullptr, t_LoadData.Argument);
+			if (t_LoadData.OnLoadFunction) t_LoadData.OnLoadFunction(t_LoadData.SkinPath, t_LoadData.SkeletonPath, nullptr, a_Skin, t_LoadData.Argument);
 			Delete(&t_LoadData);
 			return;
 		}
@@ -294,7 +398,7 @@ void Application::LoadMesh(std::string a_SkinPath, std::string a_SkeletonPath, O
 			}
 
 			t_Meshes[t_LoadData.SkinPath] = t_Mesh;
-			if (t_LoadData.OnLoadFunction) t_LoadData.OnLoadFunction(t_LoadData.SkinPath, t_LoadData.SkeletonPath, &t_Meshes[t_LoadData.SkinPath], t_LoadData.Argument);
+			if (t_LoadData.OnLoadFunction) t_LoadData.OnLoadFunction(t_LoadData.SkinPath, t_LoadData.SkeletonPath, &t_Meshes[t_LoadData.SkinPath], t_LoadData.SkinTarget, t_LoadData.Argument);
 
 			Delete(&t_LoadData);
 		}, &t_LoadData);
@@ -488,6 +592,7 @@ void Application::UpdateViewMatrix()
 
 bool Application::Update(double a_DT)
 {
+	printf("%3.2f               \r", 1 / a_DT);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	if (m_MVPUniform == nullptr)
 	{
@@ -516,8 +621,7 @@ bool Application::Update(double a_DT)
 		*m_MVPUniform = m_ProjectionMatrix * m_ViewMatrix * glm::translate(t_DrawMesh.Center);
 
 		m_Time += a_DT;
-		for (int i = 0; i < t_DrawMesh.SubMeshes.size(); i++)
-			t_DrawMesh.Draw(i, m_Time, m_ShaderProgram, *m_MVPUniform, m_TextureUniform ? &m_TextureUniform->Get() : nullptr, m_BoneArrayUniform ? &m_BoneArrayUniform->Get() : nullptr);
+		t_DrawMesh.Draw(m_Time, m_ShaderProgram, *m_MVPUniform, m_TextureUniform ? &m_TextureUniform->Get() : nullptr, m_BoneArrayUniform ? &m_BoneArrayUniform->Get() : nullptr);
 	}
 
 	m_Window.SwapBuffers();
