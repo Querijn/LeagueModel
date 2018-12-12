@@ -1,11 +1,13 @@
 #include "file_system.hpp"
 
 #include <map>
+#include <algorithm>
 
 std::map<std::string, File*>* m_Files = nullptr;
 
 File * FileSystem::GetFile(std::string a_FilePath)
 {
+	std::transform(a_FilePath.begin(), a_FilePath.end(), a_FilePath.begin(), ::tolower);
 	if (m_Files == nullptr)
 	{
 		m_Files = new std::map<std::string, File*>();
