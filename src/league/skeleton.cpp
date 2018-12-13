@@ -101,11 +101,10 @@ const std::vector<League::Skeleton::Bone>& League::Skeleton::GetBones() const
 	return m_Bones;
 }
 
-const League::Skeleton::Bone* League::Skeleton::GetBone(const std::string& a_Name) const
+const League::Skeleton::Bone* League::Skeleton::GetBone(uint32_t a_NameHash) const
 {
-	auto t_Hash = StringToHash(a_Name);
 	for (const auto& t_Bone : m_Bones)
-		if (t_Bone.Hash == t_Hash)
+		if (t_Bone.Hash == a_NameHash)
 			return &t_Bone;
 
 	return nullptr;

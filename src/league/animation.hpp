@@ -38,6 +38,8 @@ namespace League
 			using ScaleFrame = Frame<glm::vec3>;
 
 			std::string Name;
+			uint32_t Hash;
+
 			std::vector<TranslationFrame> Translation;
 			std::vector<RotationFrame> Rotation;
 			std::vector<ScaleFrame> Scale;
@@ -46,7 +48,7 @@ namespace League
 		File::LoadState GetLoadState() const { return m_State; }
 		const std::vector<Bone>& GetBones() const { return m_Bones; }
 
-		const Animation::Bone* GetBone(const std::string& a_Name) const;
+		const Animation::Bone* GetBone(uint32_t a_NameHash) const;
 		float GetDuration() const { return m_Duration; }
 		float GetFPS() const { return m_FPS; }
 	private:

@@ -43,7 +43,7 @@ namespace League
 
 		File::LoadState GetLoadState() const { return m_State; }
 
-		const Skeleton::Bone* GetBone(const std::string& a_Name) const;
+		const Skeleton::Bone* GetBone(uint32_t a_NameHash) const;
 
 		void ApplyToSkin(League::Skin& a_Skin) const;
 

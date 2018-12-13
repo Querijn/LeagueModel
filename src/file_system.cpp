@@ -22,8 +22,8 @@ File * FileSystem::GetFile(const std::string& a_FilePath)
 		});
 	}
 
-	auto* t_File = new File(a_FilePath);
-	(*m_Files)[a_FilePath] = t_File;
+	auto* t_File = new File(t_FilePath);
+	(*m_Files)[t_FilePath] = t_File;
 
 	return t_File;
 }

@@ -182,11 +182,10 @@ float UncompressTime(const uint16_t& a_CurrentTime, const float& a_AnimationLeng
 	return t_UncompressedTime;
 }
 
-const League::Animation::Bone* League::Animation::GetBone(const std::string& a_Name) const
+const League::Animation::Bone* League::Animation::GetBone(uint32_t a_NameHash) const
 {
-	auto t_Hash = StringToHash(a_Name);
 	for (const auto& t_Bone : m_Bones)
-		if (t_Bone.Name == a_Name)
+		if (t_Bone.Hash == a_NameHash)
 			return &t_Bone;
 
 	return nullptr;
@@ -303,12 +302,10 @@ File::LoadState League::Animation::LoadVersion1(const std::map<uint32_t, std::st
 		uint32_t t_BoneHash = t_HashEntries[i];
 		auto t_Index = a_BoneNameHashes.find(t_BoneHash);
 
-		if (t_Index == a_BoneNameHashes.end())
-			continue;
-
 		Bone t_BoneEntry;
-		t_BoneEntry.Name = t_Index->second;
-		AddToPublicHashMap(t_BoneEntry.Name);
+		t_BoneEntry.Hash = t_BoneHash;
+		if (t_Index != a_BoneNameHashes.end())
+			AddToPublicHashMap(t_Index->second);
 
 		for (auto &t_CompressedTranslation : t_CompressedTranslations[i])
 		{
@@ -380,14 +377,11 @@ File::LoadState League::Animation::LoadVersion3(const std::map<uint32_t, std::st
 		char Name[32];
 		a_File.Read((uint8_t*)Name, 32, a_Offset);
 
-		uint32_t t_Hash = StringToHash(Name);
-		auto t_Index = a_BoneNameHashes.find(t_Hash);
+		m_Bones[i].Hash = StringToHash(Name);
+		auto t_Index = a_BoneNameHashes.find(m_Bones[i].Hash);
 
-		if (t_Index != a_BoneNameHashes.end())
-			m_Bones[i].Name = t_Index->second;
-		else m_Bones[i].Name = Name;
-		AddToPublicHashMap(m_Bones[i].Name);
-
+		AddToPublicHashMap(t_Index != a_BoneNameHashes.end() ? t_Index->second : Name);
+		
 		a_Offset += 4;
 
 		m_Bones[i].Translation.resize(t_FrameCount);
@@ -495,12 +489,12 @@ File::LoadState League::Animation::LoadVersion4(const std::map<uint32_t, std::st
 	{
 		float t_CurrentTime = 0.0f;
 
-		auto t_NameHash = a_BoneNameHashes.find(t_BoneIndex.first);
-		if (t_NameHash == a_BoneNameHashes.end()) continue;
+		auto t_Nameindex = a_BoneNameHashes.find(t_BoneIndex.first);
+		if (t_Nameindex != a_BoneNameHashes.end()) AddToPublicHashMap(t_Nameindex->second);
 
 		Bone t_Bone;
-		t_Bone.Name = t_NameHash->second;
-		AddToPublicHashMap(t_Bone.Name);
+		t_Bone.Hash = t_BoneIndex.first;
+		
 
 		for (auto& t_Frame : t_BoneIndex.second)
 		{
@@ -519,27 +513,27 @@ File::LoadState League::Animation::LoadVersion4(const std::map<uint32_t, std::st
 File::LoadState League::Animation::LoadVersion5(const std::map<uint32_t, std::string>& a_BoneNameHashes, File & a_File, size_t & a_Offset)
 {
 	int32_t t_FileSize;
-	a_File.Get(t_FileSize, a_Offset);
+	a_File.Read((uint8_t*)(&t_FileSize), 4, a_Offset);
 	t_FileSize += 12;
 
 	a_Offset += 12;
 
 	uint32_t t_BoneCount, t_FrameCount;
 	float t_FrameDelay;
-	a_File.Get(t_BoneCount, a_Offset);
-	a_File.Get(t_FrameCount, a_Offset);
-	a_File.Get(t_FrameDelay, a_Offset);
+	a_File.Read((uint8_t*)(&t_BoneCount), 4, a_Offset);
+	a_File.Read((uint8_t*)(&t_FrameCount), 4, a_Offset);
+	a_File.Read((uint8_t*)(&t_FrameDelay), 4, a_Offset);
 
 	m_Duration = (float)t_FrameCount * t_FrameDelay;
 	m_FPS = (float)t_FrameCount / m_Duration;
 
 	int32_t t_TranslationFileOffset, t_RotationFileOffset, t_FrameFileOffset, t_HashesOffset;
 
-	a_File.Get(t_HashesOffset, a_Offset);
+	a_File.Read((uint8_t*)(&t_HashesOffset), 4, a_Offset);
 	a_Offset += 8;
-	a_File.Get(t_TranslationFileOffset, a_Offset);
-	a_File.Get(t_RotationFileOffset, a_Offset);
-	a_File.Get(t_FrameFileOffset, a_Offset);
+	a_File.Read((uint8_t*)(&t_TranslationFileOffset), 4, a_Offset);
+	a_File.Read((uint8_t*)(&t_RotationFileOffset), 4, a_Offset);
+	a_File.Read((uint8_t*)(&t_FrameFileOffset), 4, a_Offset);
 
 	t_TranslationFileOffset += 12;
 	t_RotationFileOffset += 12;
@@ -554,11 +548,9 @@ File::LoadState League::Animation::LoadVersion5(const std::map<uint32_t, std::st
 
 	for (size_t i = 0; i < t_TranslationCount; ++i)
 	{
-		glm::vec3 t_TranslationEntry;
-		a_File.Get(t_TranslationEntry.x, a_Offset);
-		a_File.Get(t_TranslationEntry.y, a_Offset);
-		a_File.Get(t_TranslationEntry.z, a_Offset);
-		t_Translations.push_back(t_TranslationEntry);
+		glm::vec3 translationEntry;
+		a_File.Read((uint8_t*)(&translationEntry), 12, a_Offset);
+		t_Translations.push_back(translationEntry);
 	}
 
 	std::vector<std::bitset<48>> t_RotationEntries;
@@ -574,7 +566,7 @@ File::LoadState League::Animation::LoadVersion5(const std::map<uint32_t, std::st
 		t_RotationEntries.push_back(t_RotationEntry);
 	}
 
-	std::vector<uint32_t> t_HashEntries;
+	std::vector<uint32_t> t_HashEntry;
 
 	size_t t_HashCount = (size_t)(t_FrameFileOffset - t_HashesOffset) / sizeof(uint32_t);
 
@@ -582,37 +574,33 @@ File::LoadState League::Animation::LoadVersion5(const std::map<uint32_t, std::st
 
 	for (size_t i = 0; i < t_HashCount; ++i)
 	{
-		uint32_t t_HashEntry;
-		a_File.Get(t_HashEntry, a_Offset);
-		t_HashEntries.push_back(t_HashEntry);
+		uint32_t hashEntry;
+		a_File.Read((uint8_t*)(&hashEntry), 4, a_Offset);
+		t_HashEntry.push_back(hashEntry);
 	}
-	
+
+	m_Bones.resize(t_BoneCount);
+
 	a_Offset = t_FrameFileOffset;
 
 	float t_CurrentTime = 0.0f;
 
-	for (size_t j = 0; j < t_BoneCount; ++j)
-	{
-		Bone t_Bone;
-		auto t_HashNameIndex = a_BoneNameHashes.find(t_HashEntries[j]);
-		if (t_HashNameIndex == a_BoneNameHashes.end()) continue;
-		t_Bone.Name = t_HashNameIndex->second;
-		AddToPublicHashMap(t_Bone.Name);
-		m_Bones.push_back(t_Bone);
-	}
-
 	for (size_t i = 0; i < t_FrameCount; ++i)
 	{
-		for (size_t j = 0; j < m_Bones.size(); ++j)
+		for (size_t j = 0; j < t_BoneCount; ++j)
 		{
-			auto& t_Bone = m_Bones[j];
+			m_Bones[j].Hash = t_HashEntry[j];
+
+			auto t_Link = a_BoneNameHashes.find(m_Bones[j].Hash);
+			if (t_Link != a_BoneNameHashes.end()) 
+				m_Bones[j].Name = t_Link->second;
 
 			uint16_t t_TranslationIndex, t_RotationIndex, t_ScaleIndex;
 			a_File.Read((uint8_t*)(&t_TranslationIndex), 2, a_Offset);
 			a_File.Read((uint8_t*)(&t_ScaleIndex), 2, a_Offset);
 			a_File.Read((uint8_t*)(&t_RotationIndex), 2, a_Offset);
 
-			t_Bone.Translation.push_back(Bone::TranslationFrame(t_CurrentTime, t_Translations[t_TranslationIndex]));
+			m_Bones[j].Translation.push_back(Bone::TranslationFrame(t_CurrentTime, t_Translations[t_TranslationIndex]));
 
 			std::bitset<48> mask = 0x7FFF;
 			uint16_t flag = (uint16_t)(t_RotationEntries[t_RotationIndex] >> 45).to_ulong();
@@ -622,12 +610,12 @@ File::LoadState League::Animation::LoadVersion5(const std::map<uint32_t, std::st
 
 			glm::quat t_RotationEntry = UncompressQuaternion(flag, sx, sy, sz);
 
-			t_Bone.Rotation.push_back(Bone::RotationFrame(t_CurrentTime, t_RotationEntry));
-			t_Bone.Scale.push_back(Bone::ScaleFrame(t_CurrentTime, t_Translations[t_ScaleIndex]));
+			m_Bones[j].Rotation.push_back(Bone::RotationFrame(t_CurrentTime, t_RotationEntry));
+			m_Bones[j].Scale.push_back(Bone::ScaleFrame(t_CurrentTime, t_Translations[t_ScaleIndex]));
 		}
 
 		t_CurrentTime += t_FrameDelay;
 	}
-	
+
 	return File::LoadState::Loaded;
 }

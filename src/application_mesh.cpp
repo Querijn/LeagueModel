@@ -70,7 +70,7 @@ void ApplicationMesh::SetupHierarchy(const glm::mat4& a_InverseRoot, std::vector
 {
 	glm::mat4 t_GlobalTransform = a_Parent;
 
-	const auto* t_AnimBone = Animations[CurrentAnimation]->GetBone(a_SkeletonBone.Name);
+	const auto* t_AnimBone = Animations[CurrentAnimation]->GetBone(a_SkeletonBone.Hash);
 	if (t_AnimBone != nullptr)
 	{
 		glm::vec3 t_Translation = FindNearestTime(t_AnimBone->Translation, a_Time, TranslationIndex);
@@ -151,9 +151,9 @@ void ApplicationMesh::SetupAnimation(std::vector<glm::mat4>& a_BoneTransforms, f
 	for (size_t i = 0; i < t_Bones.size(); i++)
 	{
 		const auto& t_AnimBone = t_Bones[i];
-		const auto* t_SkellyBone = Skeleton->GetBone(t_AnimBone.Name);
+		const auto* t_SkellyBone = Skeleton->GetBone(t_AnimBone.Hash);
 
-		if (t_SkellyBone->Parent != nullptr) continue;
+		if (t_SkellyBone == nullptr || t_SkellyBone->Parent != nullptr) continue;
 
 		SetupHierarchy(t_InverseRoot, a_BoneTransforms, *t_SkellyBone, glm::identity<glm::mat4>(), a_Time);
 	}
