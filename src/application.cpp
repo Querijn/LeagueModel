@@ -383,6 +383,7 @@ void Application::OnMeshLoad(MeshLoadData& a_LoadData)
 	{
 		if (a_LoadData.OnLoadFunction) a_LoadData.OnLoadFunction(a_LoadData.SkinPath, a_LoadData.SkeletonPath, nullptr, a_LoadData.SkinTarget, a_LoadData.Argument);
 		Delete(&a_LoadData);
+		delete &a_LoadData.SkeletonTarget;
 		return;
 	}
 
