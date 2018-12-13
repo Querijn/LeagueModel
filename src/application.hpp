@@ -16,7 +16,7 @@ class Application
 {
 public:
 	using Mesh = ApplicationMesh;
-	using OnMeshLoadFunction = void(*)(std::string a_SkinPath, std::string a_SkeletonPath, Application::Mesh* a_Mesh, League::Skin& a_Skin, void* a_UserData);
+	using OnMeshLoadFunction = void(*)(const std::string& a_SkinPath, const std::string& a_SkeletonPath, Application::Mesh* a_Mesh, League::Skin& a_Skin, void* a_UserData);
 	static Application* Instance;
 
 	Application(const char* a_Root);
@@ -24,9 +24,9 @@ public:
 	
 	void Init();
 
-	void LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath);
+	void LoadSkin(const std::string& a_BinPath, const std::string& a_AnimationBinPath);
 
-	void LoadAnimation(Application::Mesh& a_Mesh, std::string a_AnimationPath, League::Animation::OnLoadFunction a_OnLoadFunction = nullptr, void* a_UserData = nullptr);
+	void LoadAnimation(Application::Mesh& a_Mesh, const std::string& a_AnimationPath, League::Animation::OnLoadFunction a_OnLoadFunction = nullptr, void* a_UserData = nullptr);
 	void AddAnimationReference(Application::Mesh& a_Mesh, const std::string& a_AnimationName);
 
 	const Texture& GetDefaultTexture() const;
@@ -57,7 +57,7 @@ private:
 
 	bool Update(double a_DT);
 
-	void LoadMesh(std::string a_SkinPath, std::string a_SkeletonPath, OnMeshLoadFunction a_OnLoadFunction = nullptr, void* a_UserData = nullptr);
+	void LoadMesh(const std::string& a_SkinPath, const std::string& a_SkeletonPath, OnMeshLoadFunction a_OnLoadFunction = nullptr, void* a_UserData = nullptr);
 	void OnMeshLoad(MeshLoadData& a_LoadData);
 
 	Window m_Window;

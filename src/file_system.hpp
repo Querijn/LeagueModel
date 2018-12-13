@@ -15,6 +15,6 @@ using File = NativeFile;
 class FileSystem
 {
 public:
-	static File* GetFile(std::string a_FilePath);
+	static File* GetFile(const std::string& a_FilePath);
 	static void CloseFile(File& a_File);
 };

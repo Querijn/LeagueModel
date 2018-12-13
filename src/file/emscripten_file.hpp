@@ -59,7 +59,7 @@ public:
 
 	friend class FileSystem;
 protected:
-	EmscriptenFile(std::string a_FileName) : BaseFile(a_FileName) { }
+	EmscriptenFile(const std::string& a_FileName) : BaseFile(a_FileName) { }
 
 private:
 	static void OnLoad(void* a_Argument, void* a_Data, int a_Size);

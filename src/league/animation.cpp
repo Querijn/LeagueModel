@@ -15,7 +15,7 @@ League::Animation::Animation(Skeleton & a_Skeleton) :
 {
 }
 
-void League::Animation::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction, void * a_Argument)
+void League::Animation::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFunction, void * a_Argument)
 {
 	struct LoadData
 	{
@@ -182,8 +182,9 @@ float UncompressTime(const uint16_t& a_CurrentTime, const float& a_AnimationLeng
 	return t_UncompressedTime;
 }
 
-const League::Animation::Bone* League::Animation::GetBone(std::string a_Name) const
+const League::Animation::Bone* League::Animation::GetBone(const std::string& a_Name) const
 {
+	auto t_Hash = StringToHash(a_Name);
 	for (const auto& t_Bone : m_Bones)
 		if (t_Bone.Name == a_Name)
 			return &t_Bone;

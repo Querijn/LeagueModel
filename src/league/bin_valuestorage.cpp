@@ -9,7 +9,7 @@ std::map<std::string, std::string> m_HashMap;
 void InitExtraBinHashMap();
 void InitBinHashMap();
 
-uint32_t FNV1Hash(std::string a_String)
+uint32_t FNV1Hash(const std::string& a_String)
 {
 	size_t t_Hash = 0x811c9dc5;
 	const char* t_Chars = a_String.c_str();
@@ -65,6 +65,8 @@ void AddToPublicHashMap(const std::string& a_String)
 bool g_Initialised = false;
 void InitBinHashMap()
 {
+	return;
+
 	if (g_Initialised) return;
 
 	auto* t_File = FileSystem::GetFile("data/cdtb/cdragontoolbox/hashes.bin.txt");
@@ -119,6 +121,8 @@ void InitBinHashMap()
 
 void InitExtraBinHashMap()
 {
+	return;
+
 	auto* t_File = FileSystem::GetFile("D:/hashes.game.txt");
 	t_File->Load([](File* a_File, File::LoadState a_LoadState, void* a_UserData)
 	{

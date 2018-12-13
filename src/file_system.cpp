@@ -5,9 +5,10 @@
 
 std::map<std::string, File*>* m_Files = nullptr;
 
-File * FileSystem::GetFile(std::string a_FilePath)
+File * FileSystem::GetFile(const std::string& a_FilePath)
 {
-	std::transform(a_FilePath.begin(), a_FilePath.end(), a_FilePath.begin(), ::tolower);
+	std::string t_FilePath = a_FilePath;
+	std::transform(t_FilePath.begin(), t_FilePath.end(), t_FilePath.begin(), ::tolower);
 	if (m_Files == nullptr)
 	{
 		m_Files = new std::map<std::string, File*>();

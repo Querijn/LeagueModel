@@ -59,7 +59,7 @@ public:
 	struct SubMesh
 	{
 		glm::mat4 GetTransformMatrix() const;
-		void SetTexture(std::string a_FilePath);
+		void SetTexture(const std::string& a_FilePath);
 
 		IndexBuffer<uint16_t>* IndexBuffer;
 

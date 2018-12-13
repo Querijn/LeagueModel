@@ -39,7 +39,7 @@ void RecursiveInvertGlobalMatrices(const glm::mat4& a_Parent, League::Skeleton::
 		RecursiveInvertGlobalMatrices(t_Global, *t_Child);
 }
 
-void League::Skeleton::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction, void * a_Argument)
+void League::Skeleton::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFunction, void * a_Argument)
 {
 	auto* t_File = FileSystem::GetFile(a_FilePath);
 
@@ -101,10 +101,11 @@ const std::vector<League::Skeleton::Bone>& League::Skeleton::GetBones() const
 	return m_Bones;
 }
 
-const League::Skeleton::Bone* League::Skeleton::GetBone(std::string a_Name) const
+const League::Skeleton::Bone* League::Skeleton::GetBone(const std::string& a_Name) const
 {
+	auto t_Hash = StringToHash(a_Name);
 	for (const auto& t_Bone : m_Bones)
-		if (t_Bone.Name == a_Name)
+		if (t_Bone.Hash == t_Hash)
 			return &t_Bone;
 
 	return nullptr;

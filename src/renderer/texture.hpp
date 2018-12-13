@@ -13,7 +13,7 @@ public:
 	using OnLoadFunction = void (*)(Texture& a_Texture, void* a_Argument);
 	~Texture();
 
-	void Load(std::string a_ImagePath, Texture::OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
+	void Load(const std::string& a_ImagePath, Texture::OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
 
 	glm::vec2 GetDimensions() const;
 

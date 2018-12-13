@@ -5,7 +5,7 @@
 
 #include <cassert>
 
-uint32_t FNV1Hash(std::string a_String);
+uint32_t FNV1Hash(const std::string& a_String);
 std::string GetStringByHash(uint32_t a_Hash);
 
 League::Bin::~Bin()
@@ -14,7 +14,7 @@ League::Bin::~Bin()
 		Delete(t_Element);
 }
 
-void League::Bin::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction, void * a_Argument)
+void League::Bin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFunction, void * a_Argument)
 {
 	auto* t_File = FileSystem::GetFile(a_FilePath);
 
@@ -166,7 +166,7 @@ std::vector<const League::BaseValueStorage*> League::Bin::Find(FindConditionFunc
 	return t_Results;
 }
 
-const League::Bin::ValueStorage * League::Bin::Get(std::string a_Name) const
+const League::Bin::ValueStorage * League::Bin::Get(const std::string& a_Name) const
 {
 	const auto t_Hash = FNV1Hash(a_Name.c_str());
 	for (const auto& t_VectorReference : m_Values)

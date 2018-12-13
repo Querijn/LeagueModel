@@ -15,7 +15,7 @@ Shader::~Shader()
 	Delete();
 }
 
-void Shader::Load(std::string a_FilePath, Shader::OnLoadFunction a_OnLoadFunction, void * a_Argument)
+void Shader::Load(const std::string& a_FilePath, Shader::OnLoadFunction a_OnLoadFunction, void * a_Argument)
 {
 	auto* t_File = FileSystem::GetFile(a_FilePath);
 	struct LoadData

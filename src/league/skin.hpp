@@ -14,11 +14,11 @@ namespace League
 	public:
 		using OnLoadFunction = void(*)(League::Skin& a_Skin, void* a_Argument);
 		
-		void Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
+		void Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
 
 		struct Mesh
 		{
-			Mesh(std::string a_MaterialName) :
+			Mesh(const std::string& a_MaterialName) :
 				MaterialName(a_MaterialName)
 			{}
 

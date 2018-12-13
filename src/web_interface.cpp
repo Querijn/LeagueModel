@@ -5,12 +5,12 @@
 #include <emscripten/bind.h>
 using namespace emscripten;
 
-void LoadSkin(std::string a_SkinBin, std::string a_AnimationsBin)
+void LoadSkin(const std::string& a_SkinBin, std::string a_AnimationsBin)
 {
 	Application::Instance->LoadSkin(a_SkinBin, a_AnimationsBin);
 }
 
-size_t GetAvailableAnimations(std::string a_Skin)
+size_t GetAvailableAnimations(const std::string& a_Skin)
 {
 	return Application::Instance->GetAnimationsForMesh(a_Skin).size();
 }
@@ -26,23 +26,23 @@ std::string GetSkinName(size_t a_Index)
 }
 
 // TODO: Doesn't work? "Cannot call GetAnimationArray due to unbound types: NSt3__26vectorINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEENS4_IS6_EEEE"
-std::vector<std::string> GetSkinArray(std::string a_Skin)
+std::vector<std::string> GetSkinArray(const std::string& a_Skin)
 {
 	return Application::Instance->GetSkinFiles();
 }
 
 // TODO: Doesn't work? "Cannot call GetAnimationArray due to unbound types: NSt3__26vectorINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEENS4_IS6_EEEE"
-std::vector<std::string> GetAnimationArray(std::string a_Skin)
+std::vector<std::string> GetAnimationArray(const std::string& a_Skin)
 {
 	return Application::Instance->GetAnimationsForMesh(a_Skin);
 }
 
-std::string GetAnimationName(std::string a_Skin, size_t a_Index)
+std::string GetAnimationName(const std::string& a_Skin, size_t a_Index)
 {
 	return Application::Instance->GetAnimationsForMesh(a_Skin)[a_Index];
 }
 
-void PlayAnimation(std::string a_Skin, std::string a_Animation)
+void PlayAnimation(const std::string& a_Skin, std::string a_Animation)
 {
 	auto* t_Mesh = Application::Instance->GetMeshUnsafe(a_Skin);
 	if (t_Mesh != nullptr)

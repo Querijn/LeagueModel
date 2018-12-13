@@ -18,14 +18,14 @@ namespace League
 
 		~Bin();
 
-		void Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
+		void Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
 		std::string GetAsJSON() const;
 
 		File::LoadState GetLoadState() const { return m_State; }
 		const std::vector<std::string>& GetLinkedFiles() const { return m_LinkedFiles; }
 
 		std::vector<const ValueStorage*> Find(FindConditionFunction a_Function, void* a_UserData = nullptr) const;
-		const ValueStorage* Get(std::string a_Name) const;
+		const ValueStorage* Get(const std::string& a_Name) const;
 
 		friend class BaseValueStorage;
 	protected:

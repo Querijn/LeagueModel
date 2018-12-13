@@ -18,7 +18,7 @@ namespace League
 		using OnLoadFunction = void(*)(League::Animation& a_Animation, void* a_Argument);
 		Animation(Skeleton& a_Skeleton);
 
-		void Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
+		void Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
 		
 		struct Bone
 		{
@@ -46,7 +46,7 @@ namespace League
 		File::LoadState GetLoadState() const { return m_State; }
 		const std::vector<Bone>& GetBones() const { return m_Bones; }
 
-		const Animation::Bone* GetBone(std::string a_Name) const;
+		const Animation::Bone* GetBone(const std::string& a_Name) const;
 		float GetDuration() const { return m_Duration; }
 		float GetFPS() const { return m_FPS; }
 	private:

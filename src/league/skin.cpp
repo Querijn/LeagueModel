@@ -14,7 +14,7 @@ struct SubMeshHeader
 
 void AddToPublicHashMap(const std::string& a_String);
 
-void League::Skin::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction, void * a_Argument)
+void League::Skin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFunction, void * a_Argument)
 {
 	auto* t_File = FileSystem::GetFile(a_FilePath);
 

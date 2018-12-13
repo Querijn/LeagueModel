@@ -164,7 +164,7 @@ glm::mat4 ApplicationMesh::SubMesh::GetTransformMatrix() const
 	return glm::translate(Position) * glm::mat4_cast(Rotation) * glm::scale(Scale);
 }
 
-void ApplicationMesh::SubMesh::SetTexture(std::string a_FilePath)
+void ApplicationMesh::SubMesh::SetTexture(const std::string& a_FilePath)
 {
 	printf("Attempting to load texture %s\n", a_FilePath.c_str());
 	Image.Load(a_FilePath, [](Texture& a_Texture, void* a_UserData)

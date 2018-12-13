@@ -23,7 +23,7 @@ public:
 	void Update();
 
 	template<typename T>
-	ShaderVariable<T>* GetVariable(std::string a_Name, const T& a_Value = T())
+	ShaderVariable<T>* GetVariable(const std::string& a_Name, const T& a_Value = T())
 	{
 		if (m_Variables.find(a_Name) == m_Variables.end())
 		{
@@ -40,7 +40,7 @@ public:
 	}
 
 	template<typename T>
-	VertexBuffer<T>* GetVertexBuffer(std::string a_Name)
+	VertexBuffer<T>* GetVertexBuffer(const std::string& a_Name)
 	{
 		auto t_String = a_Name.c_str();
 		GLint t_Reference = GL_RET(glGetAttribLocation(m_ID, t_String), GLint);

@@ -85,7 +85,7 @@ void Application::Init()
 
 struct SkinLoadData
 {
-	SkinLoadData(std::string a_AnimationBinPath) : AnimationBinPath(a_AnimationBinPath) {}
+	SkinLoadData(const std::string& a_AnimationBinPath) : AnimationBinPath(a_AnimationBinPath) {}
 
 	std::string Texture;
 	std::string AnimationBinPath;
@@ -201,7 +201,7 @@ void OnSkinAndAnimationBin(SkinLoadData& a_LoadData)
 		Delete(&a_LoadData);
 }
 
-void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath)
+void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_AnimationBinPath)
 {
 	auto* t_LoadData = New(SkinLoadData(a_AnimationBinPath));
 
@@ -260,7 +260,7 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 		printf("Starting to load the mesh (%s and %s)..\n", t_Skin.c_str(), t_Skeleton.c_str());
 		
 		// Load the mesh (Skeleton + Skin)
-		Application::Instance->LoadMesh(t_Skin, t_Skeleton, [](std::string a_SkinPath, std::string a_SkeletonPath, Application::Mesh* a_Mesh, League::Skin& a_Skin, void* a_UserData)
+		Application::Instance->LoadMesh(t_Skin, t_Skeleton, [](const std::string& a_SkinPath, const std::string& a_SkeletonPath, Application::Mesh* a_Mesh, League::Skin& a_Skin, void* a_UserData)
 		{
 			auto* t_LoadData = (SkinLoadData*)a_UserData;
 			if (a_Mesh == nullptr)
@@ -381,7 +381,7 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 
 struct MeshLoadData
 {
-	MeshLoadData(std::string a_SkinPath, std::string a_SkeletonPath, Application::OnMeshLoadFunction a_Function, void* a_Argument) :
+	MeshLoadData(const std::string& a_SkinPath, const std::string& a_SkeletonPath, Application::OnMeshLoadFunction a_Function, void* a_Argument) :
 		SkinPath(a_SkinPath), SkeletonPath(a_SkeletonPath), OnLoadFunction(a_Function), Argument(a_Argument)
 	{}
 
@@ -456,7 +456,7 @@ void Application::OnMeshLoad(MeshLoadData& a_LoadData)
 	if (a_LoadData.OnLoadFunction) a_LoadData.OnLoadFunction(a_LoadData.SkinPath, a_LoadData.SkeletonPath, &t_Meshes[a_LoadData.SkinPath], a_LoadData.SkinTarget, a_LoadData.Argument);
 }
 
-void Application::LoadMesh(std::string a_SkinPath, std::string a_SkeletonPath, OnMeshLoadFunction a_OnLoadFunction, void* a_UserData)
+void Application::LoadMesh(const std::string& a_SkinPath, const std::string& a_SkeletonPath, OnMeshLoadFunction a_OnLoadFunction, void* a_UserData)
 {
 	m_Meshes.clear();
 	m_Animations.clear();
@@ -480,7 +480,7 @@ void Application::LoadMesh(std::string a_SkinPath, std::string a_SkeletonPath, O
 	}, t_LoadData);
 }
 
-void Application::LoadAnimation(Application::Mesh & a_Mesh, std::string a_AnimationPath, League::Animation::OnLoadFunction a_OnLoadFunction, void * a_UserData)
+void Application::LoadAnimation(Application::Mesh & a_Mesh, const std::string& a_AnimationPath, League::Animation::OnLoadFunction a_OnLoadFunction, void * a_UserData)
 {
 	if (a_Mesh.Skeleton == nullptr)
 	{
@@ -492,7 +492,7 @@ void Application::LoadAnimation(Application::Mesh & a_Mesh, std::string a_Animat
 
 	struct LoadData
 	{
-		LoadData(std::string a_AnimationPath, League::Animation::OnLoadFunction a_Function, void* a_Argument) :
+		LoadData(const std::string& a_AnimationPath, League::Animation::OnLoadFunction a_Function, void* a_Argument) :
 			AnimationPath(a_AnimationPath), OnLoadFunction(a_Function), Argument(a_Argument)
 		{}
 

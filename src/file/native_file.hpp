@@ -46,7 +46,7 @@ public:
 
 	friend class FileSystem;
 protected:
-	NativeFile(std::string a_FileName) : BaseFile(a_FileName) {}
+	NativeFile(const std::string& a_FileName) : BaseFile(a_FileName) {}
 
 private:
 	std::vector<uint8_t> m_Data;

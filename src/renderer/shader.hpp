@@ -16,7 +16,7 @@ public:
 	Shader(Type a_Type);
 	~Shader();
 
-	void Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
+	void Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
 
 	operator GLuint() const;
 
