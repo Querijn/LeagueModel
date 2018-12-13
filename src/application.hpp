@@ -11,10 +11,12 @@
 
 #include <memory>
 
+struct MeshLoadData;
 class Application
 {
 public:
 	using Mesh = ApplicationMesh;
+	using OnMeshLoadFunction = void(*)(std::string a_SkinPath, std::string a_SkeletonPath, Application::Mesh* a_Mesh, League::Skin& a_Skin, void* a_UserData);
 	static Application* Instance;
 
 	Application(const char* a_Root);
@@ -55,8 +57,8 @@ private:
 
 	bool Update(double a_DT);
 
-	using OnMeshLoadFunction = void(*)(std::string a_SkinPath, std::string a_SkeletonPath, Application::Mesh* a_Mesh, League::Skin& a_Skin, void* a_UserData);
 	void LoadMesh(std::string a_SkinPath, std::string a_SkeletonPath, OnMeshLoadFunction a_OnLoadFunction = nullptr, void* a_UserData = nullptr);
+	void OnMeshLoad(MeshLoadData& a_LoadData);
 
 	Window m_Window;
 

@@ -357,89 +357,104 @@ void Application::LoadSkin(std::string a_BinPath, std::string a_AnimationBinPath
 	}, t_LoadData);
 }
 
+struct MeshLoadData
+{
+	MeshLoadData(std::string a_SkinPath, std::string a_SkeletonPath, Application::OnMeshLoadFunction a_Function, void* a_Argument) :
+		SkinPath(a_SkinPath), SkeletonPath(a_SkeletonPath), OnLoadFunction(a_Function), Argument(a_Argument)
+	{}
+
+	bool SkinLoaded = false;
+	bool SkeletonLoaded = false;
+
+	std::string SkinPath;
+	std::string SkeletonPath;
+	League::Skin SkinTarget;
+	League::Skeleton* SkeletonTarget;
+	Application::OnMeshLoadFunction OnLoadFunction;
+	void* Argument;
+};
+
+void Application::OnMeshLoad(MeshLoadData& a_LoadData)
+{
+	if (a_LoadData.SkinLoaded == false || a_LoadData.SkeletonLoaded == false)
+		return;
+
+	if (a_LoadData.SkinTarget.GetLoadState() != File::LoadState::Loaded)
+	{
+		if (a_LoadData.OnLoadFunction) a_LoadData.OnLoadFunction(a_LoadData.SkinPath, a_LoadData.SkeletonPath, nullptr, a_LoadData.SkinTarget, a_LoadData.Argument);
+		return;
+	}
+
+	auto& t_Meshes = Application::Instance->m_Meshes;
+	auto& t_ShaderProgram = Application::Instance->m_ShaderProgram;
+	auto& t_Skin = a_LoadData.SkinTarget;
+
+	// We can only start loading the mesh AFTER we load (or fail to load the skeleton), because the skeleton potentially modifies the bone indices
+	Application::Mesh t_Mesh;
+	if (a_LoadData.SkeletonTarget->GetLoadState() == File::LoadState::Loaded)
+	{
+		t_Mesh.Skeleton = std::make_shared<League::Skeleton>(*a_LoadData.SkeletonTarget); // Now the mesh owns this pointer
+		t_Mesh.Skeleton->ApplyToSkin(a_LoadData.SkinTarget);
+	}
+	else
+	{
+		// Data is worthless to us, delete
+		t_Mesh.Skeleton = nullptr;
+		delete &a_LoadData.SkeletonTarget;
+	}
+
+	t_Mesh.PositionBuffer = t_ShaderProgram.GetVertexBuffer<glm::vec3>("v_Positions");
+	t_Mesh.UVBuffer = t_ShaderProgram.GetVertexBuffer<glm::vec2>("v_UVs");
+	t_Mesh.NormalBuffer = t_ShaderProgram.GetVertexBuffer<glm::vec3>("v_Normals");
+	t_Mesh.BoneIndexBuffer = t_ShaderProgram.GetVertexBuffer<glm::vec4>("v_BoneIndices");
+	t_Mesh.BoneWeightBuffer = t_ShaderProgram.GetVertexBuffer<glm::vec4>("v_BoneWeights");
+
+	if (t_Mesh.PositionBuffer) t_Mesh.PositionBuffer->Upload(t_Skin.GetPositions());
+	if (t_Mesh.UVBuffer) t_Mesh.UVBuffer->Upload(t_Skin.GetUVs());
+	if (t_Mesh.NormalBuffer) t_Mesh.NormalBuffer->Upload(t_Skin.GetNormals());
+	if (t_Mesh.BoneWeightBuffer) t_Mesh.BoneWeightBuffer->Upload(t_Skin.GetWeights());
+	if (t_Mesh.BoneIndexBuffer) t_Mesh.BoneIndexBuffer->Upload(t_Skin.GetBoneIndices());
+
+	auto& t_BoundingBox = t_Skin.GetBoundingBox();
+	auto& t_SkinMeshes = t_Skin.GetMeshes();
+	for (int i = 0; i < t_SkinMeshes.size(); i++)
+	{
+		Application::Mesh::SubMesh t_Submesh;
+
+		t_Submesh.IndexBuffer = &t_ShaderProgram.GetIndexBuffer<uint16_t>();
+		auto& t_SkinMesh = t_SkinMeshes[i];
+		t_Submesh.IndexBuffer->Upload(t_SkinMesh.Indices, t_SkinMesh.IndexCount);
+
+		t_Mesh.SubMeshes.push_back(t_Submesh);
+	}
+
+	t_Meshes[a_LoadData.SkinPath] = t_Mesh;
+	if (a_LoadData.OnLoadFunction) a_LoadData.OnLoadFunction(a_LoadData.SkinPath, a_LoadData.SkeletonPath, &t_Meshes[a_LoadData.SkinPath], a_LoadData.SkinTarget, a_LoadData.Argument);
+
+	Delete(&a_LoadData);
+}
+
 void Application::LoadMesh(std::string a_SkinPath, std::string a_SkeletonPath, OnMeshLoadFunction a_OnLoadFunction, void* a_UserData)
 {
 	m_Meshes.clear();
 	m_Animations.clear();
 	m_AvailableAnimations.clear();
 
-	struct LoadData
-	{
-		LoadData(std::string a_SkinPath, std::string a_SkeletonPath, OnMeshLoadFunction a_Function, void* a_Argument) :
-			SkinPath(a_SkinPath), SkeletonPath(a_SkeletonPath), OnLoadFunction(a_Function), Argument(a_Argument)
-		{}
-
-		std::string SkinPath;
-		std::string SkeletonPath;
-		League::Skin SkinTarget;
-		OnMeshLoadFunction OnLoadFunction;
-		void* Argument;
-	};
-	auto* t_LoadData = New(LoadData(a_SkinPath, a_SkeletonPath, a_OnLoadFunction, a_UserData));
+	auto* t_LoadData = New(MeshLoadData(a_SkinPath, a_SkeletonPath, a_OnLoadFunction, a_UserData));
 
 	t_LoadData->SkinTarget.Load(a_SkinPath, [](League::Skin& a_Skin, void* a_Argument)
 	{
-		auto& t_LoadData = *(LoadData*)a_Argument;
-		if (a_Skin.GetLoadState() != File::LoadState::Loaded)
-		{
-			if (t_LoadData.OnLoadFunction) t_LoadData.OnLoadFunction(t_LoadData.SkinPath, t_LoadData.SkeletonPath, nullptr, a_Skin, t_LoadData.Argument);
-			Delete(&t_LoadData);
-			return;
-		}
+		auto& t_LoadData = *(MeshLoadData*)a_Argument;
+		t_LoadData.SkinLoaded = true;
+		Application::Instance->OnMeshLoad(t_LoadData);
+	}, t_LoadData);
 
-		auto* t_Skeleton = new League::Skeleton();
-		t_Skeleton->Load(t_LoadData.SkeletonPath, [](League::Skeleton& a_Skeleton, void* a_Argument)
-		{
-			auto& t_LoadData = *(LoadData*)a_Argument;
-			auto& t_Meshes = Instance->m_Meshes;
-			auto& t_ShaderProgram = Instance->m_ShaderProgram;
-			auto& t_Skin = t_LoadData.SkinTarget;
-
-			// We can only start loading the mesh AFTER we load (or fail to load the skeleton), because the skeleton potentially modifies the bone indices
-			Mesh t_Mesh;
-			if (a_Skeleton.GetLoadState() == File::LoadState::Loaded)
-			{
-				t_Mesh.Skeleton = std::make_shared<League::Skeleton>(a_Skeleton); // Now the mesh owns this pointer
-				t_Mesh.Skeleton->ApplyToSkin(t_LoadData.SkinTarget);
-			}
-			else
-			{
-				// Data is worthless to us, delete
-				t_Mesh.Skeleton = nullptr;
-				delete &a_Skeleton;
-			}
-			
-			t_Mesh.PositionBuffer = t_ShaderProgram.GetVertexBuffer<glm::vec3>("v_Positions");
-			t_Mesh.UVBuffer = t_ShaderProgram.GetVertexBuffer<glm::vec2>("v_UVs");
-			t_Mesh.NormalBuffer = t_ShaderProgram.GetVertexBuffer<glm::vec3>("v_Normals");
-			t_Mesh.BoneIndexBuffer = t_ShaderProgram.GetVertexBuffer<glm::vec4>("v_BoneIndices");
-			t_Mesh.BoneWeightBuffer = t_ShaderProgram.GetVertexBuffer<glm::vec4>("v_BoneWeights");
-
-			if (t_Mesh.PositionBuffer) t_Mesh.PositionBuffer->Upload(t_Skin.GetPositions());
-			if (t_Mesh.UVBuffer) t_Mesh.UVBuffer->Upload(t_Skin.GetUVs());
-			if (t_Mesh.NormalBuffer) t_Mesh.NormalBuffer->Upload(t_Skin.GetNormals());
-			if (t_Mesh.BoneWeightBuffer) t_Mesh.BoneWeightBuffer->Upload(t_Skin.GetWeights());
-			if (t_Mesh.BoneIndexBuffer) t_Mesh.BoneIndexBuffer->Upload(t_Skin.GetBoneIndices());
-
-			auto& t_BoundingBox = t_Skin.GetBoundingBox();
-			auto& t_SkinMeshes = t_Skin.GetMeshes();
-			for (int i = 0; i < t_SkinMeshes.size(); i++)
-			{
-				Application::Mesh::SubMesh t_Submesh;
-
-				t_Submesh.IndexBuffer = &t_ShaderProgram.GetIndexBuffer<uint16_t>();
-				auto& t_SkinMesh = t_SkinMeshes[i];
-				t_Submesh.IndexBuffer->Upload(t_SkinMesh.Indices, t_SkinMesh.IndexCount);
-
-				t_Mesh.SubMeshes.push_back(t_Submesh);
-			}
-
-			t_Meshes[t_LoadData.SkinPath] = t_Mesh;
-			if (t_LoadData.OnLoadFunction) t_LoadData.OnLoadFunction(t_LoadData.SkinPath, t_LoadData.SkeletonPath, &t_Meshes[t_LoadData.SkinPath], t_LoadData.SkinTarget, t_LoadData.Argument);
-
-			Delete(&t_LoadData);
-		}, &t_LoadData);
-
+	t_LoadData->SkeletonTarget = new League::Skeleton();
+	t_LoadData->SkeletonTarget->Load(a_SkeletonPath, [](League::Skeleton& a_Skeleton, void* a_Argument)
+	{
+		auto& t_LoadData = *(MeshLoadData*)a_Argument;
+		t_LoadData.SkeletonLoaded = true;
+		Application::Instance->OnMeshLoad(t_LoadData);
 	}, t_LoadData);
 }
 
