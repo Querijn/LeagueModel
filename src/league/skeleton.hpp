@@ -15,9 +15,6 @@ namespace League
 	{
 	public:
 		using OnLoadFunction = void(*)(League::Skeleton& a_Skeleton, void* a_Argument);
-
-		Skeleton(League::Skin& a_Skin);
-
 		void Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
 		
 		struct Bone
@@ -48,12 +45,15 @@ namespace League
 
 		const Skeleton::Bone* GetBone(std::string a_Name) const;
 
+		void ApplyToSkin(League::Skin& a_Skin) const;
+
 	private:
 		File::LoadState m_State = File::LoadState::NotLoaded;
 
-		League::Skin& m_Skin;
 		Type m_Type;
+		uint32_t m_Version;
 		std::vector<Bone> m_Bones;
+		std::vector<uint32_t> m_BoneIndices;
 
 		File::LoadState ReadClassic(File& a_File, size_t& a_Offset);
 		File::LoadState ReadVersion2(File& a_File, size_t& a_Offset);

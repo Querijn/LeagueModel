@@ -29,11 +29,6 @@ uint32_t StringToHash(const std::string& s)
 	return hash;
 }
 
-League::Skeleton::Skeleton(League::Skin & a_Skin) :
-	m_Skin(a_Skin)
-{
-}
-
 void RecursiveInvertGlobalMatrices(const glm::mat4& a_Parent, League::Skeleton::Bone& a_Bone)
 {
 	auto t_Global = a_Parent * a_Bone.LocalMatrix;
@@ -80,6 +75,7 @@ void League::Skeleton::Load(std::string a_FilePath, OnLoadFunction a_OnLoadFunct
 		Skeleton::Type t_SkeletonType;
 		a_File->Get(t_Signature, t_Offset);
 		a_File->Get(t_SkeletonType, t_Offset);
+		a_File->Get(t_Skeleton->m_Version, t_Offset);
 
 		File::LoadState t_State;
 		switch (t_SkeletonType)
@@ -116,9 +112,6 @@ const League::Skeleton::Bone* League::Skeleton::GetBone(std::string a_Name) cons
 
 File::LoadState League::Skeleton::ReadClassic(File& a_File, size_t& a_Offset)
 {
-	uint32_t t_Version;
-	a_File.Get(t_Version, a_Offset);
-
 	a_Offset += sizeof(uint32_t);
 
 	uint32_t t_BoneCount;
@@ -154,37 +147,34 @@ File::LoadState League::Skeleton::ReadClassic(File& a_File, size_t& a_Offset)
 		t_Bone.GlobalMatrix[3][3] = 1.0f;
 		t_Bone.InverseGlobalMatrix = glm::inverse(t_Bone.GlobalMatrix);
 	}
-
-	std::vector<uint32_t> t_BoneIndices;
-	if (m_Skin.m_Major == 0 || m_Skin.m_Major == 1)
+	
+	if (m_Version < 2)
 	{
-		t_BoneIndices.resize(t_BoneCount);
+		m_BoneIndices.resize(t_BoneCount);
 		for (int i = 0; i < t_BoneCount; i++)
-			t_BoneIndices[i] = i;
+			m_BoneIndices[i] = i;
 	}
-
-	else if (m_Skin.m_Major == 2)
+	else if (m_Version == 2)
 	{
 		uint32_t t_BoneIndexCount;
 		a_File.Get(t_BoneIndexCount, a_Offset);
 
-		a_File.Get(t_BoneIndices, t_BoneIndexCount, a_Offset);
+		a_File.Get(m_BoneIndices, t_BoneIndexCount, a_Offset);
 	}
 
-	// Fix the bone indices on the skin
-	for (auto& t_IndexVector : m_Skin.m_BoneIndices)
-		for (int i = 0; i < t_IndexVector.length(); i++)
-			t_IndexVector[i] = t_BoneIndices[t_IndexVector[i]];
-
 	return File::LoadState::Loaded;
+}
 
+void League::Skeleton::ApplyToSkin(League::Skin& a_Skin) const
+{
+	// Fix the bone indices on the skin
+	for (auto& t_IndexVector : a_Skin.m_BoneIndices)
+		for (int i = 0; i < t_IndexVector.length(); i++)
+			t_IndexVector[i] = m_BoneIndices[t_IndexVector[i]];
 }
 
 File::LoadState League::Skeleton::ReadVersion2(File& a_File, size_t& a_Offset)
 {
-	uint32_t t_Version;
-	a_File.Get(t_Version, a_Offset);
-
 	a_Offset += sizeof(uint16_t);
 
 	uint16_t t_BoneCount;
@@ -201,8 +191,8 @@ File::LoadState League::Skeleton::ReadVersion2(File& a_File, size_t& a_Offset)
 	uint32_t t_BoneIndexMapOffset;
 	a_File.Get(t_BoneIndexMapOffset, a_Offset);
 
-	uint32_t t_BoneIndicesOffset;
-	a_File.Get(t_BoneIndicesOffset, a_Offset);
+	uint32_t m_BoneIndicesOffset;
+	a_File.Get(m_BoneIndicesOffset, a_Offset);
 
 	a_Offset += sizeof(uint32_t);
 	a_Offset += sizeof(uint32_t);
@@ -258,8 +248,8 @@ File::LoadState League::Skeleton::ReadVersion2(File& a_File, size_t& a_Offset)
 			m_Bones[t_Bone.ParentID].Children.push_back(&t_Bone);
 	} 
 
-	a_Offset = t_BoneIndexMapOffset;
-
+	// Unused
+	/*a_Offset = t_BoneIndexMapOffset;
 	std::map<uint32_t, uint32_t> t_BoneIndexMap;
 	for (int i = 0; i < t_BoneCount; i++)
 	{
@@ -270,12 +260,16 @@ File::LoadState League::Skeleton::ReadVersion2(File& a_File, size_t& a_Offset)
 		a_File.Get(t_AnimationID, a_Offset);
 
 		t_BoneIndexMap[t_AnimationID] = t_SkeletonID;
-	}
+	}*/
 
-	a_Offset = t_BoneIndicesOffset;
-	std::vector<uint16_t> t_BoneIndices(t_BoneIndexCount);
+	a_Offset = m_BoneIndicesOffset;
+	m_BoneIndices.reserve(t_BoneIndexCount);
 	for (int i = 0; i < t_BoneIndexCount; i++)
-		a_File.Get(t_BoneIndices[i], a_Offset);
+	{
+		uint16_t t_BoneIndex;
+		a_File.Get(t_BoneIndex, a_Offset);
+		m_BoneIndices.push_back(t_BoneIndex);
+	}
 	
 	a_Offset = t_BoneNamesOffset;
 
@@ -295,11 +289,6 @@ File::LoadState League::Skeleton::ReadVersion2(File& a_File, size_t& a_Offset)
 		t_Pointer += t_NameLength;
 		while (*t_Pointer == 0) t_Pointer++; // eat all \0s
 	}
-
-	// Fix the bone indices on the skin
-	for (auto& t_IndexVector : m_Skin.m_BoneIndices)
-		for (int i = 0; i < t_IndexVector.length(); i++)
-			t_IndexVector[i] = t_BoneIndices[t_IndexVector[i]];
 
 	for (auto& t_Bone : m_Bones)
 	{

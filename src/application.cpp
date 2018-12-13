@@ -387,7 +387,7 @@ void Application::LoadMesh(std::string a_SkinPath, std::string a_SkeletonPath, O
 			return;
 		}
 
-		auto* t_Skeleton = new League::Skeleton(a_Skin);
+		auto* t_Skeleton = new League::Skeleton();
 		t_Skeleton->Load(t_LoadData.SkeletonPath, [](League::Skeleton& a_Skeleton, void* a_Argument)
 		{
 			auto& t_LoadData = *(LoadData*)a_Argument;
@@ -398,7 +398,10 @@ void Application::LoadMesh(std::string a_SkinPath, std::string a_SkeletonPath, O
 			// We can only start loading the mesh AFTER we load (or fail to load the skeleton), because the skeleton potentially modifies the bone indices
 			Mesh t_Mesh;
 			if (a_Skeleton.GetLoadState() == File::LoadState::Loaded)
+			{
 				t_Mesh.Skeleton = std::make_shared<League::Skeleton>(a_Skeleton); // Now the mesh owns this pointer
+				t_Mesh.Skeleton->ApplyToSkin(t_LoadData.SkinTarget);
+			}
 			else
 			{
 				// Data is worthless to us, delete
@@ -444,8 +447,7 @@ void Application::LoadAnimation(Application::Mesh & a_Mesh, std::string a_Animat
 {
 	if (a_Mesh.Skeleton == nullptr)
 	{
-		League::Skin t_Skin;
-		League::Skeleton t_FakeSkeleton(t_Skin);
+		League::Skeleton t_FakeSkeleton;
 		League::Animation t_Animation(t_FakeSkeleton);
 		if (a_OnLoadFunction) a_OnLoadFunction(t_Animation, a_UserData);
 		return;
