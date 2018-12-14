@@ -440,7 +440,7 @@ void Application::OnMeshLoad(MeshLoadData& a_LoadData)
 	if (a_LoadData.SkinTarget.GetLoadState() != File::LoadState::Loaded)
 	{
 		if (a_LoadData.OnLoadFunction) a_LoadData.OnLoadFunction(a_LoadData.SkinPath, a_LoadData.SkeletonPath, nullptr, a_LoadData.SkinTarget, a_LoadData.Argument);
-		// Delete(&a_LoadData);
+		Delete(&a_LoadData);
 		delete &a_LoadData.SkeletonTarget;
 		return;
 	}
@@ -490,6 +490,7 @@ void Application::OnMeshLoad(MeshLoadData& a_LoadData)
 
 	t_Meshes[a_LoadData.SkinPath] = t_Mesh;
 	if (a_LoadData.OnLoadFunction) a_LoadData.OnLoadFunction(a_LoadData.SkinPath, a_LoadData.SkeletonPath, &t_Meshes[a_LoadData.SkinPath], a_LoadData.SkinTarget, a_LoadData.Argument);
+	Delete(&a_LoadData);
 }
 
 void Application::LoadMesh(const std::string& a_SkinPath, const std::string& a_SkeletonPath, OnMeshLoadFunction a_OnLoadFunction, void* a_UserData)
