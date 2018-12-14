@@ -62,6 +62,7 @@ void League::Skeleton::Load(const std::string& a_FilePath, OnLoadFunction a_OnLo
 
 		if (a_LoadState != File::LoadState::Loaded)
 		{
+			printf("Skin %s.\n", a_LoadState == File::LoadState::FailedToLoad ? "failed to load" : "was not found");
 			t_Skeleton->m_State = a_LoadState;
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Skeleton, t_LoadData->Argument);
 
@@ -77,6 +78,7 @@ void League::Skeleton::Load(const std::string& a_FilePath, OnLoadFunction a_OnLo
 		a_File->Get(t_SkeletonType, t_Offset);
 		a_File->Get(t_Skeleton->m_Version, t_Offset);
 
+		printf("Skeleton type == %s\n", t_SkeletonType == Skeleton::Type::Classic ? "classic" : "v2");
 		File::LoadState t_State;
 		switch (t_SkeletonType)
 		{
@@ -88,7 +90,8 @@ void League::Skeleton::Load(const std::string& a_FilePath, OnLoadFunction a_OnLo
 			t_State = t_Skeleton->ReadVersion2(*a_File, t_Offset);
 			break;
 		};
-		
+
+		printf("Skeleton was %s with %lu bones.\n", a_LoadState == File::LoadState::FailedToLoad ? "failed to load" : "loaded", t_Skeleton->m_Bones.size());
 		t_Skeleton->m_State = t_State;
 		if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Skeleton, t_LoadData->Argument);
 		FileSystem::CloseFile(*a_File);

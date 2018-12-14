@@ -16,6 +16,8 @@ void AddToPublicHashMap(const std::string& a_String);
 
 void League::Skin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFunction, void * a_Argument)
 {
+	printf("Loading skin %s.\n", a_FilePath.c_str());
+
 	auto* t_File = FileSystem::GetFile(a_FilePath);
 
 	struct LoadData
@@ -37,6 +39,7 @@ void League::Skin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFu
 
 		if (a_LoadState != File::LoadState::Loaded)
 		{
+			printf("Skin %s.\n", a_LoadState == File::LoadState::FailedToLoad ? "failed to load" : "was not found");
 			t_Skin->m_State = a_LoadState;
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Skin, t_LoadData->Argument);
 
@@ -54,6 +57,7 @@ void League::Skin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFu
 		if (t_Signature != 0x112233)
 		{
 			t_Skin->m_State = File::LoadState::FailedToLoad;
+			printf("Skin has no valid signature, this is not a skn file!\n");
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Skin, t_LoadData->Argument);
 
 			FileSystem::CloseFile(*a_File);
@@ -66,6 +70,7 @@ void League::Skin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFu
 		if (t_Skin->m_Major > 4)
 		{
 			t_Skin->m_State = File::LoadState::FailedToLoad;
+			printf("Skin has got a skn file version that we don't support!\n");
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Skin, t_LoadData->Argument);
 
 			FileSystem::CloseFile(*a_File);
@@ -193,6 +198,7 @@ void League::Skin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFu
 			t_Skin->m_Meshes.push_back(t_Mesh);
 		}
 
+		printf("Skin version %u was succesfully loaded: %u vertices.\n", t_Skin->m_Major, t_VertexCount);
 		t_Skin->m_State = File::LoadState::Loaded;
 		if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Skin, t_LoadData->Argument);
 

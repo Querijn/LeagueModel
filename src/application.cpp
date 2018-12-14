@@ -68,7 +68,7 @@ void Application::Init()
 	LoadDefaultTexture();
 	LoadShaders();
 
-	LoadSkin("data/output/data/characters/neeko/skins/skin0.bin", "data/output/data/characters/neeko/animations/skin0.bin");
+	LoadSkin("data/output/data/characters/urgot/skins/skin0.bin", "data/output/data/characters/urgot/animations/skin0.bin");
 	UpdateViewMatrix();
 
 	Platform::SetMainLoop([]() 
@@ -91,7 +91,6 @@ struct SkinLoadData
 	std::string AnimationBinPath;
 	std::string AnimationName;
 
-	int References = 0;
 	bool AnimationLoaded = false;
 	bool SkinLoaded = false;
 
@@ -107,10 +106,18 @@ struct SkinLoadData
 void PrepareEvents(const std::string& a_AnimationName, Application::Mesh& a_Mesh, std::vector<League::Skin::Mesh>& a_Submeshes, League::StringValueStorage* t_StringStorage)
 {
 	auto t_AnimationResourceData = t_StringStorage->GetParent();
-	if (t_AnimationResourceData == nullptr) return;
+	if (t_AnimationResourceData == nullptr)
+	{
+		printf("No animation resource found.\n");
+		return;
+	}
 
 	auto t_AnimationInfoStructBase = t_AnimationResourceData->GetParent();
-	if (t_AnimationInfoStructBase == nullptr) return;
+	if (t_AnimationInfoStructBase == nullptr)
+	{
+		printf("No animation info struct found.\n");
+		return;
+	}
 
 	const auto& t_AnimationInfoStruct = *(const League::StructValueStorage*)t_AnimationInfoStructBase;
 	auto t_EventMap = t_AnimationInfoStruct.GetChild("mEventDataMap");
@@ -118,7 +125,10 @@ void PrepareEvents(const std::string& a_AnimationName, Application::Mesh& a_Mesh
 
 	// Find all events by one of its members.
 	auto t_EventMembers = t_EventMap->Find([](const League::BaseValueStorage& a_Value, void* a_UserData) { return a_Value.Is("mShowSubmeshList"); });
+	if (t_EventMembers.size() == 0)
+		return;
 
+	//printf("Going through the event map for meshes to swap during the animation..\n");
 	for (auto t_EventMember : t_EventMembers)
 	{
 		// This should be the mesh swap event
@@ -134,32 +144,47 @@ void PrepareEvents(const std::string& a_AnimationName, Application::Mesh& a_Mesh
 		std::vector<League::BaseValueStorage*> t_MeshesToShow = t_MeshesToShowElement->Get();
 		std::vector<League::BaseValueStorage*> t_MeshesToHide = t_MeshesToHideElement->Get();
 
+		printf("We're planning to show %lu meshes, and hide %lu meshes at frame %f during this animation.\n", t_MeshesToShow.size(), t_MeshesToHide.size(), t_Frame);
+
 		std::vector<size_t> t_ToShow, t_ToHide;
 
+		printf("Show:\n");
 		for (auto& t_ShowMesh : t_MeshesToShow)
 		{
 			auto t_MeshName = t_ShowMesh->DebugPrint();
+			printf("- %s: ", t_MeshName.c_str());
+			bool t_Found = false;
+
 			for (int i = 0; i < a_Submeshes.size(); i++)
 			{
-				if (a_Submeshes[i].MaterialName == t_MeshName)
+				if (a_Submeshes[i].Name == t_MeshName)
 				{
 					t_ToShow.push_back(i);
+					t_Found = true;
 					break;
 				}
 			}
+
+			printf("%s\n", t_Found ? "found" : "not found");
 		}
 
 		for (auto& t_HideMesh : t_MeshesToHide)
 		{
 			auto t_MeshName = t_HideMesh->DebugPrint();
+			printf("- %s: ", t_MeshName.c_str());
+			bool t_Found = false;
+
 			for (int i = 0; i < a_Submeshes.size(); i++)
 			{
-				if (a_Submeshes[i].MaterialName == t_MeshName)
+				if (a_Submeshes[i].Name == t_MeshName)
 				{
 					t_ToHide.push_back(i);
+					t_Found = true;
 					break;
 				}
 			}
+
+			printf("%s\n", t_Found ? "found" : "not found");
 		}
 
 		a_Mesh.AnimationEvents[a_AnimationName].push_back(New(ApplicationMesh::SwapMeshAnimationEvent(a_Mesh, t_Frame, t_ToShow, t_ToHide)));
@@ -169,36 +194,32 @@ void PrepareEvents(const std::string& a_AnimationName, Application::Mesh& a_Mesh
 void OnSkinAndAnimationBin(SkinLoadData& a_LoadData)
 {
 	if (a_LoadData.AnimationLoaded == false || a_LoadData.SkinLoaded == false) return;
-
+	
 	if (a_LoadData.Target == nullptr)
 	{
+		printf("Callback for LoadSkin was called but target was unset, did we get an error?\n");
 		Delete(a_LoadData.Target);
+		Delete(&a_LoadData);
 		return;
 	}
 
+	printf("Loaded both skin and animation information. Loading an animation: %s\n", a_LoadData.AnimationName.c_str());
 	Application::Instance->LoadAnimation(*a_LoadData.Target, a_LoadData.AnimationName, [](League::Animation& a_Animation, void* a_UserData)
 	{
 		auto& t_LoadData = *(SkinLoadData*)a_UserData;
 
 		if (a_Animation.GetLoadState() != File::LoadState::Loaded)
 		{
-			t_LoadData.References++;
-			if (t_LoadData.References == 2)
-				Delete(&t_LoadData);
+			printf("Animation %s\n", a_Animation.GetLoadState() == File::LoadState::FailedToLoad ? "failed to load." : "was not found.");
+			Delete(&t_LoadData);
 			return;
 		}
 
+		printf("Animation loaded! Using it.\n");
 		t_LoadData.Target->AddAnimationReference(t_LoadData.AnimationName, a_Animation);
 		t_LoadData.Target->ApplyAnimation(t_LoadData.AnimationName);
-
-		t_LoadData.References++;
-		if (t_LoadData.References == 2)
-			Delete(&t_LoadData);
+		Delete(&t_LoadData);
 	}, &a_LoadData);
-
-	a_LoadData.References++;
-	if (a_LoadData.References == 2)
-		Delete(&a_LoadData);
 }
 
 void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_AnimationBinPath)
@@ -257,7 +278,7 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 		auto t_TextureValue = (const League::StringValueStorage*)t_MeshProperties->GetChild("texture");
 		t_LoadData->Texture = t_TextureValue ? t_Root + t_TextureValue->Get() : "";
 
-		printf("Starting to load the mesh (%s and %s)..\n", t_Skin.c_str(), t_Skeleton.c_str());
+		printf("Starting to load the mesh..\n");
 		
 		// Load the mesh (Skeleton + Skin)
 		Application::Instance->LoadMesh(t_Skin, t_Skeleton, [](const std::string& a_SkinPath, const std::string& a_SkeletonPath, Application::Mesh* a_Mesh, League::Skin& a_Skin, void* a_UserData)
@@ -265,17 +286,21 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 			auto* t_LoadData = (SkinLoadData*)a_UserData;
 			if (a_Mesh == nullptr)
 			{
+				printf("Mesh did not load!\n");
 				t_LoadData->SkinLoaded = true;
 				OnSkinAndAnimationBin(*t_LoadData);
 				return;
 			}
 
 			t_LoadData->Target = a_Mesh;
-			
+
+			printf("Mesh loaded!\n");
 			const League::BaseValueStorage* t_MaterialOverrides = nullptr;
 			auto t_InitialMeshesToHide = t_LoadData->SkinBin.Find([](const League::BaseValueStorage& a_Value, void* a_UserData) { return a_Value.Is("initialSubmeshToHide"); });
 			if (t_InitialMeshesToHide.size() != 0)
 			{
+				printf("Found %lu meshes to hide!\n", t_InitialMeshesToHide.size());
+
 				t_LoadData->SubMeshes = a_Skin.GetMeshes();
 				for (size_t i = 0; i < t_LoadData->SubMeshes.size(); i++)
 				{
@@ -283,13 +308,14 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 					bool t_ShouldHide = false;
 					for (auto& t_SubmeshToHide : t_InitialMeshesToHide)
 					{
-						if (t_Submesh.MaterialName != t_SubmeshToHide->DebugPrint())
+						if (t_Submesh.Name != t_SubmeshToHide->DebugPrint())
 							continue;
 
 						t_ShouldHide = true;
 						break;
 					}
 
+					printf("Hiding submesh '%s'.\n", t_Submesh.Name.c_str());
 					a_Mesh->SubMeshes[i].Visible = !t_ShouldHide;
 					a_Mesh->SubMeshes[i].InitialVisibility = !t_ShouldHide;
 				}
@@ -301,9 +327,14 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 			// Search for the material overrides, if needed
 			if (t_MaterialOverrides == nullptr)
 			{
+				printf("Could not find it in the original place I suspected it would be, so retrying by searching everywhere..\n");
 				auto t_Results = t_LoadData->SkinBin.Find([](const League::BaseValueStorage& a_Value, void* a_UserData) { return a_Value.Is("materialOverride"); });
 				if (t_Results.size() != 0)
+				{
+					printf("There, found it.\n");
 					t_MaterialOverrides = t_Results[0];
+				}
+				else printf("Could not find it.\n");
 			}
 
 			// Process material overrides
@@ -317,14 +348,18 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 					auto t_TextureStorage = t_Material->GetChild("texture");
 					auto t_SubmeshNameStorage = t_Material->GetChild("submesh");
 					if (t_TextureStorage == nullptr || t_SubmeshNameStorage == nullptr)
+					{
+						printf("Texture or Submesh missing from struct of material override!\n");
 						continue;
+					}
 
 					auto t_Texture = t_TextureStorage->DebugPrint();
 					auto t_SubmeshName = t_SubmeshNameStorage->DebugPrint();
 					for (int i = 0; i < t_LoadData->SubMeshes.size(); i++)
 					{
-						if (t_LoadData->SubMeshes[i].MaterialName == t_SubmeshName)
+						if (t_LoadData->SubMeshes[i].Name == t_SubmeshName)
 						{
+							printf("Submesh %s has its own texture: %s.\n", t_SubmeshName.c_str(), t_Texture.c_str());
 							t_LoadData->Target->SubMeshes[i].SetTexture(t_Root + t_Texture);
 							t_MeshesWithMaterial.push_back(i);
 							break;
@@ -333,6 +368,7 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 				}
 			}
 
+			printf("Setting other textures..\n");
 			// Set the texture (async)
 			for (int i = 0; i < a_Mesh->SubMeshes.size(); i++)
 				if (std::find(t_MeshesWithMaterial.begin(), t_MeshesWithMaterial.end(), i) == t_MeshesWithMaterial.end())
@@ -665,7 +701,7 @@ void Application::UpdateViewMatrix()
 
 bool Application::Update(double a_DT)
 {
-#if defined(_WIN32)
+#if defined(_WIN32) && defined(NDEBUG)
 	printf("%3.2f               \r", 1 / a_DT);
 #endif
 

@@ -37,6 +37,7 @@ void League::Animation::Load(const std::string& a_FilePath, OnLoadFunction a_OnL
 
 		if (a_LoadState != File::LoadState::Loaded)
 		{
+			printf("Animation %s.\n", a_LoadState == File::LoadState::FailedToLoad ? "failed to load" : "was not found");
 			t_Animation->m_State = a_LoadState;
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Animation, t_LoadData->Argument);
 
@@ -46,11 +47,14 @@ void League::Animation::Load(const std::string& a_FilePath, OnLoadFunction a_OnL
 		}
 
 		size_t t_Offset = 0;
-		uint8_t t_Signature[8];
+		uint8_t t_Signature[9];
 		a_File->Read(t_Signature, 8, t_Offset);
 
 		if (memcmp(t_Signature, "r3d2anmd", 8) != 0 && memcmp(t_Signature, "r3d2canm", 8) != 0)
 		{
+			t_Signature[8] = 0;
+			printf("Animation has signature %s, which is not known by this application!\n", (char*)t_Signature);
+
 			t_Animation->m_State = File::LoadState::FailedToLoad;
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Animation, t_LoadData->Argument);
 
@@ -69,6 +73,7 @@ void League::Animation::Load(const std::string& a_FilePath, OnLoadFunction a_OnL
 		
 		if (t_Version > 5)
 		{
+			printf("Animation has an unsupported version: %u\n", t_Version);
 			t_Animation->m_State = File::LoadState::FailedToLoad;
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Animation, t_LoadData->Argument);
 
@@ -77,10 +82,12 @@ void League::Animation::Load(const std::string& a_FilePath, OnLoadFunction a_OnL
 			return;
 		}
 
+		printf("Animation has version: %u\n", t_Version);
 		switch (t_Version)
 		{
 		default:
 		{
+			printf("Animation has an unsupported version: %u\n", t_Version);
 			t_Animation->m_State = File::LoadState::FailedToLoad;
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Animation, t_LoadData->Argument);
 
@@ -106,6 +113,7 @@ void League::Animation::Load(const std::string& a_FilePath, OnLoadFunction a_OnL
 			break;
 		}
 
+		printf("Animation was %s with %lu bones.\n", a_LoadState == File::LoadState::FailedToLoad ? "failed to load" : "loaded", t_Animation->GetBones().size());
 		if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Animation, t_LoadData->Argument);
 
 		FileSystem::CloseFile(*a_File);
