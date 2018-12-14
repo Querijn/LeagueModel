@@ -198,11 +198,21 @@ void ApplicationMesh::AddAnimationReference(const std::string& a_Name, const Lea
 void ApplicationMesh::ApplyAnimation(const std::string& a_Animation)
 {
 	const auto& t_AnimationIndex = Animations.find(a_Animation);
-	if (t_AnimationIndex == Animations.end()) return;
+	if (t_AnimationIndex == Animations.end())
+	{
+		printf("There was a request to play the animation %s, but I haven't got that one in my system!\n", a_Animation.c_str());
+		return;
+	}
 
 	CurrentAnimation = a_Animation;
 	const auto& t_Animation = Animations[CurrentAnimation];
 	const auto& t_Bones = t_Animation->GetBones();
+
+	printf("Applying an animation with the following data:\n");
+	printf("Name: %s\n", CurrentAnimation.c_str());
+	printf("Duration: %f seconds\n", t_Animation->GetDuration());
+	printf("FPS: %f\n", t_Animation->GetFPS());
+	printf("Bone count: %lu\n", t_Bones.size());
 
 	float t_HighestY(-9e9), t_LowestY(9e9);
 	size_t t_Count = 0;
@@ -222,6 +232,8 @@ void ApplicationMesh::ApplyAnimation(const std::string& a_Animation)
 	if (abs(t_HighestY) + abs(t_LowestY) < 400)
 		Center.y = -(t_HighestY + t_LowestY) * 0.5f;
 	else Center.y = -75;
+
+	printf("Height: %f\n", Center.y);
 }
 
 ApplicationMesh::SwapMeshAnimationEvent::SwapMeshAnimationEvent(ApplicationMesh & a_Mesh, float a_TriggerFrame, const std::vector<size_t>& a_ToShow, const std::vector<size_t>& a_ToHide) :
