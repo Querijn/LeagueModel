@@ -73,8 +73,6 @@ void ApplicationMesh::SetupHierarchy(const glm::mat4& a_InverseRoot, std::vector
 	snprintf(t_ContextName, 64, "%s -> %s", __FUNCTION__, a_SkeletonBone.Name.c_str());
 	Profiler::Context t(t_ContextName);
 
-	printf("Currently working on %s\n", a_SkeletonBone.Name.c_str());
-
 	glm::mat4 t_GlobalTransform = a_Parent;
 
 	const auto* t_AnimBone = Animations[CurrentAnimation].GetBone(a_SkeletonBone.Hash);
@@ -97,7 +95,9 @@ void ApplicationMesh::SetupHierarchy(const glm::mat4& a_InverseRoot, std::vector
 
 void ApplicationMesh::Draw(float a_Time, ShaderProgram& a_Program, glm::mat4& a_VP, Texture* a_Diffuse, std::vector<glm::mat4>* a_BoneTransforms)
 {
-	Profiler::Context t(__FUNCTION__);
+	char t_ContextTitle[32];
+	snprintf(t_ContextTitle, 32, "Draw -> %3.2f", a_Time);
+	Profiler::Context t(t_ContextTitle);
 
 	a_Program.Use();
 
