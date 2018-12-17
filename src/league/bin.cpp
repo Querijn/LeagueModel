@@ -1,7 +1,7 @@
 #include "bin.hpp"
 #include "bin_valuestorage.hpp"
 
-#include <profiling/memory.hpp>
+#include <profiling.hpp>
 
 #include <cassert>
 
@@ -11,11 +11,13 @@ std::string GetStringByHash(uint32_t a_Hash);
 League::Bin::~Bin()
 {
 	for (auto t_Element : m_FlatOverview)
-		Delete(t_Element);
+		LM_DEL(t_Element);
 }
 
 void League::Bin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFunction, void * a_Argument)
 {
+	Profiler::Context t(__FUNCTION__);
+
 	auto* t_File = FileSystem::GetFile(a_FilePath);
 
 	struct LoadData
@@ -28,10 +30,12 @@ void League::Bin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFun
 		OnLoadFunction OnLoadFunction;
 		void* Argument;
 	};
-	auto* t_LoadData = New(LoadData(this, a_OnLoadFunction, a_Argument));
+	auto* t_LoadData = LM_NEW(LoadData(this, a_OnLoadFunction, a_Argument));
 
 	t_File->Load([](File* a_File, File::LoadState a_LoadState, void* a_Argument)
 	{
+		Profiler::Context t("League::Bin::Load->OnFileReceived");
+
 		auto* t_LoadData = (LoadData*)a_Argument;
 		auto* t_Bin = (Bin*)t_LoadData->Target;
 
@@ -41,7 +45,7 @@ void League::Bin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFun
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Bin, t_LoadData->Argument);
 
 			FileSystem::CloseFile(*a_File);
-			Delete(t_LoadData);
+			LM_DEL(t_LoadData);
 			return;
 		}
 
@@ -54,7 +58,7 @@ void League::Bin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFun
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Bin, t_LoadData->Argument);
 
 			FileSystem::CloseFile(*a_File);
-			Delete(t_LoadData);
+			LM_DEL(t_LoadData);
 			return;
 		}
 
@@ -66,7 +70,7 @@ void League::Bin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFun
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Bin, t_LoadData->Argument);
 
 			FileSystem::CloseFile(*a_File);
-			Delete(t_LoadData);
+			LM_DEL(t_LoadData);
 			return;
 		}
 
@@ -125,7 +129,7 @@ void League::Bin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFun
 		if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Bin, t_LoadData->Argument);
 
 		FileSystem::CloseFile(*a_File);
-		Delete(t_LoadData);
+		LM_DEL(t_LoadData);
 	}, t_LoadData);
 }
 

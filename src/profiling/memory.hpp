@@ -5,8 +5,8 @@
 
 #if defined(NDEBUG) && !defined(DEBUG_MEMORY)
 
-#define New(t) new t
-#define Delete(t) delete t
+#define LM_NEW(t) new t
+#define LM_DEL(t) delete t
 
 class Memory
 {
@@ -40,7 +40,7 @@ private:
 	static void DeletePointerInfo(const char* a_File, size_t a_Line, const char* a_Name, void* a_Pointer);
 };
 
-#define New(t) Memory::TrackNew(new t, __FILE__, __LINE__)
-#define Delete(t) Memory::TrackDelete(t, __FILE__, __LINE__)
+#define LM_NEW(t) Memory::TrackNew(new t, __FILE__, __LINE__)
+#define LM_DEL(t) Memory::TrackDelete(t, __FILE__, __LINE__)
 
 #endif

@@ -46,7 +46,7 @@ public:
 	void Draw(float a_Time, ShaderProgram& a_Program, glm::mat4& a_VP, Texture* a_Diffuse, std::vector<glm::mat4>* a_BoneTransforms);
 
 	std::shared_ptr<League::Skeleton> Skeleton = nullptr;
-	std::map<std::string, const League::Animation*> Animations;
+	std::map<std::string, League::Animation> Animations;
 	std::map<std::string, std::vector<AnimationEvent*>> AnimationEvents;
 	std::string CurrentAnimation;
 

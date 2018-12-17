@@ -2,6 +2,7 @@
 #include <application.hpp>
 
 #include <league/animation.hpp>
+#include <profiling.hpp>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
@@ -68,9 +69,15 @@ T FindNearestTime(const std::vector<League::Animation::Bone::Frame<T>>& a_Vector
 
 void ApplicationMesh::SetupHierarchy(const glm::mat4& a_InverseRoot, std::vector<glm::mat4>& a_Bones, const League::Skeleton::Bone& a_SkeletonBone, const glm::mat4& a_Parent, float a_Time)
 {
+	char t_ContextName[64];
+	snprintf(t_ContextName, 64, "%s -> %s", __FUNCTION__, a_SkeletonBone.Name.c_str());
+	Profiler::Context t(t_ContextName);
+
+	printf("Currently working on %s\n", a_SkeletonBone.Name.c_str());
+
 	glm::mat4 t_GlobalTransform = a_Parent;
 
-	const auto* t_AnimBone = Animations[CurrentAnimation]->GetBone(a_SkeletonBone.Hash);
+	const auto* t_AnimBone = Animations[CurrentAnimation].GetBone(a_SkeletonBone.Hash);
 	if (t_AnimBone != nullptr)
 	{
 		glm::vec3 t_Translation = FindNearestTime(t_AnimBone->Translation, a_Time, TranslationIndex);
@@ -90,6 +97,8 @@ void ApplicationMesh::SetupHierarchy(const glm::mat4& a_InverseRoot, std::vector
 
 void ApplicationMesh::Draw(float a_Time, ShaderProgram& a_Program, glm::mat4& a_VP, Texture* a_Diffuse, std::vector<glm::mat4>* a_BoneTransforms)
 {
+	Profiler::Context t(__FUNCTION__);
+
 	a_Program.Use();
 
 	if (PositionBuffer) PositionBuffer->Use();
@@ -111,7 +120,7 @@ void ApplicationMesh::Draw(float a_Time, ShaderProgram& a_Program, glm::mat4& a_
 			const auto& t_AnimationIndex = Animations.find(CurrentAnimation);
 			if (t_AnimationIndex != Animations.end())
 			{
-				float t_AnimationDuration = t_AnimationIndex->second->GetDuration();
+				float t_AnimationDuration = t_AnimationIndex->second.GetDuration();
 				while (a_Time > t_AnimationDuration)
 				{
 					a_Time -= t_AnimationDuration;
@@ -119,7 +128,7 @@ void ApplicationMesh::Draw(float a_Time, ShaderProgram& a_Program, glm::mat4& a_
 						t_AnimationEvent->Reset();
 				}
 
-				float t_FPS = t_AnimationIndex->second->GetFPS();
+				float t_FPS = t_AnimationIndex->second.GetFPS();
 				for (auto t_AnimationEvent : AnimationEvents[CurrentAnimation])
 					t_AnimationEvent->Update(a_Time * t_FPS);
 
@@ -145,8 +154,10 @@ void ApplicationMesh::Draw(float a_Time, ShaderProgram& a_Program, glm::mat4& a_
 
 void ApplicationMesh::SetupAnimation(std::vector<glm::mat4>& a_BoneTransforms, float a_Time)
 {
+	Profiler::Context t(__FUNCTION__);
+
 	glm::mat4 t_InverseRoot = glm::identity<glm::mat4>();
-	const auto& t_Bones = Animations[CurrentAnimation]->GetBones();
+	const auto& t_Bones = Animations[CurrentAnimation].GetBones();
 
 	for (size_t i = 0; i < t_Bones.size(); i++)
 	{
@@ -166,9 +177,13 @@ glm::mat4 ApplicationMesh::SubMesh::GetTransformMatrix() const
 
 void ApplicationMesh::SubMesh::SetTexture(const std::string& a_FilePath)
 {
+	Profiler::Context t(__FUNCTION__);
+
 	printf("Attempting to load texture %s\n", a_FilePath.c_str());
 	Image.Load(a_FilePath, [](Texture& a_Texture, void* a_UserData)
 	{
+		Profiler::Context t("ApplicationMesh::SubMesh::SetTexture->OnLoad");
+
 		auto& t_SubMesh = *(SubMesh*)a_UserData;
 		if (a_Texture.GetLoadState() != File::LoadState::Loaded)
 		{
@@ -192,11 +207,13 @@ ApplicationMesh::~ApplicationMesh()
 
 void ApplicationMesh::AddAnimationReference(const std::string& a_Name, const League::Animation & a_Animation)
 {
-	Animations[a_Name] = &a_Animation;
+	Animations[a_Name] = a_Animation;
 }
 
 void ApplicationMesh::ApplyAnimation(const std::string& a_Animation)
 {
+	Profiler::Context t(__FUNCTION__);
+
 	const auto& t_AnimationIndex = Animations.find(a_Animation);
 	if (t_AnimationIndex == Animations.end())
 	{
@@ -206,12 +223,12 @@ void ApplicationMesh::ApplyAnimation(const std::string& a_Animation)
 
 	CurrentAnimation = a_Animation;
 	const auto& t_Animation = Animations[CurrentAnimation];
-	const auto& t_Bones = t_Animation->GetBones();
+	const auto& t_Bones = t_Animation.GetBones();
 
 	printf("Applying an animation with the following data:\n");
 	printf("Name: %s\n", CurrentAnimation.c_str());
-	printf("Duration: %f seconds\n", t_Animation->GetDuration());
-	printf("FPS: %f\n", t_Animation->GetFPS());
+	printf("Duration: %f seconds\n", t_Animation.GetDuration());
+	printf("FPS: %f\n", t_Animation.GetFPS());
 	printf("Bone count: %lu\n", t_Bones.size());
 
 	float t_HighestY(-9e9), t_LowestY(9e9);

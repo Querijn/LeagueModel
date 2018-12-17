@@ -16,11 +16,19 @@ bool WindowsPlatform::IsWeb()
 	return false;
 }
 
+struct OnStart
+{
+	OnStart()
+	{
+		QueryPerformanceFrequency(&g_Frequency);
+		QueryPerformanceCounter(&g_Start);
+	}
+};
+
+OnStart t;
+
 void WindowsPlatform::SetMainLoop(LoopFunction a_Function)
 {
-	QueryPerformanceFrequency(&g_Frequency);
-	QueryPerformanceCounter(&g_Start);
-
 	while (a_Function())
 	{
 

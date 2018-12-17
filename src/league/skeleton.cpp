@@ -1,6 +1,6 @@
 #include "league/skeleton.hpp"
 #include "league/skin.hpp"
-#include <profiling/memory.hpp>
+#include <profiling.hpp>
 
 #include <map>
 
@@ -41,6 +41,8 @@ void RecursiveInvertGlobalMatrices(const glm::mat4& a_Parent, League::Skeleton::
 
 void League::Skeleton::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFunction, void * a_Argument)
 {
+	Profiler::Context t(__FUNCTION__);
+
 	auto* t_File = FileSystem::GetFile(a_FilePath);
 
 	struct LoadData
@@ -53,10 +55,12 @@ void League::Skeleton::Load(const std::string& a_FilePath, OnLoadFunction a_OnLo
 		OnLoadFunction OnLoadFunction;
 		void* Argument;
 	};
-	auto* t_LoadData = New(LoadData(this, a_OnLoadFunction, a_Argument));
+	auto* t_LoadData = LM_NEW(LoadData(this, a_OnLoadFunction, a_Argument));
 
 	t_File->Load([](File* a_File, File::LoadState a_LoadState, void* a_Argument)
 	{
+		Profiler::Context t("League::Skeleton::Load->OnFileReceived");
+
 		auto* t_LoadData = (LoadData*)a_Argument;
 		auto* t_Skeleton = (Skeleton*)t_LoadData->Target;
 
@@ -67,7 +71,7 @@ void League::Skeleton::Load(const std::string& a_FilePath, OnLoadFunction a_OnLo
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Skeleton, t_LoadData->Argument);
 
 			FileSystem::CloseFile(*a_File);
-			Delete(t_LoadData);
+			LM_DEL(t_LoadData);
 			return;
 		}
 
@@ -95,8 +99,17 @@ void League::Skeleton::Load(const std::string& a_FilePath, OnLoadFunction a_OnLo
 		t_Skeleton->m_State = t_State;
 		if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Skeleton, t_LoadData->Argument);
 		FileSystem::CloseFile(*a_File);
-		Delete(t_LoadData);
+		LM_DEL(t_LoadData);
 	}, t_LoadData);
+}
+
+League::Skeleton::Skeleton(const Skeleton & a_Skeleton) :
+	m_State(a_Skeleton.m_State),
+	m_Type(a_Skeleton.m_Type),
+	m_Version(a_Skeleton.m_Version),
+	m_Bones(a_Skeleton.m_Bones),
+	m_BoneIndices(a_Skeleton.m_BoneIndices)
+{
 }
 
 const std::vector<League::Skeleton::Bone>& League::Skeleton::GetBones() const

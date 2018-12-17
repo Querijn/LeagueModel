@@ -20,7 +20,7 @@ public:
 
 	operator GLuint() const;
 
-	void Delete();
+	void LM_DEL();
 	
 	File::LoadState GetLoadState() const { return m_State; }
 

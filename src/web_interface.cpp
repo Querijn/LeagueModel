@@ -2,6 +2,8 @@
 
 #include "application.hpp"
 
+#include <profiling.hpp>
+
 #include <emscripten/bind.h>
 using namespace emscripten;
 
@@ -73,6 +75,27 @@ void PlayAnimation(const std::string& a_Skin, std::string a_Animation)
 	}, t_LoadData);
 }
 
+std::string GetProfileResultsAsString()
+{
+	return Profiler::Get().GetJSON();
+}
+
+void GetProfileResults()
+{
+	EM_ASM
+	(
+		function download(content, fileName, contentType) 
+		{
+			var a = document.createElement("a");
+			var file = new Blob([content], { type: contentType });
+			a.href = URL.createObjectURL(file);
+			a.download = fileName;
+			a.click();
+		}
+		download(window["Module"]["GetProfileResultsAsString"](), 'profile_results.json', 'text/plain');
+	);
+}
+
 EMSCRIPTEN_BINDINGS(my_module) 
 {
 	function("LoadSkin", &LoadSkin); 
@@ -84,6 +107,9 @@ EMSCRIPTEN_BINDINGS(my_module)
 	function("GetAvailableAnimations", &GetAvailableAnimations);
 	function("GetAnimationName", &GetAnimationName);
 	function("PlayAnimation", &PlayAnimation);
+
+	function("GetProfileResultsAsString", &GetProfileResultsAsString);
+	function("GetProfileResults", &GetProfileResults);
 }
 
 #endif

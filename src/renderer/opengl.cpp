@@ -26,4 +26,4 @@ void InitOpenGL()
 #endif
 
 	m_IsOpenGLInitialised = true;
-}
+}	

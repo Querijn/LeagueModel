@@ -16,7 +16,6 @@ namespace League
 	{
 	public:
 		using OnLoadFunction = void(*)(League::Animation& a_Animation, void* a_Argument);
-		Animation(Skeleton& a_Skeleton);
 
 		void Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
 		
@@ -61,6 +60,5 @@ namespace League
 
 		float m_FPS, m_Duration;
 		std::vector<Bone> m_Bones;
-		Skeleton& m_Skeleton;
 	};
 }

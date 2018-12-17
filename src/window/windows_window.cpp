@@ -7,6 +7,8 @@
 
 #include "event_handler/events.hpp"
 
+#include "profiling.hpp"
+
 #include <GL/gl.h>
 #include <GL/glext.h>
 
@@ -22,6 +24,8 @@ static PFNWGLCREATECONTEXTATTRIBSARBPROC glCreateContextAttribsARB;
 WindowsWindow::WindowsWindow(const WindowSettings & a_WindowSettings) :
 	BaseWindow(a_WindowSettings)
 {
+	Profiler::Context("WindowCreation");
+
 	if (m_Initialised)
 	{
 		__debugbreak();

@@ -17,6 +17,9 @@ namespace League
 		using OnLoadFunction = void(*)(League::Skeleton& a_Skeleton, void* a_Argument);
 		void Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
 		
+		Skeleton() {}
+		Skeleton(const Skeleton& a_Skeleton);
+
 		struct Bone
 		{
 			std::string Name;

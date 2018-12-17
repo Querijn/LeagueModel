@@ -1,7 +1,7 @@
 #include "skin.hpp"
 #include <string>
 
-#include <profiling/memory.hpp>
+#include <profiling.hpp>
 
 struct SubMeshHeader
 {
@@ -16,6 +16,7 @@ void AddToPublicHashMap(const std::string& a_String);
 
 void League::Skin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFunction, void * a_Argument)
 {
+	Profiler::Context t(__FUNCTION__);
 	printf("Loading skin %s.\n", a_FilePath.c_str());
 
 	auto* t_File = FileSystem::GetFile(a_FilePath);
@@ -30,10 +31,12 @@ void League::Skin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFu
 		OnLoadFunction OnLoadFunction;
 		void* Argument;
 	};
-	auto* t_LoadData = New(LoadData(this, a_OnLoadFunction, a_Argument));
+	auto* t_LoadData = LM_NEW(LoadData(this, a_OnLoadFunction, a_Argument));
 
 	t_File->Load([](File* a_File, File::LoadState a_LoadState, void* a_Argument)
 	{
+		Profiler::Context t("League::Skin::Load->OnFileReceived");
+
 		auto* t_LoadData = (LoadData*)a_Argument;
 		auto* t_Skin = (Skin*)t_LoadData->Target;
 
@@ -44,7 +47,7 @@ void League::Skin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFu
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Skin, t_LoadData->Argument);
 
 			FileSystem::CloseFile(*a_File);
-			Delete(t_LoadData);
+			LM_DEL(t_LoadData);
 			return;
 		}
 
@@ -61,7 +64,7 @@ void League::Skin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFu
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Skin, t_LoadData->Argument);
 
 			FileSystem::CloseFile(*a_File);
-			Delete(t_LoadData);
+			LM_DEL(t_LoadData);
 			return;
 		}
 
@@ -74,7 +77,7 @@ void League::Skin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFu
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Skin, t_LoadData->Argument);
 
 			FileSystem::CloseFile(*a_File);
-			Delete(t_LoadData);
+			LM_DEL(t_LoadData);
 			return;
 		}
 
@@ -176,7 +179,7 @@ void League::Skin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFu
 				if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Skin, t_LoadData->Argument);
 
 				FileSystem::CloseFile(*a_File);
-				Delete(t_LoadData);
+				LM_DEL(t_LoadData);
 				return;
 			}
 		}
@@ -203,7 +206,7 @@ void League::Skin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFu
 		if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Skin, t_LoadData->Argument);
 
 		FileSystem::CloseFile(*a_File);
-		Delete(t_LoadData);
+		LM_DEL(t_LoadData);
 	}, t_LoadData);
 }
 

@@ -11,7 +11,7 @@
 
 #include <algorithm>
 
-#include <profiling/memory.hpp>
+#include <profiling.hpp>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
@@ -40,18 +40,13 @@ Application::Application(const char* a_Root) :
 
 Application::~Application()
 {
-	for (auto t_Animation : m_Animations)
-	{
-		Delete(t_Animation);
-		t_Animation = nullptr;
-	}
-
-	m_Animations.clear();
 	m_Meshes.clear();
 }
 
 void Application::Init()
 {
+	Profiler::Context t(__FUNCTION__);
+
 	EventHandler::Init();
 
 	ADD_MEMBER_FUNCTION_EVENT_LISTENER(MouseDownEvent, Application, OnMouseDownEvent);
@@ -68,11 +63,13 @@ void Application::Init()
 	LoadDefaultTexture();
 	LoadShaders();
 
-	LoadSkin("data/output/data/characters/urgot/skins/skin0.bin", "data/output/data/characters/urgot/animations/skin0.bin");
+	LoadSkin("data/output/data/characters/ryze/skins/skin0.bin", "data/output/data/characters/ryze/animations/skin0.bin");
 	UpdateViewMatrix();
 
 	Platform::SetMainLoop([]() 
 	{
+		Profiler::Frame t;
+
 		double dt = Platform::GetTimeSinceStart() - g_LastTime;
 		g_LastTime = Platform::GetTimeSinceStart();
 
@@ -105,6 +102,7 @@ struct SkinLoadData
 
 void PrepareEvents(const std::string& a_AnimationName, Application::Mesh& a_Mesh, std::vector<League::Skin::Mesh>& a_Submeshes, League::StringValueStorage* t_StringStorage)
 {
+	Profiler::Context t(__FUNCTION__);
 	auto t_AnimationResourceData = t_StringStorage->GetParent();
 	if (t_AnimationResourceData == nullptr)
 	{
@@ -187,19 +185,20 @@ void PrepareEvents(const std::string& a_AnimationName, Application::Mesh& a_Mesh
 			printf("%s\n", t_Found ? "found" : "not found");
 		}
 
-		a_Mesh.AnimationEvents[a_AnimationName].push_back(New(ApplicationMesh::SwapMeshAnimationEvent(a_Mesh, t_Frame, t_ToShow, t_ToHide)));
+		a_Mesh.AnimationEvents[a_AnimationName].push_back(LM_NEW(ApplicationMesh::SwapMeshAnimationEvent(a_Mesh, t_Frame, t_ToShow, t_ToHide)));
 	}
 }
 
 void OnSkinAndAnimationBin(SkinLoadData& a_LoadData)
 {
+	Profiler::Context t(__FUNCTION__);
 	if (a_LoadData.AnimationLoaded == false || a_LoadData.SkinLoaded == false) return;
 	
 	if (a_LoadData.Target == nullptr)
 	{
 		printf("Callback for LoadSkin was called but target was unset, did we get an error?\n");
-		Delete(a_LoadData.Target);
-		Delete(&a_LoadData);
+		LM_DEL(a_LoadData.Target);
+		LM_DEL(&a_LoadData);
 		return;
 	}
 
@@ -211,24 +210,27 @@ void OnSkinAndAnimationBin(SkinLoadData& a_LoadData)
 		if (a_Animation.GetLoadState() != File::LoadState::Loaded)
 		{
 			printf("Animation %s\n", a_Animation.GetLoadState() == File::LoadState::FailedToLoad ? "failed to load." : "was not found.");
-			Delete(&t_LoadData);
+			LM_DEL(&t_LoadData);
 			return;
 		}
 
 		printf("Animation loaded! Using it.\n");
 		t_LoadData.Target->AddAnimationReference(t_LoadData.AnimationName, a_Animation);
 		t_LoadData.Target->ApplyAnimation(t_LoadData.AnimationName);
-		Delete(&t_LoadData);
+		LM_DEL(&t_LoadData);
 	}, &a_LoadData);
 }
 
 void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_AnimationBinPath)
 {
-	auto* t_LoadData = New(SkinLoadData(a_AnimationBinPath));
+	Profiler::Context t(__FUNCTION__);
+	auto* t_LoadData = LM_NEW(SkinLoadData(a_AnimationBinPath));
 
 	// Load in the BIN containing most of the information about the base mesh
 	t_LoadData->SkinBin.Load(a_BinPath, [](League::Bin& a_Bin, void* a_UserData)
 	{
+		Profiler::Context t("Application::LoadSkin->LoadSkinBin");
+
 		auto* t_LoadData = (SkinLoadData*)a_UserData;
 		if (a_Bin.GetLoadState() != File::LoadState::Loaded)
 		{
@@ -283,6 +285,7 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 		// Load the mesh (Skeleton + Skin)
 		Application::Instance->LoadMesh(t_Skin, t_Skeleton, [](const std::string& a_SkinPath, const std::string& a_SkeletonPath, Application::Mesh* a_Mesh, League::Skin& a_Skin, void* a_UserData)
 		{
+			Profiler::Context t("Application::LoadSkin->LoadMesh");
 			auto* t_LoadData = (SkinLoadData*)a_UserData;
 			if (a_Mesh == nullptr)
 			{
@@ -382,6 +385,8 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 	// Load all the animations
 	t_LoadData->AnimationBin.Load(t_LoadData->AnimationBinPath, [](League::Bin& a_Bin, void* a_UserData)
 	{
+		Profiler::Context t("Application::LoadSkin->LoadAnimationBin");
+
 		auto* t_LoadData = (SkinLoadData*)a_UserData;
 		if (a_Bin.GetLoadState() != File::LoadState::Loaded)
 		{
@@ -434,13 +439,14 @@ struct MeshLoadData
 
 void Application::OnMeshLoad(MeshLoadData& a_LoadData)
 {
+	Profiler::Context t(__FUNCTION__);
 	if (a_LoadData.SkinLoaded == false || a_LoadData.SkeletonLoaded == false)
 		return;
 
 	if (a_LoadData.SkinTarget.GetLoadState() != File::LoadState::Loaded)
 	{
 		if (a_LoadData.OnLoadFunction) a_LoadData.OnLoadFunction(a_LoadData.SkinPath, a_LoadData.SkeletonPath, nullptr, a_LoadData.SkinTarget, a_LoadData.Argument);
-		Delete(&a_LoadData);
+		LM_DEL(&a_LoadData);
 		delete &a_LoadData.SkeletonTarget;
 		return;
 	}
@@ -490,19 +496,20 @@ void Application::OnMeshLoad(MeshLoadData& a_LoadData)
 
 	t_Meshes[a_LoadData.SkinPath] = t_Mesh;
 	if (a_LoadData.OnLoadFunction) a_LoadData.OnLoadFunction(a_LoadData.SkinPath, a_LoadData.SkeletonPath, &t_Meshes[a_LoadData.SkinPath], a_LoadData.SkinTarget, a_LoadData.Argument);
-	Delete(&a_LoadData);
+	LM_DEL(&a_LoadData);
 }
 
 void Application::LoadMesh(const std::string& a_SkinPath, const std::string& a_SkeletonPath, OnMeshLoadFunction a_OnLoadFunction, void* a_UserData)
 {
+	Profiler::Context t(__FUNCTION__);
 	m_Meshes.clear();
-	m_Animations.clear();
 	m_AvailableAnimations.clear();
 
-	auto* t_LoadData = New(MeshLoadData(a_SkinPath, a_SkeletonPath, a_OnLoadFunction, a_UserData));
+	auto* t_LoadData = LM_NEW(MeshLoadData(a_SkinPath, a_SkeletonPath, a_OnLoadFunction, a_UserData));
 
 	t_LoadData->SkinTarget.Load(a_SkinPath, [](League::Skin& a_Skin, void* a_Argument)
 	{
+		Profiler::Context t("Application::LoadMesh->LoadSkin");
 		auto& t_LoadData = *(MeshLoadData*)a_Argument;
 		t_LoadData.SkinLoaded = true;
 		Application::Instance->OnMeshLoad(t_LoadData);
@@ -511,7 +518,9 @@ void Application::LoadMesh(const std::string& a_SkinPath, const std::string& a_S
 	t_LoadData->SkeletonTarget = new League::Skeleton();
 	t_LoadData->SkeletonTarget->Load(a_SkeletonPath, [](League::Skeleton& a_Skeleton, void* a_Argument)
 	{
+		Profiler::Context t("Application::LoadMesh->LoadSkeleton");
 		auto& t_LoadData = *(MeshLoadData*)a_Argument;
+
 		t_LoadData.SkeletonLoaded = true;
 		Application::Instance->OnMeshLoad(t_LoadData);
 	}, t_LoadData);
@@ -519,11 +528,12 @@ void Application::LoadMesh(const std::string& a_SkinPath, const std::string& a_S
 
 void Application::LoadAnimation(Application::Mesh & a_Mesh, const std::string& a_AnimationPath, League::Animation::OnLoadFunction a_OnLoadFunction, void * a_UserData)
 {
+	Profiler::Context t(__FUNCTION__);
+
 	if (a_Mesh.Skeleton == nullptr)
 	{
-		League::Skeleton t_FakeSkeleton;
-		League::Animation t_Animation(t_FakeSkeleton);
-		if (a_OnLoadFunction) a_OnLoadFunction(t_Animation, a_UserData);
+		League::Animation t_FakeAnimation;
+		if (a_OnLoadFunction) a_OnLoadFunction(t_FakeAnimation, a_UserData);
 		return;
 	}
 
@@ -536,25 +546,24 @@ void Application::LoadAnimation(Application::Mesh & a_Mesh, const std::string& a
 		std::string AnimationPath;
 		std::string SkeletonPath;
 		League::Animation::OnLoadFunction OnLoadFunction;
+		League::Animation Target;
 		void* Argument;
 	};
-	auto* t_LoadData = New(LoadData(a_AnimationPath, a_OnLoadFunction, a_UserData));
+	auto* t_LoadData = LM_NEW(LoadData(a_AnimationPath, a_OnLoadFunction, a_UserData));
 
-	auto* t_Animation = New(League::Animation(*a_Mesh.Skeleton));
-	t_Animation->Load(a_AnimationPath, [](League::Animation& a_Animation, void* a_Argument)
+	t_LoadData->Target.Load(a_AnimationPath, [](League::Animation& a_Animation, void* a_Argument)
 	{
+		Profiler::Context t("Application::LoadAnimation->LoadAnimation");
 		auto& t_LoadData = *(LoadData*)a_Argument;
 		if (a_Animation.GetLoadState() != File::LoadState::Loaded)
 		{
 			if (t_LoadData.OnLoadFunction) t_LoadData.OnLoadFunction(a_Animation, t_LoadData.Argument);
-			Delete(&t_LoadData);
-			Delete(&a_Animation);
+			LM_DEL(&t_LoadData);
 			return;
 		}
 
-		Instance->m_Animations.push_back(&a_Animation);
 		if (t_LoadData.OnLoadFunction) t_LoadData.OnLoadFunction(a_Animation, t_LoadData.Argument);
-		Delete(&t_LoadData);
+		LM_DEL(&t_LoadData);
 	}, t_LoadData);
 }
 
@@ -673,17 +682,22 @@ void Application::OnPointerMoveEvent(const PointerMoveEvent * a_Event)
 
 void Application::LoadDefaultTexture()
 {
+	Profiler::Context t(__FUNCTION__);
 	m_DefaultTexture.Load("data/missing_texture.jpg");
 }
 
 void Application::LoadShaders()
 {
+	Profiler::Context t(__FUNCTION__);
+
 	m_FragmentShader.Load("data/league_model.frag", [](Shader* a, void* b) { Instance->LoadShaderVariables(); });
 	m_VertexShader.Load("data/league_model.vert", [](Shader* a, void* b) { Instance->LoadShaderVariables(); });
 }
 
 void Application::LoadShaderVariables()
 {
+	Profiler::Context t(__FUNCTION__);
+
 	if (m_FragmentShader.GetLoadState() != File::LoadState::Loaded) return;
 	if (m_VertexShader.GetLoadState() != File::LoadState::Loaded) return;
 
@@ -702,6 +716,7 @@ void Application::UpdateViewMatrix()
 
 bool Application::Update(double a_DT)
 {
+	Profiler::Context t(__FUNCTION__);
 #if defined(_WIN32) && defined(NDEBUG)
 	printf("%3.2f               \r", 1 / a_DT);
 #endif
@@ -709,15 +724,17 @@ bool Application::Update(double a_DT)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	if (m_MVPUniform == nullptr)
 	{
+		Profiler::Context t2("WaitForSync");
 		m_Window.SwapBuffers();
 		return m_Window.RunFrame();
 	}
 
 	glViewport(0, 0, m_Window.GetWidth(), m_Window.GetHeight());
 	m_ProjectionMatrix = glm::perspective(45.0f, (float)m_Window.GetWidth() / (float)m_Window.GetHeight(), 0.1f, 1500.0f);
-	
+
 	if (m_Meshes.size() == 0)
 	{
+		Profiler::Context t2("WaitForSync");
 		m_Window.SwapBuffers();
 		return m_Window.RunFrame();
 	}
@@ -727,6 +744,7 @@ bool Application::Update(double a_DT)
 		auto& t_DrawMesh = t_MeshInfo.second;
 		if (t_DrawMesh.SubMeshes.size() == 0)
 		{
+			Profiler::Context t2("WaitForSync");
 			m_Window.SwapBuffers();
 			return m_Window.RunFrame();
 		}
@@ -737,15 +755,25 @@ bool Application::Update(double a_DT)
 		t_DrawMesh.Draw(m_Time, m_ShaderProgram, *m_MVPUniform, m_TextureUniform ? &m_TextureUniform->Get() : nullptr, m_BoneArrayUniform ? &m_BoneArrayUniform->Get() : nullptr);
 	}
 
-	m_Window.SwapBuffers();
-	return m_Window.RunFrame();
+	{
+		Profiler::Context t2("WaitForSync");
+		m_Window.SwapBuffers();
+		return m_Window.RunFrame();
+	}
 }
 
 int main()
 {
+	Profiler::Get();
 	printf("LeagueModel Application built on %s at %s, calling new\n", __DATE__, __TIME__);
 	auto* t_Application = new Application("data/output");
 	Application::Instance->Init();
+
+#if defined(_WIN32)
+	std::ofstream t_TraceFile("profile_result.json");
+	t_TraceFile << Profiler::Get().GetJSON();
+	t_TraceFile.close();
+#endif
 
 	std::atexit([]()
 	{

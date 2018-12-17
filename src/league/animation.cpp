@@ -2,7 +2,7 @@
 #include "skeleton.hpp"
 #include <string>
 
-#include <profiling/memory.hpp>
+#include <profiling.hpp>
 
 #include <bitset>
 #include <unordered_set>
@@ -10,13 +10,10 @@
 uint32_t StringToHash(const std::string& a_String);
 void AddToPublicHashMap(const std::string& a_String);
 
-League::Animation::Animation(Skeleton & a_Skeleton) :
-	m_Skeleton(a_Skeleton)
-{
-}
-
 void League::Animation::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFunction, void * a_Argument)
 {
+	Profiler::Context t(__FUNCTION__);
+
 	struct LoadData
 	{
 		LoadData(Animation* a_Target, OnLoadFunction a_Function, void* a_Argument) :
@@ -27,11 +24,13 @@ void League::Animation::Load(const std::string& a_FilePath, OnLoadFunction a_OnL
 		OnLoadFunction OnLoadFunction;
 		void* Argument;
 	};
-	auto* t_LoadData = New(LoadData(this, a_OnLoadFunction, a_Argument));
+	auto* t_LoadData = LM_NEW(LoadData(this, a_OnLoadFunction, a_Argument));
 
 	auto* t_File = FileSystem::GetFile(a_FilePath);
 	t_File->Load([](File* a_File, File::LoadState a_LoadState, void* a_Argument)
 	{
+		Profiler::Context t("League::Animation::Load->OnFileReceived");
+
 		auto* t_LoadData = (LoadData*)a_Argument;
 		auto* t_Animation = (Animation*)t_LoadData->Target;
 
@@ -42,7 +41,7 @@ void League::Animation::Load(const std::string& a_FilePath, OnLoadFunction a_OnL
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Animation, t_LoadData->Argument);
 
 			FileSystem::CloseFile(*a_File);
-			Delete(t_LoadData);
+			LM_DEL(t_LoadData);
 			return;
 		}
 
@@ -59,7 +58,7 @@ void League::Animation::Load(const std::string& a_FilePath, OnLoadFunction a_OnL
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Animation, t_LoadData->Argument);
 
 			FileSystem::CloseFile(*a_File);
-			Delete(t_LoadData);
+			LM_DEL(t_LoadData);
 			return;
 		}
 
@@ -67,9 +66,9 @@ void League::Animation::Load(const std::string& a_FilePath, OnLoadFunction a_OnL
 		a_File->Get(t_Version, t_Offset);
 
 		std::map<uint32_t, std::string> t_BoneNameHashes;
-		auto t_Bones = t_Animation->m_Skeleton.GetBones();
+		/*auto t_Bones = t_Animation->m_Skeleton.GetBones();
 		for (auto& t_Bone : t_Bones)
-			t_BoneNameHashes[t_Bone.Hash] = t_Bone.Name;
+			t_BoneNameHashes[t_Bone.Hash] = t_Bone.Name;*/
 		
 		if (t_Version > 5)
 		{
@@ -78,7 +77,7 @@ void League::Animation::Load(const std::string& a_FilePath, OnLoadFunction a_OnL
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Animation, t_LoadData->Argument);
 
 			FileSystem::CloseFile(*a_File);
-			Delete(t_LoadData);
+			LM_DEL(t_LoadData);
 			return;
 		}
 
@@ -92,7 +91,7 @@ void League::Animation::Load(const std::string& a_FilePath, OnLoadFunction a_OnL
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Animation, t_LoadData->Argument);
 
 			FileSystem::CloseFile(*a_File);
-			Delete(t_LoadData);
+			LM_DEL(t_LoadData);
 			return;
 		}
 
@@ -117,7 +116,7 @@ void League::Animation::Load(const std::string& a_FilePath, OnLoadFunction a_OnL
 		if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Animation, t_LoadData->Argument);
 
 		FileSystem::CloseFile(*a_File);
-		Delete(t_LoadData);
+		LM_DEL(t_LoadData);
 	}, t_LoadData);
 }
 

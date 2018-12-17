@@ -180,36 +180,36 @@ League::BaseValueStorage * League::BaseValueStorage::Create(League::Bin& a_Bin, 
 {
 	switch (a_Type)
 	{
-	case Bool: return New(NumberValueStorage<bool>(a_Bin, a_Parent, a_Type, a_Hash));
-	case S8: return New(NumberValueStorage<int8_t>(a_Bin, a_Parent, a_Type, a_Hash));
-	case U8: return New(NumberValueStorage<uint8_t>(a_Bin, a_Parent, a_Type, a_Hash));
-	case S16: return New(NumberValueStorage<int16_t>(a_Bin, a_Parent, a_Type, a_Hash));
-	case U16: return New(NumberValueStorage<uint16_t>(a_Bin, a_Parent, a_Type, a_Hash));
-	case Link: return New(NumberValueStorage<uint32_t>(a_Bin, a_Parent, a_Type, a_Hash));
-	case S32: return New(NumberValueStorage<int32_t>(a_Bin, a_Parent, a_Type, a_Hash));
-	case U32: return New(NumberValueStorage<uint32_t>(a_Bin, a_Parent, a_Type, a_Hash));
-	case S64: return New(NumberValueStorage<int64_t>(a_Bin, a_Parent, a_Type, a_Hash));
-	case U64: return New(NumberValueStorage<uint64_t>(a_Bin, a_Parent, a_Type, a_Hash));
-	case Float: return New(NumberValueStorage<float>(a_Bin, a_Parent, a_Type, a_Hash));
-	case Hash: return New(HashValueStorage(a_Bin, a_Parent, a_Type, a_Hash));
-	case Padding: return New(NumberValueStorage<uint8_t>(a_Bin, a_Parent, a_Type, a_Hash));
+	case Bool: return LM_NEW(NumberValueStorage<bool>(a_Bin, a_Parent, a_Type, a_Hash));
+	case S8: return LM_NEW(NumberValueStorage<int8_t>(a_Bin, a_Parent, a_Type, a_Hash));
+	case U8: return LM_NEW(NumberValueStorage<uint8_t>(a_Bin, a_Parent, a_Type, a_Hash));
+	case S16: return LM_NEW(NumberValueStorage<int16_t>(a_Bin, a_Parent, a_Type, a_Hash));
+	case U16: return LM_NEW(NumberValueStorage<uint16_t>(a_Bin, a_Parent, a_Type, a_Hash));
+	case Link: return LM_NEW(NumberValueStorage<uint32_t>(a_Bin, a_Parent, a_Type, a_Hash));
+	case S32: return LM_NEW(NumberValueStorage<int32_t>(a_Bin, a_Parent, a_Type, a_Hash));
+	case U32: return LM_NEW(NumberValueStorage<uint32_t>(a_Bin, a_Parent, a_Type, a_Hash));
+	case S64: return LM_NEW(NumberValueStorage<int64_t>(a_Bin, a_Parent, a_Type, a_Hash));
+	case U64: return LM_NEW(NumberValueStorage<uint64_t>(a_Bin, a_Parent, a_Type, a_Hash));
+	case Float: return LM_NEW(NumberValueStorage<float>(a_Bin, a_Parent, a_Type, a_Hash));
+	case Hash: return LM_NEW(HashValueStorage(a_Bin, a_Parent, a_Type, a_Hash));
+	case Padding: return LM_NEW(NumberValueStorage<uint8_t>(a_Bin, a_Parent, a_Type, a_Hash));
 
-	case String: return New(StringValueStorage(a_Bin, a_Parent, a_Type, a_Hash));
+	case String: return LM_NEW(StringValueStorage(a_Bin, a_Parent, a_Type, a_Hash));
 
-	case RGBA: return New(RGBAStorage(a_Bin, a_Parent, a_Type, a_Hash));
-	case FVec2: return New(FVec2Storage(a_Bin, a_Parent, a_Type, a_Hash));
-	case FVec3: return New(FVec3Storage(a_Bin, a_Parent, a_Type, a_Hash));
-	case FVec4: return New(FVec4Storage(a_Bin, a_Parent, a_Type, a_Hash));
-	case U16Vec3: return New(U16Vec3Storage(a_Bin, a_Parent, a_Type, a_Hash));
+	case RGBA: return LM_NEW(RGBAStorage(a_Bin, a_Parent, a_Type, a_Hash));
+	case FVec2: return LM_NEW(FVec2Storage(a_Bin, a_Parent, a_Type, a_Hash));
+	case FVec3: return LM_NEW(FVec3Storage(a_Bin, a_Parent, a_Type, a_Hash));
+	case FVec4: return LM_NEW(FVec4Storage(a_Bin, a_Parent, a_Type, a_Hash));
+	case U16Vec3: return LM_NEW(U16Vec3Storage(a_Bin, a_Parent, a_Type, a_Hash));
 
 	case Struct:
 	case Embedded:
-		return New(StructValueStorage(a_Bin, a_Parent, a_Type, a_Hash));
+		return LM_NEW(StructValueStorage(a_Bin, a_Parent, a_Type, a_Hash));
 
-	case Mat4: return New(MatrixValueStorage(a_Bin, a_Parent, a_Type, a_Hash));
-	case Container: return New(ContainerValueStorage(a_Bin, a_Parent, a_Type, a_Hash));
-	case Array: return New(ArrayValueStorage(a_Bin, a_Parent, a_Type, a_Hash));
-	case Map: return New(MapValueStorage(a_Bin, a_Parent, a_Type, a_Hash));
+	case Mat4: return LM_NEW(MatrixValueStorage(a_Bin, a_Parent, a_Type, a_Hash));
+	case Container: return LM_NEW(ContainerValueStorage(a_Bin, a_Parent, a_Type, a_Hash));
+	case Array: return LM_NEW(ArrayValueStorage(a_Bin, a_Parent, a_Type, a_Hash));
+	case Map: return LM_NEW(MapValueStorage(a_Bin, a_Parent, a_Type, a_Hash));
 
 	default: throw 0;
 	};

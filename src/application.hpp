@@ -80,7 +80,6 @@ private:
 	float m_CameraDistance = 1000;
 
 	std::map<std::string, Mesh> m_Meshes;
-	std::vector<League::Animation*> m_Animations;
 	std::map<const Mesh*, std::vector<std::string>> m_AvailableAnimations;
 
 	bool m_MouseIsDown = false;
