@@ -63,7 +63,10 @@ void Application::Init()
 	LoadDefaultTexture();
 	LoadShaders();
 
+#if defined(_WIN32)
 	LoadSkin("data/output/data/characters/ryze/skins/skin0.bin", "data/output/data/characters/ryze/animations/skin0.bin");
+#endif
+
 	UpdateViewMatrix();
 
 	Platform::SetMainLoop([]() 
@@ -219,6 +222,11 @@ void OnSkinAndAnimationBin(SkinLoadData& a_LoadData)
 		t_LoadData.Target->ApplyAnimation(t_LoadData.AnimationName);
 		LM_DEL(&t_LoadData);
 	}, &a_LoadData);
+}
+
+void Application::LoadMesh(const std::string & a_SkinPath, const std::string & a_SkeletonPath)
+{
+	LoadMesh(a_SkinPath, a_SkeletonPath, [](const std::string& a_SkinPath, const std::string& a_SkeletonPath, Application::Mesh* a_Mesh, League::Skin& a_Skin, void* a_UserData) {});
 }
 
 void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_AnimationBinPath)

@@ -24,6 +24,7 @@ public:
 	
 	void Init();
 
+	void LoadMesh(const std::string& a_SknPath, const std::string& a_SkeletonPath);
 	void LoadSkin(const std::string& a_BinPath, const std::string& a_AnimationBinPath);
 
 	void LoadAnimation(Application::Mesh& a_Mesh, const std::string& a_AnimationPath, League::Animation::OnLoadFunction a_OnLoadFunction = nullptr, void* a_UserData = nullptr);
@@ -57,7 +58,7 @@ private:
 
 	bool Update(double a_DT);
 
-	void LoadMesh(const std::string& a_SkinPath, const std::string& a_SkeletonPath, OnMeshLoadFunction a_OnLoadFunction = nullptr, void* a_UserData = nullptr);
+	void LoadMesh(const std::string& a_SkinPath, const std::string& a_SkeletonPath, OnMeshLoadFunction a_OnLoadFunction, void* a_UserData = nullptr);
 	void OnMeshLoad(MeshLoadData& a_LoadData);
 
 	Window m_Window;

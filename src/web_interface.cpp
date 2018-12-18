@@ -12,6 +12,11 @@ void LoadSkin(const std::string& a_SkinBin, std::string a_AnimationsBin)
 	Application::Instance->LoadSkin(a_SkinBin, a_AnimationsBin);
 }
 
+void LoadMesh(const std::string& a_Skin, const std::string& a_Skeleton)
+{
+	Application::Instance->LoadMesh(a_Skin, a_Skeleton);
+}
+
 size_t GetAvailableAnimations(const std::string& a_Skin)
 {
 	return Application::Instance->GetAnimationsForMesh(a_Skin).size();
@@ -98,7 +103,8 @@ void GetProfileResults()
 
 EMSCRIPTEN_BINDINGS(my_module) 
 {
-	function("LoadSkin", &LoadSkin); 
+	function("LoadSkin", &LoadSkin);
+	function("LoadMesh", &LoadMesh);
 
 	function("GetAvailableSkins", &GetAvailableSkins);
 	function("GetSkinName", &GetSkinName);
