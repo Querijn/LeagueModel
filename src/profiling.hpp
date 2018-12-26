@@ -1,6 +1,5 @@
 #pragma once
 
-#include <profiling/logger.hpp>
 #include <profiling/memory.hpp>
 
 #include <stdio.h>
