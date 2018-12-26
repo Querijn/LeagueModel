@@ -71,7 +71,7 @@ void Application::Init()
 
 	Platform::SetMainLoop([]() 
 	{
-		FileSystem::CloseLoadedFiles();
+		// FileSystem::CloseLoadedFiles();
 
 		double dt = Platform::GetTimeSinceStart() - g_LastTime;
 		Profiler::Frame t("BottomLoop", dt);
