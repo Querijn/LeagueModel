@@ -91,7 +91,7 @@ struct SkinLoadData
 
 	std::string Texture;
 	std::string AnimationBinPath;
-	std::string AnimationName;
+	std::string AnimationName = "";
 
 	bool AnimationLoaded = false;
 	bool SkinLoaded = false;
@@ -419,10 +419,32 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 
 		const auto& t_Root = Application::Instance->GetAssetRoot();
 
-		for (auto t_AnimationNameStorage : t_AnimationNames)
+		for (int i = 0; i < t_AnimationNames.size(); i++)
 		{
+			auto t_AnimationNameStorage = t_AnimationNames[i];
 			auto* t_StringStorage = (League::StringValueStorage*)t_AnimationNameStorage;
-			t_LoadData->AnimationName = t_Root + t_StringStorage->Get();
+
+			auto t_AnimationName = t_Root + t_StringStorage->Get();
+
+			// Try to load one of these..
+			if (t_LoadData->AnimationName.size() == 0 &&
+				((t_AnimationName.find("dance") != std::string::npos || t_AnimationName.find("Dance") != std::string::npos) ||
+				(t_AnimationName.find("joke") != std::string::npos || t_AnimationName.find("Joke") != std::string::npos) ||
+				(t_AnimationName.find("emote") != std::string::npos || t_AnimationName.find("Emote") != std::string::npos) ||
+				(t_AnimationName.find("laugh") != std::string::npos || t_AnimationName.find("Laugh") != std::string::npos) ||
+				(t_AnimationName.find("recall") != std::string::npos || t_AnimationName.find("Recall") != std::string::npos)))
+				t_LoadData->AnimationName = t_AnimationName;
+
+			if (t_LoadData->AnimationName.size() == 0 && i + 1 == t_AnimationNames.size())
+			{
+				printf("Could not find a suitable animation, so I gotta settle for %s..\nThe options were:\n", t_AnimationName.c_str());
+				for (int i = 0; i < t_AnimationNames.size(); i++)
+				{
+					auto* t_StringStorage2 = (League::StringValueStorage*)t_AnimationNames[i];
+					auto t_AnimationName2 = t_Root + t_StringStorage2->Get();
+					printf(" - %s", t_AnimationName2.c_str());
+				}
+			}
 
 			PrepareEvents(t_LoadData->AnimationName, *t_LoadData->Target, t_LoadData->SubMeshes, t_StringStorage);
 			Application::Instance->AddAnimationReference(*t_LoadData->Target, t_LoadData->AnimationName);
