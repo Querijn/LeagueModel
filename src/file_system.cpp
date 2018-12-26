@@ -33,12 +33,26 @@ File * FileSystem::GetFile(const std::string& a_FilePath)
 	return t_Index->second;
 }
 
-void FileSystem::CloseFile(File & a_File)
+void FileSystem::CloseLoadedFiles()
 {
-	auto t_FileName = a_File.GetName().c_str();
-	auto t_Index = m_Files->find(a_File.GetName());
-	if (t_Index == m_Files->end()) return;
+	if (m_Files == nullptr)
+		return; 
 
-	delete t_Index->second;
-	m_Files->erase(t_Index);
+	bool t_ShouldRemove = false;
+	for (auto t_FileIterator : *m_Files)
+	{
+		if (t_FileIterator.second->IsHandled() == false)
+			continue;
+
+		delete t_FileIterator.second;
+		t_FileIterator.second = nullptr;
+		t_ShouldRemove = true;
+	}
+
+	for (auto i = m_Files->cbegin(); i != m_Files->cend();)
+	{
+		if (i->second == nullptr)
+			i = m_Files->erase(i);    
+		else i++;
+	}
 }

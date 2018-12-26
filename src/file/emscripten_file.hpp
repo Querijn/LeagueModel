@@ -7,6 +7,8 @@
 
 class EmscriptenFile : public BaseFile
 {
+	static const int MaxCallbacks = 32;
+
 public:
 	using LoadState = FileLoadState;
 	using OnLoadFunction = void(*)(EmscriptenFile* a_File, FileLoadState a_LoadState, void* a_Argument);
@@ -59,7 +61,7 @@ public:
 
 	friend class FileSystem;
 protected:
-	EmscriptenFile(const std::string& a_FileName) : BaseFile(a_FileName) { }
+	EmscriptenFile(const std::string& a_FileName);
 
 private:
 	static void OnLoad(void* a_Argument, void* a_Data, int a_Size);
@@ -68,8 +70,8 @@ private:
 	std::vector<uint8_t> m_Data;
 	std::shared_ptr<std::ifstream> m_Stream;
 	
-	OnLoadFunction m_OnLoadArg[32];
-	void* m_ArgData[32];
+	OnLoadFunction m_OnLoadArg[MaxCallbacks];
+	void* m_ArgData[MaxCallbacks];
 	size_t m_ArgCount = 0;
 };
 

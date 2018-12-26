@@ -44,7 +44,6 @@ void League::Bin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFun
 			t_Bin->m_State = a_LoadState;
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Bin, t_LoadData->Argument);
 
-			FileSystem::CloseFile(*a_File);
 			LM_DEL(t_LoadData);
 			return;
 		}
@@ -57,7 +56,6 @@ void League::Bin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFun
 			t_Bin->m_State = File::LoadState::FailedToLoad;
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Bin, t_LoadData->Argument);
 
-			FileSystem::CloseFile(*a_File);
 			LM_DEL(t_LoadData);
 			return;
 		}
@@ -69,7 +67,6 @@ void League::Bin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFun
 			t_Bin->m_State = File::LoadState::FailedToLoad;
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Bin, t_LoadData->Argument);
 
-			FileSystem::CloseFile(*a_File);
 			LM_DEL(t_LoadData);
 			return;
 		}
@@ -128,7 +125,6 @@ void League::Bin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFun
 		t_Bin->m_State = File::LoadState::Loaded;
 		if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Bin, t_LoadData->Argument);
 
-		FileSystem::CloseFile(*a_File);
 		LM_DEL(t_LoadData);
 	}, t_LoadData);
 }

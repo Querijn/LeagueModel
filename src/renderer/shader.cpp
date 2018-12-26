@@ -77,7 +77,6 @@ void Shader::Load(const std::string& a_FilePath, Shader::OnLoadFunction a_OnLoad
 
 		t_Shader->m_State = t_HasSucceeded ? File::LoadState::Loaded : File::LoadState::FailedToLoad;
 		if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(t_Shader, t_LoadData->Argument);
-		FileSystem::CloseFile(*a_File);
 		delete t_LoadData;
 	}, t_LoadData);
 }

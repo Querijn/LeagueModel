@@ -5,6 +5,7 @@
 
 void EmscriptenFile::Load(EmscriptenFile::OnLoadFunction a_OnLoadCallback, void* a_Argument)
 {
+	m_Handled = false;
 	if (m_State != FileLoadState::NotLoaded)
 	{
 		if (a_OnLoadCallback) 
@@ -20,6 +21,16 @@ void EmscriptenFile::Load(EmscriptenFile::OnLoadFunction a_OnLoadCallback, void*
 		emscripten_async_wget_data(Name.c_str(), (void*)this, OnLoad, OnLoadFailed);
 }
 
+EmscriptenFile::EmscriptenFile(const std::string & a_FileName) : 
+	BaseFile(a_FileName), m_ArgCount(0)
+{
+	for (int i = 0; i < MaxCallbacks; i++)
+	{
+		m_OnLoadArg[i] = nullptr;
+		m_ArgData[i] = nullptr;
+	}
+}
+
 void EmscriptenFile::OnLoad(void* a_Argument, void* a_Data, int a_Size)
 {
 	auto* t_File = (EmscriptenFile*)a_Argument;
@@ -29,8 +40,15 @@ void EmscriptenFile::OnLoad(void* a_Argument, void* a_Data, int a_Size)
 	memcpy(t_File->m_Data.data(), a_Data, a_Size);
 
 	t_File->m_State = EmscriptenFile::LoadState::Loaded;
+	
+	printf("%p => %s has finished loading, calling %zu callbacks\n", t_File, t_File->Name.c_str(), t_File->m_ArgCount);
 	for (int i = 0; i < t_File->m_ArgCount; i++)
-		if (t_File->m_OnLoadArg[i]) t_File->m_OnLoadArg[i](t_File, EmscriptenFile::LoadState::Loaded, t_File->m_ArgData[i]);
+	{
+		printf("Arg %d: %p, %p\n", i, t_File->m_OnLoadArg[i], t_File->m_ArgData[i]);
+		if (t_File->m_OnLoadArg[i])
+			t_File->m_OnLoadArg[i](t_File, EmscriptenFile::LoadState::Loaded, t_File->m_ArgData[i]);
+	}
+	t_File->m_Handled = true;
 }
 
 void EmscriptenFile::OnLoadFailed(void* a_Argument)
@@ -41,6 +59,7 @@ void EmscriptenFile::OnLoadFailed(void* a_Argument)
 	t_File->m_State = EmscriptenFile::LoadState::NotFound;
 	for (int i = 0; i < t_File->m_ArgCount; i++)
 		if (t_File->m_OnLoadArg[i]) t_File->m_OnLoadArg[i](t_File, EmscriptenFile::LoadState::NotFound, t_File->m_ArgData[i]);
+	t_File->m_Handled = true;
 }
 
 size_t EmscriptenFile::Read(uint8_t* a_Destination, size_t a_ByteCount, size_t& a_Offset) const

@@ -70,7 +70,6 @@ void League::Skeleton::Load(const std::string& a_FilePath, OnLoadFunction a_OnLo
 			t_Skeleton->m_State = a_LoadState;
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Skeleton, t_LoadData->Argument);
 
-			FileSystem::CloseFile(*a_File);
 			LM_DEL(t_LoadData);
 			return;
 		}
@@ -98,7 +97,7 @@ void League::Skeleton::Load(const std::string& a_FilePath, OnLoadFunction a_OnLo
 		printf("Skeleton was %s with %lu bones.\n", a_LoadState == File::LoadState::FailedToLoad ? "failed to load" : "loaded", t_Skeleton->m_Bones.size());
 		t_Skeleton->m_State = t_State;
 		if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Skeleton, t_LoadData->Argument);
-		FileSystem::CloseFile(*a_File);
+
 		LM_DEL(t_LoadData);
 	}, t_LoadData);
 }

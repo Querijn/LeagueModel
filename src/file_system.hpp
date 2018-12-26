@@ -16,5 +16,5 @@ class FileSystem
 {
 public:
 	static File* GetFile(const std::string& a_FilePath);
-	static void CloseFile(File& a_File);
+	static void CloseLoadedFiles();
 };

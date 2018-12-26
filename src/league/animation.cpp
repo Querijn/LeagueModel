@@ -40,7 +40,6 @@ void League::Animation::Load(const std::string& a_FilePath, OnLoadFunction a_OnL
 			t_Animation->m_State = a_LoadState;
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Animation, t_LoadData->Argument);
 
-			FileSystem::CloseFile(*a_File);
 			LM_DEL(t_LoadData);
 			return;
 		}
@@ -57,7 +56,6 @@ void League::Animation::Load(const std::string& a_FilePath, OnLoadFunction a_OnL
 			t_Animation->m_State = File::LoadState::FailedToLoad;
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Animation, t_LoadData->Argument);
 
-			FileSystem::CloseFile(*a_File);
 			LM_DEL(t_LoadData);
 			return;
 		}
@@ -76,7 +74,6 @@ void League::Animation::Load(const std::string& a_FilePath, OnLoadFunction a_OnL
 			t_Animation->m_State = File::LoadState::FailedToLoad;
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Animation, t_LoadData->Argument);
 
-			FileSystem::CloseFile(*a_File);
 			LM_DEL(t_LoadData);
 			return;
 		}
@@ -90,7 +87,6 @@ void League::Animation::Load(const std::string& a_FilePath, OnLoadFunction a_OnL
 			t_Animation->m_State = File::LoadState::FailedToLoad;
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Animation, t_LoadData->Argument);
 
-			FileSystem::CloseFile(*a_File);
 			LM_DEL(t_LoadData);
 			return;
 		}
@@ -115,7 +111,6 @@ void League::Animation::Load(const std::string& a_FilePath, OnLoadFunction a_OnL
 		printf("Animation was %s with %lu bones.\n", a_LoadState == File::LoadState::FailedToLoad ? "failed to load" : "loaded", t_Animation->GetBones().size());
 		if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Animation, t_LoadData->Argument);
 
-		FileSystem::CloseFile(*a_File);
 		LM_DEL(t_LoadData);
 	}, t_LoadData);
 }

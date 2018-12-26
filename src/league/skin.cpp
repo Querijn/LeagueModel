@@ -46,7 +46,6 @@ void League::Skin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFu
 			t_Skin->m_State = a_LoadState;
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Skin, t_LoadData->Argument);
 
-			FileSystem::CloseFile(*a_File);
 			LM_DEL(t_LoadData);
 			return;
 		}
@@ -63,7 +62,6 @@ void League::Skin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFu
 			printf("Skin has no valid signature, this is not a skn file!\n");
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Skin, t_LoadData->Argument);
 
-			FileSystem::CloseFile(*a_File);
 			LM_DEL(t_LoadData);
 			return;
 		}
@@ -76,7 +74,6 @@ void League::Skin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFu
 			printf("Skin has got a skn file version that we don't support!\n");
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Skin, t_LoadData->Argument);
 
-			FileSystem::CloseFile(*a_File);
 			LM_DEL(t_LoadData);
 			return;
 		}
@@ -178,7 +175,6 @@ void League::Skin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFu
 				t_Skin->m_State = File::LoadState::FailedToLoad;
 				if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Skin, t_LoadData->Argument);
 
-				FileSystem::CloseFile(*a_File);
 				LM_DEL(t_LoadData);
 				return;
 			}
@@ -205,7 +201,6 @@ void League::Skin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFu
 		t_Skin->m_State = File::LoadState::Loaded;
 		if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Skin, t_LoadData->Argument);
 
-		FileSystem::CloseFile(*a_File);
 		LM_DEL(t_LoadData);
 	}, t_LoadData);
 }

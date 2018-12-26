@@ -6,8 +6,10 @@
 
 void NativeFile::Load(NativeFile::OnLoadFunction a_OnLoadCallback, void* a_Argument)
 {
+	m_Handled = false;
 	auto t_State = FetchData();
 	if (a_OnLoadCallback) a_OnLoadCallback(this, t_State, a_Argument);
+	m_Handled = true;
 }
 
 size_t NativeFile::Read(uint8_t* a_Destination, size_t a_ByteCount, size_t& a_Offset) const

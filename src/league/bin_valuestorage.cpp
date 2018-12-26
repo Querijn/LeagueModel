@@ -74,7 +74,6 @@ void InitBinHashMap()
 	{
 		if (a_LoadState != File::LoadState::Loaded)
 		{
-			FileSystem::CloseFile(*a_File);
 			return;
 		}
 
@@ -128,7 +127,6 @@ void InitExtraBinHashMap()
 	{
 		if (a_LoadState != File::LoadState::Loaded)
 		{
-			FileSystem::CloseFile(*a_File);
 			return;
 		}
 

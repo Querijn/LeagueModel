@@ -63,14 +63,16 @@ void Application::Init()
 	LoadDefaultTexture();
 	LoadShaders();
 
-#if defined(_WIN32)
+//#if defined(_WIN32)
 	LoadSkin("data/output/data/characters/ryze/skins/skin0.bin", "data/output/data/characters/ryze/animations/skin0.bin");
-#endif
+//#endif
 
 	UpdateViewMatrix();
 
 	Platform::SetMainLoop([]() 
 	{
+		FileSystem::CloseLoadedFiles();
+
 		double dt = Platform::GetTimeSinceStart() - g_LastTime;
 		Profiler::Frame t("BottomLoop", dt);
 
@@ -409,10 +411,15 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 		{
 			if (a_ValueStorage.GetType() != League::Bin::ValueStorage::Type::String)
 				return false;
+			
+			if (!a_ValueStorage.Is("mAnimationFilePath"))
+				return false;
 
-			return a_ValueStorage.Is("mAnimationFilePath");
+			auto t_Value = a_ValueStorage.DebugPrint();
+			return t_Value.find("recall") != std::string::npos || t_Value.find("Recall") != std::string::npos;
 		});
-		printf("Found all of the animations! We have %lu animations.\n", t_AnimationNames.size());
+		auto t_Name = t_AnimationNames.size() > 0 ? t_AnimationNames[0]->DebugPrint() : "";
+		printf("Found all of the animations! We have %lu animations (%s).\n", t_AnimationNames.size(), t_Name.c_str());
 
 		const auto& t_Root = Application::Instance->GetAssetRoot();
 
