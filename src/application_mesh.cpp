@@ -69,9 +69,7 @@ T FindNearestTime(const std::vector<League::Animation::Bone::Frame<T>>& a_Vector
 
 void ApplicationMesh::SetupHierarchy(const glm::mat4& a_InverseRoot, std::vector<glm::mat4>& a_Bones, const League::Skeleton::Bone& a_SkeletonBone, const glm::mat4& a_Parent, float a_Time)
 {
-	char t_ContextName[64];
-	snprintf(t_ContextName, 64, "%s -> %s", __FUNCTION__, a_SkeletonBone.Name.c_str());
-	Profiler::Context t(t_ContextName);
+	Profiler::ContextWithInfo t(__FUNCTION__, a_SkeletonBone.Name.c_str());
 
 	glm::mat4 t_GlobalTransform = a_Parent;
 
@@ -95,9 +93,7 @@ void ApplicationMesh::SetupHierarchy(const glm::mat4& a_InverseRoot, std::vector
 
 void ApplicationMesh::Draw(float a_Time, ShaderProgram& a_Program, glm::mat4& a_VP, Texture* a_Diffuse, std::vector<glm::mat4>* a_BoneTransforms)
 {
-	char t_ContextTitle[32];
-	snprintf(t_ContextTitle, 32, "Draw -> %3.2f", a_Time);
-	Profiler::Context t(t_ContextTitle);
+	Profiler::Frame t(__FUNCTION__, a_Time);
 
 	a_Program.Use();
 

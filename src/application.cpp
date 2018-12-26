@@ -71,9 +71,9 @@ void Application::Init()
 
 	Platform::SetMainLoop([]() 
 	{
-		Profiler::Frame t;
-
 		double dt = Platform::GetTimeSinceStart() - g_LastTime;
+		Profiler::Frame t("BottomLoop", dt);
+
 		g_LastTime = Platform::GetTimeSinceStart();
 
 		EventHandler::EmitEvent<UpdateEvent>(dt);
@@ -231,7 +231,9 @@ void Application::LoadMesh(const std::string & a_SkinPath, const std::string & a
 
 void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_AnimationBinPath)
 {
-	Profiler::Context t(__FUNCTION__);
+	char t_ContextName[256];
+	snprintf(t_ContextName, 256, "%s -> %s AND %s", __FUNCTION__, a_BinPath.c_str(), a_AnimationBinPath.c_str());
+	Profiler::Context t(t_ContextName);
 	auto* t_LoadData = LM_NEW(SkinLoadData(a_AnimationBinPath));
 
 	// Load in the BIN containing most of the information about the base mesh
@@ -724,7 +726,7 @@ void Application::UpdateViewMatrix()
 
 bool Application::Update(double a_DT)
 {
-	Profiler::Context t(__FUNCTION__);
+	Profiler::Frame t(__FUNCTION__, a_DT);
 #if defined(_WIN32) && defined(NDEBUG)
 	printf("%3.2f               \r", 1 / a_DT);
 #endif
