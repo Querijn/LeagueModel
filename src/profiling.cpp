@@ -7,8 +7,7 @@
 #include <algorithm>
 #include <string>
 
-Profiler* Profiler::m_Instance = nullptr; 
-Profiler::Logger Profiler::Log;
+Profiler* Profiler::m_Instance = nullptr;
 
 Profiler& Profiler::Get()
 {

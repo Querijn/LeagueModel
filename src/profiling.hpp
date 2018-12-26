@@ -8,7 +8,6 @@
 class Profiler
 {
 public:
-	using Logger = ProfilerLogger;
 	static const int BufferSize = 1048576;
 
 	static Profiler& Get();
@@ -37,8 +36,6 @@ public: \
 	__PROFILER_SCOPE_CLASS1(Context, const char*, a_Name, Profiler::Get().PushContext(a_Name), Profiler::Get().PopContext());
 	__PROFILER_SCOPE_CLASS2(ContextWithInfo, const char*, a_Name, const char*, a_Info, Profiler::Get().PushContext(a_Name, a_Info), Profiler::Get().PopContext());
 	__PROFILER_SCOPE_CLASS2(Frame, const char*, a_Name, double, a_Double, char t_TimeString[32]; snprintf(t_TimeString, 32, "%3.4f", a_Double); Profiler::Get().PushContext(a_Name, t_TimeString);, Profiler::Get().PopContext());
-	
-	static Profiler::Logger Log;
 
 	void PushContext(const char* a_Name, const char* a_Info = nullptr);
 	void PopContext();
