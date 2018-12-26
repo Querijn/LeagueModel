@@ -31,12 +31,13 @@ void Texture::Load(const std::string& a_ImagePath, Texture::OnLoadFunction a_OnL
 			t_Texture->m_LoadState = a_LoadState;
 			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Texture, t_LoadData->Argument);
 
-			FileSystem::CloseFile(*a_File);
+			// FileSystem::CloseFile(*a_File);
 			LM_DEL(t_LoadData);
 			return;
 		}
 
-		std::string t_Path = a_File->GetName().c_str();
+		std::string t_Path = a_File->GetName();
+		printf("Loading texture %s\n", t_Path.c_str());
 
 		// Check if image path ends in DDS
 		auto t_Index = t_Path.find_last_of('.');
@@ -46,7 +47,6 @@ void Texture::Load(const std::string& a_ImagePath, Texture::OnLoadFunction a_OnL
 		t_Texture->m_LoadState = t_IsDDS ? t_Texture->UploadDDS(a_File) : t_Texture->UploadRGB(a_File);
 
 		if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Texture, t_LoadData->Argument);
-		FileSystem::CloseFile(*a_File);
 		LM_DEL(t_LoadData);
 	}, t_LoadData);
 }

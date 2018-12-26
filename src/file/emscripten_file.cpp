@@ -12,11 +12,12 @@ void EmscriptenFile::Load(EmscriptenFile::OnLoadFunction a_OnLoadCallback, void*
 		return;
 	}
 
-	m_OnLoadArg.push_back(a_OnLoadCallback);
-	m_ArgData.push_back(a_Argument);
+	m_OnLoadArg[m_ArgCount] = a_OnLoadCallback;
+	m_ArgData[m_ArgCount] = a_Argument;
+	m_ArgCount++;
 
-	auto t_Name = Name.c_str();
-	emscripten_async_wget_data(t_Name, (void*)this, OnLoad, OnLoadFailed);
+	if (m_ArgCount == 1) // Only load on the first request
+		emscripten_async_wget_data(Name.c_str(), (void*)this, OnLoad, OnLoadFailed);
 }
 
 void EmscriptenFile::OnLoad(void* a_Argument, void* a_Data, int a_Size)
@@ -28,7 +29,7 @@ void EmscriptenFile::OnLoad(void* a_Argument, void* a_Data, int a_Size)
 	memcpy(t_File->m_Data.data(), a_Data, a_Size);
 
 	t_File->m_State = EmscriptenFile::LoadState::Loaded;
-	for (int i = 0; i < t_File->m_OnLoadArg.size(); i++)
+	for (int i = 0; i < t_File->m_ArgCount; i++)
 		if (t_File->m_OnLoadArg[i]) t_File->m_OnLoadArg[i](t_File, EmscriptenFile::LoadState::Loaded, t_File->m_ArgData[i]);
 }
 
@@ -38,16 +39,22 @@ void EmscriptenFile::OnLoadFailed(void* a_Argument)
 	t_File->m_Size = 0;
 
 	t_File->m_State = EmscriptenFile::LoadState::NotFound;
-	for (int i = 0; i < t_File->m_OnLoadArg.size(); i++)
+	for (int i = 0; i < t_File->m_ArgCount; i++)
 		if (t_File->m_OnLoadArg[i]) t_File->m_OnLoadArg[i](t_File, EmscriptenFile::LoadState::NotFound, t_File->m_ArgData[i]);
 }
 
 size_t EmscriptenFile::Read(uint8_t* a_Destination, size_t a_ByteCount, size_t& a_Offset) const
 {
-	if (a_Offset + a_ByteCount > m_Size) a_ByteCount = m_Size - a_Offset;
+	if (a_Offset + a_ByteCount > m_Size)
+	{
+		printf("OUT OF BUFFER RANGE FOR %s: We're returning a reduced size => %lu\n", Name.c_str(), a_Offset > m_Size ? 0 : m_Size - a_Offset);
+		if (a_Offset > m_Size) return 0;
+		else a_ByteCount = m_Size - a_Offset;
+	}
+
 	if (a_ByteCount == 0) return 0;
 
-	memcpy(a_Destination, &m_Data[a_Offset], a_ByteCount);
+	memcpy(a_Destination, m_Data.data() + a_Offset, a_ByteCount);
 
 	a_Offset += a_ByteCount;
 	return a_ByteCount;
