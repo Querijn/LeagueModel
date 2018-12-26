@@ -9,7 +9,7 @@ void EmscriptenFile::Load(EmscriptenFile::OnLoadFunction a_OnLoadCallback, void*
 	//m_OnLoad = nullptr;
 	m_ArgData = a_Argument;
 
-	auto t_Name = m_Name.c_str();
+	auto t_Name = Name.c_str();
 	emscripten_async_wget_data(t_Name, (void*)this, OnLoad, OnLoadFailed);
 }
 
@@ -53,7 +53,7 @@ const std::vector<uint8_t>& EmscriptenFile::GetData() const
 
 std::string EmscriptenFile::GetName() const
 {
-	return m_Name;
+	return Name;
 }
 
 #endif

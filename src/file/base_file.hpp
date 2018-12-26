@@ -12,9 +12,9 @@ enum FileLoadState
 class BaseFile
 {
 public:
-	BaseFile(const std::string& a_FileName) : m_Name(a_FileName) {}
+	BaseFile(const std::string& a_FileName) : Name(a_FileName) {}
 
 protected:
-	std::string m_Name;
+	std::string Name;
 	size_t m_Size;
 };
