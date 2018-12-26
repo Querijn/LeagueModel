@@ -68,8 +68,8 @@ private:
 	std::vector<uint8_t> m_Data;
 	std::shared_ptr<std::ifstream> m_Stream;
 	
-	OnLoadFunction m_OnLoadArg = nullptr;
-	void* m_ArgData = nullptr;
+	std::vector<OnLoadFunction> m_OnLoadArg;
+	std::vector<void*> m_ArgData;
 };
 
 #endif

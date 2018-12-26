@@ -5,9 +5,15 @@
 
 void EmscriptenFile::Load(EmscriptenFile::OnLoadFunction a_OnLoadCallback, void* a_Argument)
 {
-	m_OnLoadArg = a_OnLoadCallback;
-	//m_OnLoad = nullptr;
-	m_ArgData = a_Argument;
+	if (m_State != FileLoadState::NotLoaded)
+	{
+		if (a_OnLoadCallback) 
+			a_OnLoadCallback(this, m_State, a_Argument);
+		return;
+	}
+
+	m_OnLoadArg.push_back(a_OnLoadCallback);
+	m_ArgData.push_back(a_Argument);
 
 	auto t_Name = Name.c_str();
 	emscripten_async_wget_data(t_Name, (void*)this, OnLoad, OnLoadFailed);
@@ -16,23 +22,24 @@ void EmscriptenFile::Load(EmscriptenFile::OnLoadFunction a_OnLoadCallback, void*
 void EmscriptenFile::OnLoad(void* a_Argument, void* a_Data, int a_Size)
 {
 	auto* t_File = (EmscriptenFile*)a_Argument;
-	auto t_FileName = t_File->GetName().c_str();
-
 	t_File->m_Data.resize(a_Size);
 	t_File->m_Size = a_Size;
 
 	memcpy(t_File->m_Data.data(), a_Data, a_Size);
 
-	if (t_File->m_OnLoadArg) t_File->m_OnLoadArg(t_File, EmscriptenFile::LoadState::Loaded, t_File->m_ArgData);
+	t_File->m_State = EmscriptenFile::LoadState::Loaded;
+	for (int i = 0; i < t_File->m_OnLoadArg.size(); i++)
+		if (t_File->m_OnLoadArg[i]) t_File->m_OnLoadArg[i](t_File, EmscriptenFile::LoadState::Loaded, t_File->m_ArgData[i]);
 }
 
 void EmscriptenFile::OnLoadFailed(void* a_Argument)
 {
 	auto* t_File = (EmscriptenFile*)a_Argument;
-	auto t_FileName = t_File->GetName().c_str();
-
 	t_File->m_Size = 0;
-	if (t_File->m_OnLoadArg) t_File->m_OnLoadArg(t_File, EmscriptenFile::LoadState::NotFound, t_File->m_ArgData);
+
+	t_File->m_State = EmscriptenFile::LoadState::NotFound;
+	for (int i = 0; i < t_File->m_OnLoadArg.size(); i++)
+		if (t_File->m_OnLoadArg[i]) t_File->m_OnLoadArg[i](t_File, EmscriptenFile::LoadState::NotFound, t_File->m_ArgData[i]);
 }
 
 size_t EmscriptenFile::Read(uint8_t* a_Destination, size_t a_ByteCount, size_t& a_Offset) const
