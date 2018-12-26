@@ -14,6 +14,7 @@ size_t NativeFile::Read(uint8_t* a_Destination, size_t a_ByteCount, size_t& a_Of
 {
 	if (a_Offset + a_ByteCount > m_Size)
 	{
+		printf("OUT OF BUFFER RANGE FOR %s: We're returning a reduced size => %lu\n", Name.c_str(), a_Offset > m_Size ? 0 : m_Size - a_Offset);
 		if (a_Offset > m_Size) return 0;
 		else a_ByteCount = m_Size - a_Offset;
 	}
