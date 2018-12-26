@@ -214,7 +214,7 @@ for (let include of includeFolders)
             buildInfoFile.buildCount = sourceFiles.length;
         }
         catch (e) {
-            console.error(e);
+            console.error("Error during build: " + e);
             return;
         }
     }
