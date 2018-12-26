@@ -41,10 +41,8 @@ void EmscriptenFile::OnLoad(void* a_Argument, void* a_Data, int a_Size)
 
 	t_File->m_State = EmscriptenFile::LoadState::Loaded;
 	
-	printf("%p => %s has finished loading, calling %zu callbacks\n", t_File, t_File->Name.c_str(), t_File->m_ArgCount);
 	for (int i = 0; i < t_File->m_ArgCount; i++)
 	{
-		printf("Arg %d: %p, %p\n", i, t_File->m_OnLoadArg[i], t_File->m_ArgData[i]);
 		if (t_File->m_OnLoadArg[i])
 			t_File->m_OnLoadArg[i](t_File, EmscriptenFile::LoadState::Loaded, t_File->m_ArgData[i]);
 	}
