@@ -61,5 +61,5 @@ function LoadSkin() {
     var skinSelect = document.getElementById("skin-select");
     var champ = champSelect.options[champSelect.selectedIndex].value.toLowerCase();
     var skin = skinSelect.options[skinSelect.selectedIndex].value;
-    Module.LoadSkin(`data/output/data/characters/${champ}/skins/skin${skin}.bin`, `data/output/data/characters/${champ}/animations/skin0.bin`);
+    Module.LoadSkin(`data/output/data/characters/${champ}/skins/skin${skin}.bin`, `data/output/data/characters/${champ}/animations/skin${skin}.bin`);
 }
