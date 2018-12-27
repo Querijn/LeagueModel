@@ -183,6 +183,17 @@ const League::Bin::ValueStorage * League::Bin::Get(const std::string& a_Name) co
 	return nullptr;
 }
 
+const std::vector<League::Bin::ValueStorage*>* League::Bin::GetTopLevel(uint32_t a_Hash) const
+{
+	for (const auto& t_VectorReference : m_Values)
+	{
+		if (t_VectorReference.first == a_Hash)
+			return &t_VectorReference.second;
+	}
+
+	return nullptr;
+}
+
 void League::Bin::AddFlatValueStorage(ValueStorage * a_Storage)
 {
 	m_FlatOverview.push_back(a_Storage);

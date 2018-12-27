@@ -26,6 +26,7 @@ namespace League
 
 		std::vector<const ValueStorage*> Find(FindConditionFunction a_Function, void* a_UserData = nullptr) const;
 		const ValueStorage* Get(const std::string& a_Name) const;
+		const std::vector<ValueStorage*>* GetTopLevel(uint32_t a_Hash) const;
 
 		friend class BaseValueStorage;
 	protected:
