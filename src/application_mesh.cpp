@@ -175,7 +175,7 @@ void ApplicationMesh::SubMesh::SetTexture(const std::string& a_FilePath)
 {
 	Profiler::Context t(__FUNCTION__);
 
-	printf("Attempting to load texture %s\n", a_FilePath.c_str());
+	printf("Attempting to set texture '%s' for this submesh\n", a_FilePath.c_str());
 	Image.Load(a_FilePath, [](Texture& a_Texture, void* a_UserData)
 	{
 		Profiler::Context t("ApplicationMesh::SubMesh::SetTexture->OnLoad");
