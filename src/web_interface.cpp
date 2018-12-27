@@ -7,8 +7,15 @@
 #include <emscripten/bind.h>
 using namespace emscripten;
 
+bool g_IsReady = false;
+
 void LoadSkin(const std::string& a_SkinBin, std::string a_AnimationsBin)
 {
+	if (g_IsReady == false)
+	{
+		EM_ASM(console.error("Tried to load a skin while the application is not ready yet!"));
+		return;
+	}
 	Application::Instance->LoadSkin(a_SkinBin, a_AnimationsBin);
 }
 
@@ -101,17 +108,32 @@ void GetProfileResults()
 	);
 }
 
-void IsReady()
+void ReadyUp()
 {
+	g_IsReady = true;
 	EM_ASM
 	(
 		if (Module.OnReady)
 			Module.OnReady();
 	);
+	EM_ASM(console.log("LeagueModel is ready to go."));
+}
+
+void Unready()
+{
+	g_IsReady = false;
+	EM_ASM(console.log("LeagueModel is unreadied."));
+}
+
+bool IsReady()
+{
+	return g_IsReady;
 }
 
 EMSCRIPTEN_BINDINGS(my_module) 
 {
+	function("IsReady", &IsReady);
+
 	function("LoadSkin", &LoadSkin);
 	function("LoadMesh", &LoadMesh);
 

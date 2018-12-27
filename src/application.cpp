@@ -23,7 +23,8 @@
 uint32_t FNV1Hash(const std::string& a_String);
 
 #if defined(__EMSCRIPTEN__)
-void IsReady();
+void ReadyUp();
+void Unready();
 #endif
 
 std::string GetStringByHash(uint32_t a_Hash);
@@ -91,13 +92,25 @@ void Application::Init()
 	});
 
 #if defined(__EMSCRIPTEN__)
-	IsReady();
+	ReadyUp();
 #endif
 }
 
 struct SkinLoadData
 {
-	SkinLoadData(const std::string& a_AnimationBinPath) : AnimationBinPath(a_AnimationBinPath) {}
+	SkinLoadData(const std::string& a_AnimationBinPath) : AnimationBinPath(a_AnimationBinPath) 
+	{
+#if defined(__EMSCRIPTEN__)
+		Unready();
+#endif
+	}
+
+	~SkinLoadData()
+	{
+#if defined(__EMSCRIPTEN__)
+		ReadyUp();
+#endif
+	}
 
 	std::string Texture;
 	std::string AnimationBinPath;
