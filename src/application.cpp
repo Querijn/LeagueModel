@@ -442,8 +442,10 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 				{
 					auto* t_StringStorage2 = (League::StringValueStorage*)t_AnimationNames[i];
 					auto t_AnimationName2 = t_Root + t_StringStorage2->Get();
-					printf(" - %s", t_AnimationName2.c_str());
+					printf(" - %s\n", t_AnimationName2.c_str());
 				}
+
+				t_LoadData->AnimationName = t_AnimationName;
 			}
 
 			PrepareEvents(t_LoadData->AnimationName, *t_LoadData->Target, t_LoadData->SubMeshes, t_StringStorage);
