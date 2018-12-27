@@ -3,9 +3,11 @@
 
 #include <profiling.hpp>
 
+uint32_t FNV1Hash(const std::string& a_String);
+
 struct SubMeshHeader
 {
-	std::string Material = "";
+	std::string Name = "";
 	uint32_t VertexOffset;
 	uint32_t VertexCount;
 	uint32_t IndexOffset;
@@ -87,10 +89,10 @@ void League::Skin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFu
 			{
 				SubMeshHeader t_Mesh;
 
-				char t_MaterialName[64];
-				a_File->Read((uint8_t*)t_MaterialName, 64, t_Offset);
-				t_Mesh.Material = t_MaterialName;
-				AddToPublicHashMap(t_MaterialName);
+				char t_Name[64];
+				a_File->Read((uint8_t*)t_Name, 64, t_Offset);
+				t_Mesh.Name = t_Name;
+				AddToPublicHashMap(t_Name);
 
 				a_File->Get(t_Mesh.VertexOffset, t_Offset);
 				a_File->Get(t_Mesh.VertexCount, t_Offset);
@@ -182,7 +184,7 @@ void League::Skin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFu
 
 		for (auto& t_MeshHeader : t_SubMeshHeaders)
 		{
-			Mesh t_Mesh(t_MeshHeader.Material);
+			Mesh t_Mesh(t_MeshHeader.Name);
 			t_Mesh.VertexCount = t_MeshHeader.VertexCount;
 			t_Mesh.IndexCount = t_MeshHeader.IndexCount;
 
@@ -203,6 +205,11 @@ void League::Skin::Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFu
 
 		LM_DEL(t_LoadData);
 	}, t_LoadData);
+}
+
+League::Skin::Mesh::Mesh(const std::string& a_Name) : Name(a_Name)
+{
+	Hash = FNV1Hash(Name);
 }
 
 const League::Skin::BoundingBox& League::Skin::GetBoundingBox() const

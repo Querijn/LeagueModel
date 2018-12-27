@@ -18,11 +18,10 @@ namespace League
 
 		struct Mesh
 		{
-			Mesh(const std::string& a_MaterialName) :
-				Name(a_MaterialName)
-			{}
+			Mesh(const std::string& a_Name);
 
 			std::string Name;
+			uint32_t Hash;
 			size_t VertexCount;
 
 			glm::vec3* Positions;
