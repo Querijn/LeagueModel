@@ -63,9 +63,9 @@ void Application::Init()
 	LoadDefaultTexture();
 	LoadShaders();
 
-//#if defined(_WIN32)
+#if defined(_WIN32)
 	LoadSkin("data/output/data/characters/ryze/skins/skin0.bin", "data/output/data/characters/ryze/animations/skin0.bin");
-//#endif
+#endif
 
 	UpdateViewMatrix();
 
