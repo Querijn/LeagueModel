@@ -126,6 +126,7 @@ namespace League
 		BaseValueStorage* GetChild(size_t a_Index) const override { return nullptr; }
 
 		std::string Get() const;
+		uint32_t GetData() const { return m_Data; }
 
 		void FetchDataFromFile(File* a_File, size_t& a_Offset) override { a_File->Get(m_Data, a_Offset); }
 
