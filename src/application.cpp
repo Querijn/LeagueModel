@@ -795,6 +795,11 @@ std::vector<std::string> Application::GetSkinFiles() const
 	return t_Results;
 }
 
+void Application::SetAssetRoot(const std::string& a_AssetRoot)
+{
+	m_Root = a_AssetRoot;
+}
+
 const std::string & Application::GetAssetRoot() const
 {
 	return m_Root;

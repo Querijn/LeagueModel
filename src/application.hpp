@@ -40,6 +40,7 @@ public:
 
 	std::vector<std::string> GetSkinFiles() const;
 
+	void SetAssetRoot(const std::string& a_AssetRoot);
 	const std::string& GetAssetRoot() const;
 
 private:
