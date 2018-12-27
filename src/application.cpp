@@ -20,6 +20,7 @@
 #include <glm/gtx/compatibility.hpp>
 
 #include <fstream>
+uint32_t FNV1Hash(const std::string& a_String);
 
 #if defined(__EMSCRIPTEN__)
 void IsReady();
@@ -69,18 +70,10 @@ void Application::Init()
 	LoadShaders();
 
 #if defined(_WIN32)
-	LoadSkin("data/output/data/characters/aatrox/skins/skin1.bin", "data/output/data/characters/aatrox/animations/skin0.bin");
+	LoadSkin("data/output/data/characters/ornn/skins/skin0.bin", "data/output/data/characters/ornn/animations/skin0.bin");
 #endif
 
 	UpdateViewMatrix();
-
-	League::Bin t_Bin;
-	t_Bin.Load("data/output/data/characters/aatrox/skins/skin1.bin", [](League::Bin& a_Bin, void* a_UserData)
-	{
-		std::ofstream t_Json("skin1.json");
-		t_Json << a_Bin.GetAsJSON();
-		t_Json.close();
-	});
 
 	Platform::SetMainLoop([]() 
 	{
@@ -330,11 +323,32 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 
 			printf("Mesh loaded!\n");
 			const League::BaseValueStorage* t_MaterialOverrides = nullptr;
-			auto t_InitialMeshesToHide = t_LoadData->SkinBin.Find([](const League::BaseValueStorage& a_Value, void* a_UserData) { return a_Value.Is("initialSubmeshToHide"); });
+			auto t_InitialMeshStoragesToHide = t_LoadData->SkinBin.Find([](const League::BaseValueStorage& a_Value, void* a_UserData) { return a_Value.Is("initialSubmeshToHide"); });
+			std::vector<uint32_t> t_InitialMeshesToHide;
+			if (t_InitialMeshStoragesToHide.size() != 0)
+			{
+				for (auto t_Storage : t_InitialMeshStoragesToHide)
+				{
+					auto t_HashStorage = (const League::StringValueStorage*)t_Storage;
+					auto t_String = t_HashStorage->Get();
+
+					for (size_t i = 0; i < t_String.size(); )
+					{
+						size_t t_Index = t_String.find(' ', i);
+						if (t_Index == std::string::npos) 
+							t_Index = t_String.size();
+
+						auto t_Mesh = t_String.substr(i, t_Index - i);
+						t_InitialMeshesToHide.push_back(FNV1Hash(t_Mesh));
+
+						i = t_Index + 1;
+					}
+				}
+			}
+
 			if (t_InitialMeshesToHide.size() != 0)
 			{
-				printf("Found %lu meshes to hide!\n", t_InitialMeshesToHide.size());
-
+				printf("Found %lu meshes to hide!\n", t_InitialMeshStoragesToHide.size());
 				t_LoadData->SubMeshes = a_Skin.GetMeshes();
 				for (size_t i = 0; i < t_LoadData->SubMeshes.size(); i++)
 				{
@@ -342,8 +356,7 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 					bool t_ShouldHide = false;
 					for (auto& t_SubmeshToHide : t_InitialMeshesToHide)
 					{
-						const auto& t_HashStorage = (const League::HashValueStorage*)t_SubmeshToHide;
-						if (t_Submesh.Hash != t_HashStorage->GetData())
+						if (t_Submesh.Hash != t_SubmeshToHide)
 							continue;
 
 						t_ShouldHide = true;
@@ -356,7 +369,7 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 				}
 
 				// Little hack to improve finding the materialOverride
-				t_MaterialOverrides = t_InitialMeshesToHide[0]->GetParent()->GetChild("materialOverride");
+				t_MaterialOverrides = t_InitialMeshStoragesToHide[0]->GetParent()->GetChild("materialOverride");
 			}
 
 			// Search for the material overrides, if needed
