@@ -422,7 +422,7 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 						auto t_MaterialDefinition = t_LoadData->SkinBin.GetTopLevel(t_MaterialID->Get());
 						if (t_MaterialDefinition == nullptr)
 						{
-							printf("Material ID was set as %lu but I could not find it!\n", t_MaterialID->Get());
+							printf("Material ID was set as %u but I could not find it!\n", t_MaterialID->Get());
 							continue;
 						}
 						
