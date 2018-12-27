@@ -21,6 +21,10 @@
 
 #include <fstream>
 
+#if defined(__EMSCRIPTEN__)
+void IsReady();
+#endif
+
 Application* Application::Instance = nullptr;
 double g_LastTime = 0;
 
@@ -64,10 +68,18 @@ void Application::Init()
 	LoadShaders();
 
 #if defined(_WIN32)
-	LoadSkin("data/output/data/characters/ryze/skins/skin0.bin", "data/output/data/characters/ryze/animations/skin0.bin");
+	LoadSkin("data/output/data/characters/aatrox/skins/skin1.bin", "data/output/data/characters/aatrox/animations/skin0.bin");
 #endif
 
 	UpdateViewMatrix();
+
+	League::Bin t_Bin;
+	t_Bin.Load("data/output/data/characters/aatrox/skins/skin1.bin", [](League::Bin& a_Bin, void* a_UserData)
+	{
+		std::ofstream t_Json("skin1.json");
+		t_Json << a_Bin.GetAsJSON();
+		t_Json.close();
+	});
 
 	Platform::SetMainLoop([]() 
 	{
@@ -83,6 +95,10 @@ void Application::Init()
 
 		return Instance->Update(dt); 
 	});
+
+#if defined(__EMSCRIPTEN__)
+	IsReady();
+#endif
 }
 
 struct SkinLoadData
@@ -802,7 +818,7 @@ bool Application::Update(double a_DT)
 int main()
 {
 	Profiler::Get();
-	printf("LeagueModel Application built on %s at %s, calling new\n", __DATE__, __TIME__);
+	printf("LeagueModel Application built on %s at %s\n", __DATE__, __TIME__);
 	auto* t_Application = new Application("data/output");
 	Application::Instance->Init();
 

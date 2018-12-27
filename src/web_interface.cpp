@@ -101,6 +101,15 @@ void GetProfileResults()
 	);
 }
 
+void IsReady()
+{
+	EM_ASM
+	(
+		if (Module.OnReady)
+			Module.OnReady();
+	);
+}
+
 EMSCRIPTEN_BINDINGS(my_module) 
 {
 	function("LoadSkin", &LoadSkin);
