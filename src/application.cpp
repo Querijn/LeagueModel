@@ -70,7 +70,7 @@ void Application::Init()
 	LoadShaders();
 
 #if defined(_WIN32)
-	LoadSkin("data/output/data/characters/ornn/skins/skin0.bin", "data/output/data/characters/ornn/animations/skin0.bin");
+	LoadSkin("data/output/data/characters/aatrox/skins/skin1.bin", "data/output/data/characters/aatrox/animations/skin1.bin");
 #endif
 
 	UpdateViewMatrix();
@@ -302,7 +302,41 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 
 		// Get the texture file
 		auto t_TextureValue = (const League::StringValueStorage*)t_MeshProperties->GetChild("texture");
-		t_LoadData->Texture = t_TextureValue ? t_Root + t_TextureValue->Get() : "";
+		if (t_TextureValue != nullptr)
+			t_LoadData->Texture = t_Root + t_TextureValue->Get();
+		else
+		{
+			const auto t_MaterialHash = (const League::HashValueStorage*)t_MeshProperties->GetChild("material");
+
+			auto t_MaterialDefinition = t_LoadData->SkinBin.GetTopLevel(t_MaterialHash->GetData());
+			for (auto& t_MatDefMember : *t_MaterialDefinition)
+			{
+				if (t_MatDefMember->GetType() != League::Bin::ValueStorage::Container)
+					continue;
+
+				const auto& t_Array = ((const League::ContainerValueStorage*)t_MatDefMember)->Get();
+				for (int i = 0; i < t_Array.size(); i++)
+				{
+					const auto& t_Struct = ((const League::StructValueStorage*)t_Array[i]);
+					auto t_Results = t_Struct->Find([](const League::BaseValueStorage& a_Value, void* a_UserData)
+					{
+						if (a_Value.GetType() != League::BaseValueStorage::Type::String)
+							return false;
+
+						auto t_Value = ((const League::StringValueStorage&)a_Value).Get();
+						return t_Value == "Diffuse_Texture";
+					});
+
+					if (t_Results.size() == 0)
+						continue;
+
+					auto t_TextureStorage = t_Results[0]->GetParent()->GetChild("textureName");
+					auto t_Texture = t_TextureStorage->DebugPrint();
+					t_LoadData->Texture = t_Root + t_Texture;
+					break;
+				}
+			}
+		}
 
 		printf("Starting to load the mesh..\n");
 		
