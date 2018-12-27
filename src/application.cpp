@@ -25,6 +25,7 @@
 void IsReady();
 #endif
 
+std::string GetStringByHash(uint32_t a_Hash);
 Application* Application::Instance = nullptr;
 double g_LastTime = 0;
 
@@ -170,18 +171,19 @@ void PrepareEvents(const std::string& a_AnimationName, Application::Mesh& a_Mesh
 		printf("Show:\n");
 		for (auto& t_ShowMesh : t_MeshesToShow)
 		{
-			auto t_MeshName = t_ShowMesh->DebugPrint();
+			auto t_Storage = ((const League::HashValueStorage*)t_ShowMesh);
+			auto t_MeshName = t_Storage->Get();
 			printf("- %s: ", t_MeshName.c_str());
 			bool t_Found = false;
 
 			for (int i = 0; i < a_Submeshes.size(); i++)
 			{
-				if (a_Submeshes[i].Name == t_MeshName)
-				{
-					t_ToShow.push_back(i);
-					t_Found = true;
-					break;
-				}
+				if (a_Submeshes[i].Hash != t_Storage->GetData())
+					continue;
+
+				t_ToShow.push_back(i);
+				t_Found = true;
+				break;
 			}
 
 			printf("%s\n", t_Found ? "found" : "not found");
@@ -189,18 +191,19 @@ void PrepareEvents(const std::string& a_AnimationName, Application::Mesh& a_Mesh
 
 		for (auto& t_HideMesh : t_MeshesToHide)
 		{
-			auto t_MeshName = t_HideMesh->DebugPrint();
+			auto t_Storage = ((const League::HashValueStorage*)t_HideMesh);
+			auto t_MeshName = t_Storage->Get();
 			printf("- %s: ", t_MeshName.c_str());
 			bool t_Found = false;
 
 			for (int i = 0; i < a_Submeshes.size(); i++)
 			{
-				if (a_Submeshes[i].Name == t_MeshName)
-				{
-					t_ToHide.push_back(i);
-					t_Found = true;
-					break;
-				}
+				if (a_Submeshes[i].Hash != t_Storage->GetData())
+					continue;
+
+				t_ToHide.push_back(i);
+				t_Found = true;
+				break;
 			}
 
 			printf("%s\n", t_Found ? "found" : "not found");
@@ -339,7 +342,8 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 					bool t_ShouldHide = false;
 					for (auto& t_SubmeshToHide : t_InitialMeshesToHide)
 					{
-						if (t_Submesh.Name != t_SubmeshToHide->DebugPrint())
+						const auto& t_HashStorage = (const League::HashValueStorage*)t_SubmeshToHide;
+						if (t_Submesh.Hash != t_HashStorage->GetData())
 							continue;
 
 						t_ShouldHide = true;
@@ -376,23 +380,78 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 				auto t_Materials = (const League::ContainerValueStorage*)t_MaterialOverrides;
 				for (const auto& t_Material : t_Materials->Get())
 				{
+					auto t_MaterialID = (const League::NumberValueStorage<unsigned int>*)t_Material->GetChild("material");
 					auto t_TextureStorage = t_Material->GetChild("texture");
 					auto t_SubmeshNameStorage = t_Material->GetChild("submesh");
-					if (t_TextureStorage == nullptr || t_SubmeshNameStorage == nullptr)
+					if ((t_MaterialID == nullptr && t_TextureStorage == nullptr) || t_SubmeshNameStorage == nullptr)
 					{
-						printf("Texture or Submesh missing from struct of material override!\n");
+						printf("Texture/Material and/or Submesh missing from struct of material override!\n");
 						continue;
 					}
 
-					auto t_Texture = t_TextureStorage->DebugPrint();
-					auto t_SubmeshName = t_SubmeshNameStorage->DebugPrint();
-					for (int i = 0; i < t_LoadData->SubMeshes.size(); i++)
+					if (t_TextureStorage)
 					{
-						if (t_LoadData->SubMeshes[i].Name == t_SubmeshName)
+						auto t_Texture = t_TextureStorage->DebugPrint();
+						auto t_SubmeshName = t_SubmeshNameStorage->DebugPrint();
+						for (int i = 0; i < t_LoadData->SubMeshes.size(); i++)
 						{
-							printf("Submesh %s has its own texture: %s.\n", t_SubmeshName.c_str(), t_Texture.c_str());
-							t_LoadData->Target->SubMeshes[i].SetTexture(t_Root + t_Texture);
-							t_MeshesWithMaterial.push_back(i);
+							if (t_LoadData->SubMeshes[i].Name == t_SubmeshName)
+							{
+								printf("Submesh %s has its own texture: %s.\n", t_SubmeshName.c_str(), t_Texture.c_str());
+								t_LoadData->Target->SubMeshes[i].SetTexture(t_Root + t_Texture);
+								t_MeshesWithMaterial.push_back(i);
+								break;
+							}
+						}
+					}
+					else
+					{
+						auto t_MaterialDefinition = t_LoadData->SkinBin.GetTopLevel(t_MaterialID->Get());
+						if (t_MaterialDefinition == nullptr)
+						{
+							printf("Material ID was set as %lu but I could not find it!\n", t_MaterialID->Get());
+							continue;
+						}
+						
+						for (auto& t_MatDefMember : *t_MaterialDefinition)
+						{
+							if (t_MatDefMember->GetType() != League::Bin::ValueStorage::Container)
+								continue;
+
+							const auto& t_Array = ((const League::ContainerValueStorage*)t_MatDefMember)->Get();
+							for (int i = 0; i < t_Array.size(); i++)
+							{
+								const auto& t_Struct = ((const League::StructValueStorage*)t_Array[i]);
+								auto t_Results = t_Struct->Find([](const League::BaseValueStorage& a_Value, void* a_UserData) 
+								{ 
+									if (a_Value.GetType() != League::BaseValueStorage::Type::String)
+										return false;
+
+									auto t_Value = ((const League::StringValueStorage&)a_Value).Get();
+									return t_Value == "Diffuse_Texture"; 
+								});
+
+								if (t_Results.size() == 0)
+									continue;
+
+								bool t_Done = false;
+								auto t_TextureStorage = t_Results[0]->GetParent()->GetChild("textureName");
+								auto t_Texture = t_TextureStorage->DebugPrint();
+								auto t_SubmeshName = t_SubmeshNameStorage->DebugPrint();
+								for (int i = 0; i < t_LoadData->SubMeshes.size(); i++)
+								{
+									if (t_LoadData->SubMeshes[i].Name != t_SubmeshName)
+										continue;
+
+									printf("Submesh %s has its own texture: %s.\n", t_SubmeshName.c_str(), t_Texture.c_str());
+									t_LoadData->Target->SubMeshes[i].SetTexture(t_Root + t_Texture);
+									t_MeshesWithMaterial.push_back(i);
+									t_Done = true;
+									break;
+								}
+
+								if (t_Done) break;
+							}
 							break;
 						}
 					}
