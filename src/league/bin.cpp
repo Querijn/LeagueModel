@@ -1,5 +1,5 @@
-#include "bin.hpp"
-#include "bin_valuestorage.hpp"
+#include "league_model/bin.hpp"
+#include "league_model/bin_valuestorage.hpp"
 
 #include <profiling.hpp>
 

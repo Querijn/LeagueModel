@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.8)
 project(LeagueModel)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+option(UseAsLibrary "Use LeagueModel as library" OFF)
+
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(DirectX_D3DX9_LIBRARY OFF)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
@@ -43,11 +45,11 @@ ADD_LEAGUEMODEL_SOURCE(File\\Base							"src/file/base_file.hpp"						"src/file/
 ADD_LEAGUEMODEL_SOURCE(File\\Emscripten						"src/file/emscripten_file.hpp"					"src/file/emscripten_file.cpp")
 ADD_LEAGUEMODEL_SOURCE(File\\Native							"src/file/native_file.hpp"						"src/file/native_file.cpp")
 
-ADD_LEAGUEMODEL_SOURCE(League\\Bin							"src/league/bin.hpp"							"src/league/bin.cpp")
-ADD_LEAGUEMODEL_SOURCE(League\\Bin\\ValueStorage			"src/league/bin_valuestorage.hpp"				"src/league/bin_valuestorage.cpp")
-ADD_LEAGUEMODEL_SOURCE(League\\Skin							"src/league/skin.hpp"							"src/league/skin.cpp")
-ADD_LEAGUEMODEL_SOURCE(League\\Skeleton						"src/league/skeleton.hpp"						"src/league/skeleton.cpp")
-ADD_LEAGUEMODEL_SOURCE(League\\Animation					"src/league/animation.hpp"						"src/league/animation.cpp")
+ADD_LEAGUEMODEL_SOURCE(League\\Bin							"include/league_model/bin.hpp"					"src/league/bin.cpp")
+ADD_LEAGUEMODEL_SOURCE(League\\Bin\\ValueStorage			"include/league_model/bin_valuestorage.hpp"		"src/league/bin_valuestorage.cpp")
+ADD_LEAGUEMODEL_SOURCE(League\\Skin							"include/league_model/skin.hpp"					"src/league/skin.cpp")
+ADD_LEAGUEMODEL_SOURCE(League\\Skeleton						"include/league_model/skeleton.hpp"				"src/league/skeleton.cpp")
+ADD_LEAGUEMODEL_SOURCE(League\\Animation					"include/league_model/animation.hpp"			"src/league/animation.cpp")
 
 ADD_LEAGUEMODEL_SOURCE(Window								"src/window.hpp"								"src/window.cpp")
 ADD_LEAGUEMODEL_SOURCE(Window\\BaseWindow					"src/window/base_window.hpp"					"src/window/base_window.cpp")
@@ -79,11 +81,15 @@ ADD_LEAGUEMODEL_SOURCE(EventHandler\\Event					"src/event_handler/event.hpp"				
 ADD_LEAGUEMODEL_SOURCE(EventHandler\\EventThread			"src/event_handler/event_thread.hpp"			"src/event_handler/event_thread.cpp")
 ADD_LEAGUEMODEL_SOURCE(EventHandler\\Events					"src/event_handler/events.hpp"					"")
 
-add_executable(LeagueModel ${LEAGUEMODEL_SOURCES})
-set_target_properties(LeagueModel PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+if (UseAsLibrary)
+	add_executable(LeagueModel ${LEAGUEMODEL_SOURCES})
+	set_target_properties(LeagueModel PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+	
+	if (WIN32)
+		target_link_libraries(LeagueModel opengl32)
 
-if (WIN32)
-	target_link_libraries(LeagueModel opengl32)
-
-	add_custom_command(TARGET LeagueModel POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/libs" $<TARGET_FILE_DIR:LeagueModel>)
-endif (WIN32)
+		add_custom_command(TARGET LeagueModel POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/libs" $<TARGET_FILE_DIR:LeagueModel>)
+	endif (WIN32)
+else (UseAsLibrary)
+	add_library(LeagueModel ${LEAGUEMODEL_SOURCES})
+endif (UseAsLibrary)

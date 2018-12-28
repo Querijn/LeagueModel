@@ -1,7 +1,7 @@
 #pragma once
 
 #include <renderer.hpp>
-#include <league/skeleton.hpp>
+#include <league_model/skeleton.hpp>
 
 #include <map>
 #include <string>

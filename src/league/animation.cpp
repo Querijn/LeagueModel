@@ -1,5 +1,5 @@
-#include "animation.hpp"
-#include "skeleton.hpp"
+#include "league_model/animation.hpp"
+#include "league_model/skeleton.hpp"
 #include <string>
 
 #include <profiling.hpp>

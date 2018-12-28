@@ -1,5 +1,5 @@
-#include "league/skeleton.hpp"
-#include "league/skin.hpp"
+#include "league_model/skeleton.hpp"
+#include "league_model/skin.hpp"
 #include <profiling.hpp>
 
 #include <map>

@@ -1,5 +1,5 @@
 #ifdef _WIN32
-#include "platform/windows_platform.hpp"
+#include "league_model/platform/windows_platform.hpp"
 
 #include <algorithm>
 

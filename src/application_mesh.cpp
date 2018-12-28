@@ -1,7 +1,7 @@
 #include <application_mesh.hpp>
 #include <application.hpp>
 
-#include <league/animation.hpp>
+#include <league_model/animation.hpp>
 #include <profiling.hpp>
 
 #define GLM_ENABLE_EXPERIMENTAL

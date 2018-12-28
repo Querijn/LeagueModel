@@ -3,8 +3,8 @@
 #include <renderer.hpp>
 #include <window.hpp>
 #include <event_handler/events.hpp>
-#include <league/skeleton.hpp>
-#include <league/animation.hpp>
+#include <league_model/skeleton.hpp>
+#include <league_model/animation.hpp>
 #include <application_mesh.hpp>
 
 #include <glm/glm.hpp>

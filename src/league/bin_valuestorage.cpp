@@ -1,4 +1,4 @@
-#include "bin_valuestorage.hpp"
+#include "league_model/bin_valuestorage.hpp"
 #include "profiling/memory.hpp"
 
 #include <glm/glm.hpp>
@@ -253,12 +253,12 @@ std::string League::StringValueStorage::GetAsJSON(bool a_ExposeHash, bool a_IsHa
 
 void League::StringValueStorage::FetchDataFromFile(File * a_File, size_t & a_Offset)
 {
+
 	uint16_t t_StringLength;
 	a_File->Get(t_StringLength, a_Offset);
 
 	m_Data = std::string(t_StringLength, '\0');
 	a_File->Read((uint8_t*)m_Data.c_str(), t_StringLength, a_Offset);
-
 	AddToPublicHashMap(m_Data);
 }
 

@@ -3,11 +3,11 @@
 #include <event_handler.hpp>
 #include <event_handler/events.hpp>
 
-#include <league/bin_valuestorage.hpp>
-#include <league/bin.hpp>
-#include <league/skin.hpp>
-#include <league/skeleton.hpp>
-#include <league/animation.hpp>
+#include <league_model/bin_valuestorage.hpp>
+#include <league_model/bin.hpp>
+#include <league_model/skin.hpp>
+#include <league_model/skeleton.hpp>
+#include <league_model/animation.hpp>
 
 #include <algorithm>
 
@@ -894,7 +894,7 @@ void Application::UpdateViewMatrix()
 bool Application::Update(double a_DT)
 {
 	Profiler::Frame t(__FUNCTION__, a_DT);
-#if defined(_WIN32) && defined(NDEBUG)
+#if defined(_WIN32)
 	printf("%3.2f               \r", 1 / a_DT);
 #endif
 

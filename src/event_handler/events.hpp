@@ -1,7 +1,7 @@
 #pragma once
 
 #include <event_handler/event.hpp>
-#include <platform/mouse_definitions.hpp>
+#include <league_model/platform/mouse_definitions.hpp>
 
 #include <vector>
 #include <string>

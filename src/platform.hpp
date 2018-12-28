@@ -2,12 +2,12 @@
 
 #ifdef _WIN32
 
-#include <platform/windows_platform.hpp>
+#include <league_model/platform/windows_platform.hpp>
 using Platform = WindowsPlatform;
 
 #else
 
-#include <platform/emscripten_platform.hpp>
+#include <league_model/platform/emscripten_platform.hpp>
 using Platform = EmscriptenPlatform;
 
 #endif
