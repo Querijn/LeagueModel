@@ -1,6 +1,6 @@
 #include "profiling.hpp"
 
-#include "platform.hpp"
+#include "league_model/platform.hpp"
 
 #include <cassert>
 #include <vector>

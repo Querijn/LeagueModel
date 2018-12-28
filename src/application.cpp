@@ -1,8 +1,8 @@
 #include <application.hpp>
-#include <platform.hpp>
 #include <event_handler.hpp>
 #include <event_handler/events.hpp>
 
+#include <league_model/platform.hpp>
 #include <league_model/bin_valuestorage.hpp>
 #include <league_model/bin.hpp>
 #include <league_model/skin.hpp>

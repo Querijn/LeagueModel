@@ -2,7 +2,7 @@
 #ifdef __EMSCRIPTEN__
 
 #include <stddef.h>
-#include <platform/base_platform.hpp>
+#include <league_model/platform/base_platform.hpp>
 
 class EmscriptenPlatform
 {

@@ -1,5 +1,5 @@
 #ifdef __EMSCRIPTEN__
-#include "platform/emscripten_platform.hpp"
+#include "league_model/platform/emscripten_platform.hpp"
 
 #include <emscripten.h>
 #include <algorithm>
