@@ -24,9 +24,9 @@ void LoadMesh(const std::string& a_Skin, const std::string& a_Skeleton)
 	Application::Instance->LoadMesh(a_Skin, a_Skeleton);
 }
 
-size_t GetAvailableAnimations(const std::string& a_Skin)
+size_t GetAvailableAnimations()
 {
-	return Application::Instance->GetAnimationsForMesh(a_Skin).size();
+	return Application::Instance->GetAnimations().size();
 }
 
 size_t GetAvailableSkins()
@@ -46,20 +46,20 @@ std::vector<std::string> GetSkinArray(const std::string& a_Skin)
 }
 
 // TODO: Doesn't work? "Cannot call GetAnimationArray due to unbound types: NSt3__26vectorINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEENS4_IS6_EEEE"
-std::vector<std::string> GetAnimationArray(const std::string& a_Skin)
+std::vector<std::string> GetAnimationArray()
 {
-	return Application::Instance->GetAnimationsForMesh(a_Skin);
+	return Application::Instance->GetAnimations();
 }
 
-std::string GetAnimationName(const std::string& a_Skin, size_t a_Index)
+std::string GetAnimationName(size_t a_Index)
 {
-	return Application::Instance->GetAnimationsForMesh(a_Skin)[a_Index];
+	return Application::Instance->GetAnimations()[a_Index];
 }
 
 void PlayAnimation(const std::string& a_Skin, std::string a_Animation)
 {
 	auto* t_Mesh = Application::Instance->GetMeshUnsafe(a_Skin);
-	if (t_Mesh != nullptr)
+	if (t_Mesh == nullptr)
 	{
 		printf("Could not play animation \"%s\", I don't know that animation for the mesh \"%s\"!\n", a_Animation.c_str(), a_Skin.c_str());
 		return;
@@ -113,10 +113,12 @@ void ReadyUp()
 	g_IsReady = true;
 	EM_ASM
 	(
-		if (Module.OnReady)
-			Module.OnReady();
+		if (window["Module"]["OnReady"])
+			window["Module"]["OnReady"]();
+		else
+			console.error("OnReady is not set.");
+		console.log("LeagueModel is ready to go.");
 	);
-	EM_ASM(console.log("LeagueModel is ready to go."));
 }
 
 void Unready()

@@ -1,19 +1,17 @@
 <html>
-  <head>
-    <title>LeagueModel</title>
-  <body>
-    <canvas id='canvas' width='256' height='256'></canvas>
-    <select id="champ-select"></select>
-    <select id="skin-select"></select>
-    <button onclick='LoadSkin();'>
-      Load!
-    </button>
-    <script src="data/interface.js"></script>
-    <script type='text/javascript'>
-      var Module = {
-        canvas: document.getElementById('canvas')
-      };
-    </script>
+	<head>
+		<title>LeagueModel</title>
+	<body>
+		<canvas id='canvas' width='256' height='256'></canvas><br />
+		<br />
+		Skin: <select id="champ-select"></select>
+		<select id="skin-select"></select>
+		<button onclick='LoadSkin();'>Load Skin</button><br />
+		<br />
+		Animation: <select id="animation-select"></select>
+		<button onclick='PlayAnimation();'>Play Animation</button><br />
+
+		<script src="data/interface.js"></script>
     {{{ SCRIPT }}}
   </body>
 </html>

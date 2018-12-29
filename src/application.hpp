@@ -28,15 +28,14 @@ public:
 	void LoadSkin(const std::string& a_BinPath, const std::string& a_AnimationBinPath);
 
 	void LoadAnimation(Application::Mesh& a_Mesh, const std::string& a_AnimationPath, League::Animation::OnLoadFunction a_OnLoadFunction = nullptr, void* a_UserData = nullptr);
-	void AddAnimationReference(Application::Mesh& a_Mesh, const std::string& a_AnimationName);
+	void AddAnimationReference(const std::string& a_AnimationName);
 
 	const Texture& GetDefaultTexture() const;
 
 	Mesh* GetMeshUnsafe(const std::string& a_Name);
 
 	const Mesh* GetMesh(const std::string& a_Name) const;
-	std::vector<std::string> GetAnimationsForMesh(const Mesh& a_Mesh) const;
-	std::vector<std::string> GetAnimationsForMesh(const std::string& a_Name) const;
+	const std::vector<std::string>& GetAnimations() const;
 
 	std::vector<std::string> GetSkinFiles() const;
 
@@ -82,7 +81,7 @@ private:
 	float m_CameraDistance = 1000;
 
 	std::map<std::string, Mesh> m_Meshes;
-	std::map<const Mesh*, std::vector<std::string>> m_AvailableAnimations;
+	std::vector<std::string> m_AvailableAnimations;
 
 	bool m_MouseIsDown = false;
 	glm::vec2 m_MousePosition;

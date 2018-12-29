@@ -128,17 +128,16 @@ struct SkinLoadData
 	std::vector<League::Skin::Mesh> SubMeshes;
 };
 
-void PrepareEvents(const std::string& a_AnimationName, Application::Mesh& a_Mesh, std::vector<League::Skin::Mesh>& a_Submeshes, League::StringValueStorage* t_StringStorage)
+void PrepareEvents(const std::string& a_AnimationName, Application::Mesh& a_Mesh, std::vector<League::Skin::Mesh>& a_Submeshes, const League::BaseValueStorage* a_Parent)
 {
 	Profiler::Context t(__FUNCTION__);
-	auto t_AnimationResourceData = t_StringStorage->GetParent();
-	if (t_AnimationResourceData == nullptr)
+	if (a_Parent == nullptr)
 	{
 		printf("No animation resource found.\n");
 		return;
 	}
 
-	auto t_AnimationInfoStructBase = t_AnimationResourceData->GetParent();
+	auto t_AnimationInfoStructBase = a_Parent->GetParent();
 	if (t_AnimationInfoStructBase == nullptr)
 	{
 		printf("No animation info struct found.\n");
@@ -554,10 +553,12 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 
 		const auto& t_Root = Application::Instance->GetAssetRoot();
 
+		const League::BaseValueStorage* t_Parent = nullptr;
 		for (int i = 0; i < t_AnimationNames.size(); i++)
 		{
 			auto t_AnimationNameStorage = t_AnimationNames[i];
-			auto* t_StringStorage = (League::StringValueStorage*)t_AnimationNameStorage;
+			const League::StringValueStorage* t_StringStorage = (League::StringValueStorage*)t_AnimationNameStorage;
+			t_Parent = t_StringStorage->GetParent();
 
 			auto t_AnimationName = t_Root + t_StringStorage->Get();
 
@@ -583,8 +584,8 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 				t_LoadData->AnimationName = t_AnimationName;
 			}
 
-			PrepareEvents(t_LoadData->AnimationName, *t_LoadData->Target, t_LoadData->SubMeshes, t_StringStorage);
-			Application::Instance->AddAnimationReference(*t_LoadData->Target, t_LoadData->AnimationName);
+			Application::Instance->AddAnimationReference(t_AnimationName);
+			PrepareEvents(t_AnimationName, *t_LoadData->Target, t_LoadData->SubMeshes, t_Parent);
 		}
 
 		t_LoadData->AnimationLoaded = true;
@@ -666,6 +667,7 @@ void Application::OnMeshLoad(MeshLoadData& a_LoadData)
 		t_Mesh.SubMeshes.push_back(t_Submesh);
 	}
 
+	std::transform(a_LoadData.SkinPath.begin(), a_LoadData.SkinPath.end(), a_LoadData.SkinPath.begin(), ::tolower);
 	t_Meshes[a_LoadData.SkinPath] = t_Mesh;
 	if (a_LoadData.OnLoadFunction) a_LoadData.OnLoadFunction(a_LoadData.SkinPath, a_LoadData.SkeletonPath, &t_Meshes[a_LoadData.SkinPath], a_LoadData.SkinTarget, a_LoadData.Argument);
 	LM_DEL(&a_LoadData);
@@ -739,9 +741,12 @@ void Application::LoadAnimation(Application::Mesh & a_Mesh, const std::string& a
 	}, t_LoadData);
 }
 
-void Application::AddAnimationReference(Application::Mesh & a_Mesh, const std::string & a_AnimationName)
+void Application::AddAnimationReference(const std::string & a_AnimationName)
 {
-	m_AvailableAnimations[&a_Mesh].push_back(a_AnimationName);
+	std::string t_Name = a_AnimationName;
+	std::transform(t_Name.begin(), t_Name.end(), t_Name.begin(), ::tolower);
+	printf("Adding reference: %s\n", t_Name.c_str());
+	m_AvailableAnimations.push_back(t_Name);
 }
 
 const Texture & Application::GetDefaultTexture() const
@@ -751,7 +756,9 @@ const Texture & Application::GetDefaultTexture() const
 
 Application::Mesh * Application::GetMeshUnsafe(const std::string & a_Name)
 {
-	auto t_Index = m_Meshes.find(a_Name);
+	std::string t_Name = a_Name;
+	std::transform(t_Name.begin(), t_Name.end(), t_Name.begin(), ::tolower);
+	auto t_Index = m_Meshes.find(t_Name);
 	if (t_Index == m_Meshes.end())
 		return nullptr;
 
@@ -760,29 +767,18 @@ Application::Mesh * Application::GetMeshUnsafe(const std::string & a_Name)
 
 const Application::Mesh * Application::GetMesh(const std::string & a_Name) const
 {
-	auto t_Index = m_Meshes.find(a_Name);
+	std::string t_Name = a_Name;
+	std::transform(t_Name.begin(), t_Name.end(), t_Name.begin(), ::tolower);
+	auto t_Index = m_Meshes.find(t_Name);
 	if (t_Index == m_Meshes.end())
 		return nullptr;
 
 	return &t_Index->second;
 }
 
-std::vector<std::string> Application::GetAnimationsForMesh(const Mesh & a_Mesh) const
+const std::vector<std::string>& Application::GetAnimations() const
 {
-	auto t_Index = m_AvailableAnimations.find(&a_Mesh);
-	if (t_Index == m_AvailableAnimations.end())
-		return std::vector<std::string>();
-
-	return t_Index->second;
-}
-
-std::vector<std::string> Application::GetAnimationsForMesh(const std::string & a_Name) const
-{
-	auto t_Mesh = GetMesh(a_Name);
-	if (t_Mesh == nullptr)
-		return std::vector<std::string>();
-
-	return GetAnimationsForMesh(*t_Mesh);
+	return m_AvailableAnimations;
 }
 
 std::vector<std::string> Application::GetSkinFiles() const

@@ -109,8 +109,6 @@ void ApplicationMesh::Draw(float a_Time, ShaderProgram& a_Program, glm::mat4& a_
 
 		if (a_Diffuse) *a_Diffuse = t_Submesh.HasImage ? t_Submesh.Image : Application::Instance->GetDefaultTexture();
 
-		glm::vec4 t_Center(0);
-
 		if (Skeleton && a_BoneTransforms)
 		{
 			const auto& t_AnimationIndex = Animations.find(CurrentAnimation);
