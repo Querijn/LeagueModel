@@ -81,7 +81,11 @@ private:
 	void SetupAnimation(std::vector<glm::mat4>& a_BoneTransforms, float a_Time);
 	void SetupHierarchy(const glm::mat4& a_InverseRoot, std::vector<glm::mat4>& a_Bones, const League::Skeleton::Bone& a_SkeletonBone, const glm::mat4& a_Parent, float a_Time);
 
-	size_t TranslationIndex = 0;
-	size_t RotationIndex = 0;
-	size_t ScaleIndex = 0;
+	struct BoneFrameIndexCache
+	{
+		size_t Translation = 0;
+		size_t Rotation = 0;
+		size_t Scale = 0;
+	};
+	std::vector<BoneFrameIndexCache> m_CurrentFrame;
 };

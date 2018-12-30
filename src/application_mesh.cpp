@@ -48,8 +48,10 @@ T FindNearestTime(const std::vector<League::Animation::Bone::Frame<T>>& a_Vector
 	auto t_Min = a_Vector[0];
 	auto t_Max = a_Vector[a_Vector.size() - 1];
 
-	while (a_Index >= a_Vector.size())
-		a_Index -= a_Vector.size();
+	if (a_Time < a_Vector[a_Index].Time)
+		a_Index = 0;
+
+	a_Index = a_Index ? a_Index - 1 : 0;
 
 	for (; a_Index < a_Vector.size(); a_Index++)
 	{
@@ -64,8 +66,6 @@ T FindNearestTime(const std::vector<League::Animation::Bone::Frame<T>>& a_Vector
 		t_Max = t_Current;
 		break;
 	}
-	
-	a_Index--;
 
 	float t_Div = t_Max.Time - t_Min.Time;
 	float t_LerpValue = (t_Div == 0) ? 1 : (a_Time - t_Min.Time) / t_Div;
@@ -81,9 +81,9 @@ void ApplicationMesh::SetupHierarchy(const glm::mat4& a_InverseRoot, std::vector
 	const auto* t_AnimBone = Animations[CurrentAnimation].GetBone(a_SkeletonBone.Hash);
 	if (t_AnimBone != nullptr)
 	{
-		glm::vec3 t_Translation = FindNearestTime(t_AnimBone->Translation, a_Time, TranslationIndex);
-		glm::quat t_Rotation = FindNearestTime(t_AnimBone->Rotation, a_Time, RotationIndex);
-		glm::vec3 t_Scale = FindNearestTime(t_AnimBone->Scale, a_Time, ScaleIndex);
+		glm::vec3 t_Translation = FindNearestTime(t_AnimBone->Translation, a_Time, m_CurrentFrame[a_SkeletonBone.ID].Translation);
+		glm::quat t_Rotation = FindNearestTime(t_AnimBone->Rotation, a_Time, m_CurrentFrame[a_SkeletonBone.ID].Rotation);
+		glm::vec3 t_Scale = FindNearestTime(t_AnimBone->Scale, a_Time, m_CurrentFrame[a_SkeletonBone.ID].Scale);
 
 		auto t_LocalTransform = glm::translate(t_Translation) * glm::mat4_cast(t_Rotation) * glm::scale(t_Scale);
 		t_GlobalTransform = a_Parent * t_LocalTransform;
@@ -108,41 +108,58 @@ void ApplicationMesh::Draw(float a_Time, ShaderProgram& a_Program, glm::mat4& a_
 	if (BoneIndexBuffer) BoneIndexBuffer->Use();
 	if (BoneWeightBuffer) BoneWeightBuffer->Use();
 
+	bool t_HasVisible = false;
+	for (auto& t_Submesh : SubMeshes)
+	{
+		if (t_Submesh.Visible)
+		{
+			t_HasVisible = true;
+			break;
+		}
+	}
+
+	if (!t_HasVisible)
+		return;
+
+	if (Skeleton && a_BoneTransforms)
+	{
+		const auto& t_AnimationIndex = Animations.find(CurrentAnimation);
+		if (t_AnimationIndex != Animations.end())
+		{
+			float t_AnimationDuration = t_AnimationIndex->second.GetDuration();
+			while (a_Time > t_AnimationDuration)
+			{
+				a_Time -= t_AnimationDuration;
+				for (auto t_AnimationEvent : AnimationEvents[CurrentAnimation])
+					t_AnimationEvent->Reset();
+			}
+
+			float t_FPS = t_AnimationIndex->second.GetFPS();
+			for (auto t_AnimationEvent : AnimationEvents[CurrentAnimation])
+				t_AnimationEvent->Update(a_Time * t_FPS);
+
+			auto& t_Bones = Skeleton->GetBones();
+			while (m_CurrentFrame.size() < t_Bones.size())
+				m_CurrentFrame.push_back(BoneFrameIndexCache());
+
+			a_BoneTransforms->resize(t_Bones.size());
+			SetupAnimation(*a_BoneTransforms, a_Time);
+		}
+		else
+		{
+			auto& t_Bones = Skeleton->GetBones();
+			a_BoneTransforms->resize(t_Bones.size());
+			for (int i = 0; i < a_BoneTransforms->size(); i++)
+				a_BoneTransforms->at(i) = glm::identity<glm::mat4>();
+		}
+	}
+
 	for (auto& t_Submesh : SubMeshes)
 	{
 		if (t_Submesh.Visible == false) continue;
 
 		if (a_Diffuse) *a_Diffuse = t_Submesh.HasImage ? t_Submesh.Image : Application::Instance->GetDefaultTexture();
 
-		if (Skeleton && a_BoneTransforms)
-		{
-			const auto& t_AnimationIndex = Animations.find(CurrentAnimation);
-			if (t_AnimationIndex != Animations.end())
-			{
-				float t_AnimationDuration = t_AnimationIndex->second.GetDuration();
-				while (a_Time > t_AnimationDuration)
-				{
-					a_Time -= t_AnimationDuration;
-					for (auto t_AnimationEvent : AnimationEvents[CurrentAnimation])
-						t_AnimationEvent->Reset();
-				}
-
-				float t_FPS = t_AnimationIndex->second.GetFPS();
-				for (auto t_AnimationEvent : AnimationEvents[CurrentAnimation])
-					t_AnimationEvent->Update(a_Time * t_FPS);
-
-				auto& t_Bones = Skeleton->GetBones();
-				a_BoneTransforms->resize(t_Bones.size());
-				SetupAnimation(*a_BoneTransforms, a_Time);
-			}
-			else
-			{
-				auto& t_Bones = Skeleton->GetBones();
-				a_BoneTransforms->resize(t_Bones.size());
-				for (int i = 0; i < a_BoneTransforms->size(); i++)
-					a_BoneTransforms->at(i) = glm::identity<glm::mat4>();
-			}
-		}
 
 		a_VP *= t_Submesh.GetTransformMatrix();
 
