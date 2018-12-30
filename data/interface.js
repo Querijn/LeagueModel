@@ -1,9 +1,55 @@
 var skinsByChampion = {};
 var wasUrlSkinRequested = false;
 
+var consoleLog = console.log;
+var consoleWarn = console.warn;
+var consoleError = console.error;
+
 var log = [];
+function logMessage(type, message) {
+	log.push(`[${(new Date()).toLocaleString()}] '${type.toUpperCase()}: ${message}'`);
+}
+
+console.log = function () { 
+	var text = arguments[0];
+	if (arguments.length > 1)
+		text = Array.prototype.slice.call(arguments).join(" ");
+	
+	logMessage("log", text);
+	consoleLog.apply(console, arguments);
+}
+
+console.warn = function () { 
+	var text = arguments[0];
+	if (arguments.length > 1)
+		text = Array.prototype.slice.call(arguments).join(" ");
+
+	logMessage("warn", text);
+	consoleWarn.apply(console, arguments);
+}
+
+console.error = function () { 
+	var text = arguments[0];
+	if (arguments.length > 1)
+		text = Array.prototype.slice.call(arguments).join(" ");
+
+	logMessage("error", text);
+	consoleError.apply(console, arguments);
+}
+
 function UploadLog() {
-	var blob = new Blob([JSON.stringify(log)]);
+
+	if (!confirm("This will send information from your browser and your recent log to https://irule.at.\n\nThings that this sends:\n- Your error log, everything caught during run-time that was reported with console.log, console.warn and console.error.\n- The navigator javascript object, to identify your device (https://developer.mozilla.org/en-US/docs/Web/API/Navigator)\n- The screen object, to identify your window state (https://developer.mozilla.org/en-US/docs/Web/API/Screen)\n\nIf you are not okay with this, you can click cancel below. Otherwise this information is stored for 3 months."))
+		return;
+	
+	var nav = {}, view = {};
+	for (var i in navigator) nav[i] = navigator[i];
+	for (var i in screen) view[i] = screen[i];
+	var blob = new Blob([JSON.stringify({
+		log: log,
+		screen: view,
+		navigator: nav
+	})]);
 	
 	var reader = new FileReader();
 	reader.onload = function(event){
@@ -125,7 +171,6 @@ var Module = {
 			text = Array.prototype.slice.call(arguments).join(" ");
 
 		console.log(text);
-		log.push(text);
 	},
 
 	printErr: function(text) {
@@ -133,7 +178,6 @@ var Module = {
 			text = Array.prototype.slice.call(arguments).join(" ");
 	
 		console.error(text);
-		log.push(text);
 	},
 
 	OnReady: function() {
