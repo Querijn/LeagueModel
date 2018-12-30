@@ -1,42 +1,64 @@
 var skinsByChampion = {};
 var wasUrlSkinRequested = false;
 
+var log = [];
+function UploadLog() {
+	var blob = new Blob([JSON.stringify(log)]);
+	
+	var reader = new FileReader();
+	reader.onload = function(event){
+		var formData = new FormData();
+		formData.append('fname', 'log.txt');
+		formData.append('data', event.target.result);
+		
+		var logUploader = new XMLHttpRequest();
+		logUploader.onreadystatechange = function() {
+			if (this.readyState == 4 && this.status == 200)
+				console.log(this.responseText);
+		};
+		
+		logUploader.open("POST", "https://irule.at/models/log_upload/", true);
+		logUploader.send(formData);
+	};
+	reader.readAsDataURL(blob);
+}
+
 fetch("data/small-summary.json")
-	.then(function(response) {
-		if (response.status !== 200) {
-			console.error(response.error);
-			return;
-		}
+.then(function(response) {
+	if (response.status !== 200) {
+		console.error(response.error);
+		return;
+	}
 
-		response.json().then(async data => {
-			var champSelect = document.getElementById("champ-select");
-			var skinSelect = document.getElementById("skin-select");
+	response.json().then(async data => {
+		var champSelect = document.getElementById("champ-select");
+		var skinSelect = document.getElementById("skin-select");
 
-			let added = false;
-			for (let champ of data) {
-				if (champ.id < 0) continue;
+		let added = false;
+		for (let champ of data) {
+			if (champ.id < 0) continue;
+			var option = document.createElement("option");
+			option.text = champ.name;
+			option.value = champ.id.toLowerCase();
+			champSelect.add(option);
+
+			skinsByChampion[option.value] = champ.skins;
+
+			if (added) continue;
+			for (let skin of champ.skins) {
 				var option = document.createElement("option");
-				option.text = champ.name;
-				option.value = champ.id.toLowerCase();
-				champSelect.add(option);
-
-				skinsByChampion[option.value] = champ.skins;
-
-				if (added) continue;
-				for (let skin of champ.skins) {
-					var option = document.createElement("option");
-					option.text = skin.name;
-					option.value = skin.num;
-					skinSelect.add(option);
-				}
-
-				added = true;
+				option.text = skin.name;
+				option.value = skin.num;
+				skinSelect.add(option);
 			}
-		});
-	})
-	.catch(function(err) {
-		console.error("Fetch Error :-S", err);
+
+			added = true;
+		}
 	});
+})
+.catch(function(err) {
+	console.error("Fetch error:", err);
+});
 
 document.getElementById("champ-select").addEventListener("change", () => {
 	var champSelect = document.getElementById("champ-select");
@@ -94,42 +116,24 @@ function PlayAnimation() {
 	Module.PlayAnimation(skin.toLowerCase(), animation.toLowerCase());
 }
 
-var log = [];
-var statusElement = document.getElementById("status");
-var progressElement = document.getElementById("progress");
-var spinnerElement = document.getElementById("spinner");
 var Module = {
 	preRun: [],
 	postRun: [],
 	
-	print: (function() {
-		var element = document.getElementById("output");
-		if (element) element.value = ""; // clear browser cache
-		return function(text) {
-			if (arguments.length > 1)
-				text = Array.prototype.slice.call(arguments).join(" ");
-			// These replacements are necessary if you render to raw HTML
-			//text = text.replace(/&/g, "&amp;");
-			//text = text.replace(/</g, "&lt;");
-			//text = text.replace(/>/g, "&gt;");
-			//text = text.replace('\n', '<br>', 'g');
-			console.log(text);
-			if (element) {
-				element.value += text + "\n";
-				element.scrollTop = element.scrollHeight; // focus on bottom
-			}
-		};
-	})(),
+	print: function(text) {
+		if (arguments.length > 1)
+			text = Array.prototype.slice.call(arguments).join(" ");
+
+		console.log(text);
+		log.push(text);
+	},
 
 	printErr: function(text) {
 		if (arguments.length > 1)
 			text = Array.prototype.slice.call(arguments).join(" ");
-		if (0) {
-			// XXX disabled for safety typeof dump == 'function') {
-			dump(text + "\n"); // fast, straight to the real console
-		} else {
-			console.error(text);
-		}
+	
+		console.error(text);
+		log.push(text);
 	},
 
 	OnReady: function() {
