@@ -4,6 +4,7 @@
 #include <profiling.hpp>
 
 #include <cassert>
+#include <fstream>
 
 uint32_t FNV1Hash(const std::string& a_String);
 std::string GetStringByHash(uint32_t a_Hash);
@@ -154,6 +155,13 @@ std::string League::Bin::GetAsJSON() const
 	}
 
 	return t_Return + "}";
+}
+
+void League::Bin::SaveToFile(const char * a_FileName) const
+{
+	std::ofstream t_File(a_FileName);
+	t_File << GetAsJSON();
+	t_File.close();
 }
 
 std::vector<const League::BaseValueStorage*> League::Bin::Find(FindConditionFunction a_Function, void * a_UserData) const

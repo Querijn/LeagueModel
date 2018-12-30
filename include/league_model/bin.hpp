@@ -20,6 +20,7 @@ namespace League
 
 		void Load(const std::string& a_FilePath, OnLoadFunction a_OnLoadFunction = nullptr, void* a_Argument = nullptr);
 		std::string GetAsJSON() const;
+		void SaveToFile(const char* a_FileName) const;
 
 		File::LoadState GetLoadState() const { return m_State; }
 		const std::vector<std::string>& GetLinkedFiles() const { return m_LinkedFiles; }
