@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.8)
 project(LeagueModel)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-option(UseAsLibrary "Use LeagueModel as library" OFF)
+option(LEAGUE_MODEL_LIBRARY "Use LeagueModel as library" OFF)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(DirectX_D3DX9_LIBRARY OFF)
@@ -83,7 +83,9 @@ ADD_LEAGUEMODEL_SOURCE(Window\\EmscriptenWindow        "src/window/emscripten_wi
 ADD_LEAGUEMODEL_SOURCE(Window\\WindowsWindow           "src/window/windows_window.hpp"                            "src/window/windows_window.cpp")
 
 
-if (UseAsLibrary)
+if (LEAGUE_MODEL_LIBRARY)
+	add_library(LeagueModel ${LEAGUEMODEL_SOURCES})
+else (LEAGUE_MODEL_LIBRARY)
 	add_executable(LeagueModel ${LEAGUEMODEL_SOURCES})
 	set_target_properties(LeagueModel PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 	
@@ -92,6 +94,4 @@ if (UseAsLibrary)
 
 		add_custom_command(TARGET LeagueModel POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/libs" $<TARGET_FILE_DIR:LeagueModel>)
 	endif (WIN32)
-else (UseAsLibrary)
-	add_library(LeagueModel ${LEAGUEMODEL_SOURCES})
-endif (UseAsLibrary)
+endif (LEAGUE_MODEL_LIBRARY)
