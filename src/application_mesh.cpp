@@ -48,9 +48,12 @@ T FindNearestTime(const std::vector<League::Animation::Bone::Frame<T>>& a_Vector
 	auto t_Min = a_Vector[0];
 	auto t_Max = a_Vector[a_Vector.size() - 1];
 
-	for (int i = 0; i < a_Vector.size(); i++)
+	while (a_Index >= a_Vector.size())
+		a_Index -= a_Vector.size();
+
+	for (; a_Index < a_Vector.size(); a_Index++)
 	{
-		const auto& t_Current = a_Vector[i];
+		const auto& t_Current = a_Vector[a_Index];
 
 		if (t_Current.Time <= a_Time)
 		{
@@ -61,6 +64,8 @@ T FindNearestTime(const std::vector<League::Animation::Bone::Frame<T>>& a_Vector
 		t_Max = t_Current;
 		break;
 	}
+	
+	a_Index--;
 
 	float t_Div = t_Max.Time - t_Min.Time;
 	float t_LerpValue = (t_Div == 0) ? 1 : (a_Time - t_Min.Time) / t_Div;
