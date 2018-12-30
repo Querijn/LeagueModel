@@ -119,8 +119,17 @@ struct SkinLoadData
 	bool AnimationLoaded = false;
 	bool SkinLoaded = false;
 
-	bool PrepareEventsDone = false;
-	bool SkinDone = false;
+	struct PrepareEventArgsT
+	{
+		PrepareEventArgsT(std::string& a_AnimationName, const League::BaseValueStorage* a_ParentStorage) :
+			AnimationName(a_AnimationName),
+			ParentStorage(a_ParentStorage)
+		{}
+
+		std::string AnimationName;
+		const League::BaseValueStorage* ParentStorage;
+	};
+	std::vector<PrepareEventArgsT> PrepareEventArgs;
 
 	Application::Mesh* Target = nullptr;
 	League::Bin SkinBin;
@@ -230,6 +239,9 @@ void OnSkinAndAnimationBin(SkinLoadData& a_LoadData)
 		LM_DEL(&a_LoadData);
 		return;
 	}
+
+	for (auto t_PrepareEventArg : a_LoadData.PrepareEventArgs)
+		PrepareEvents(t_PrepareEventArg.AnimationName, *a_LoadData.Target, a_LoadData.SubMeshes, t_PrepareEventArg.ParentStorage);
 
 	printf("Loaded both skin and animation information. Loading an animation: %s\n", a_LoadData.AnimationName.c_str());
 	Application::Instance->LoadAnimation(*a_LoadData.Target, a_LoadData.AnimationName, [](League::Animation& a_Animation, void* a_UserData)
@@ -585,7 +597,7 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 			}
 
 			Application::Instance->AddAnimationReference(t_AnimationName);
-			PrepareEvents(t_AnimationName, *t_LoadData->Target, t_LoadData->SubMeshes, t_Parent);
+			t_LoadData->PrepareEventArgs.push_back(SkinLoadData::PrepareEventArgsT(t_AnimationName, t_Parent));
 		}
 
 		t_LoadData->AnimationLoaded = true;
