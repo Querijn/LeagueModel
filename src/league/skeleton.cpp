@@ -92,9 +92,13 @@ void League::Skeleton::Load(const std::string& a_FilePath, OnLoadFunction a_OnLo
 		case Skeleton::Type::Version2:
 			t_State = t_Skeleton->ReadVersion2(*a_File, t_Offset);
 			break;
+
+		default:
+			t_State = File::LoadState::FailedToLoad;
+			break;
 		};
 
-		printf("Skeleton was %s with %lu bones.\n", a_LoadState == File::LoadState::FailedToLoad ? "failed to load" : "loaded", t_Skeleton->m_Bones.size());
+		printf("Skeleton %s with %lu bones.\n", a_LoadState == File::LoadState::FailedToLoad ? "failed to load" : "was loaded", t_Skeleton->m_Bones.size());
 		t_Skeleton->m_State = t_State;
 		if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Skeleton, t_LoadData->Argument);
 
