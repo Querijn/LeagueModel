@@ -50,6 +50,11 @@ public:
 	std::map<std::string, std::vector<AnimationEvent*>> AnimationEvents;
 	std::string CurrentAnimation;
 
+	std::vector<glm::vec3> Positions;
+	std::vector<glm::vec3> Normals;
+	std::vector<glm::vec4> BoneIndices;
+	std::vector<glm::vec4> BoneWeights;
+
 	VertexBuffer<glm::vec3>* PositionBuffer;
 	VertexBuffer<glm::vec2>* UVBuffer;
 	VertexBuffer<glm::vec3>* NormalBuffer;

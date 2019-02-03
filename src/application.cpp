@@ -71,7 +71,7 @@ void Application::Init()
 	LoadShaders();
 
 #if defined(_WIN32)
-	LoadSkin("data/output/data/characters/aatrox/skins/skin1.bin", "data/output/data/characters/aatrox/animations/skin1.bin");
+	LoadSkin("data/output/data/characters/aatrox/skins/skin0.bin", "data/output/data/characters/aatrox/animations/skin0.bin");
 #endif
 
 	UpdateViewMatrix();
@@ -80,15 +80,15 @@ void Application::Init()
 	{
 		// FileSystem::CloseLoadedFiles();
 
-		double dt = Platform::GetTimeSinceStart() - g_LastTime;
-		Profiler::Frame t("BottomLoop", dt);
+		double t_Deltatime = Platform::GetTimeSinceStart() - g_LastTime;
+		Profiler::Frame t("BottomLoop", t_Deltatime);
 
 		g_LastTime = Platform::GetTimeSinceStart();
 
-		EventHandler::EmitEvent<UpdateEvent>(dt);
+		EventHandler::EmitEvent<UpdateEvent>(t_Deltatime);
 		EventHandler::Run();
 
-		return Instance->Update(dt); 
+		return Instance->Update(t_Deltatime); 
 	});
 
 #if defined(__EMSCRIPTEN__)
@@ -289,6 +289,8 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 			return;
 		}
 		printf("Skin information is loaded!\n");
+
+		a_Bin.SaveToFile("Ree.json");
 
 		auto t_MeshProperties = a_Bin.Get("skinMeshProperties");
 		if (!t_MeshProperties)
@@ -553,6 +555,8 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 			return;
 		}
 
+		a_Bin.SaveToFile("animation.json");
+
 		auto t_AnimationNames = a_Bin.Find([](const League::Bin::ValueStorage& a_ValueStorage, void* a_UserData)
 		{
 			if (a_ValueStorage.GetType() != League::Bin::ValueStorage::Type::String)
@@ -617,9 +621,9 @@ struct MeshLoadData
 	std::string SkinPath;
 	std::string SkeletonPath;
 	League::Skin SkinTarget;
-	League::Skeleton* SkeletonTarget;
-	Application::OnMeshLoadFunction OnLoadFunction;
-	void* Argument;
+	League::Skeleton* SkeletonTarget = nullptr;
+	Application::OnMeshLoadFunction OnLoadFunction = nullptr;
+	void* Argument = nullptr;
 };
 
 void Application::OnMeshLoad(MeshLoadData& a_LoadData)
@@ -630,9 +634,10 @@ void Application::OnMeshLoad(MeshLoadData& a_LoadData)
 
 	if (a_LoadData.SkinTarget.GetLoadState() != File::LoadState::Loaded)
 	{
-		if (a_LoadData.OnLoadFunction) a_LoadData.OnLoadFunction(a_LoadData.SkinPath, a_LoadData.SkeletonPath, nullptr, a_LoadData.SkinTarget, a_LoadData.Argument);
+		if (a_LoadData.OnLoadFunction) 
+			a_LoadData.OnLoadFunction(a_LoadData.SkinPath, a_LoadData.SkeletonPath, nullptr, a_LoadData.SkinTarget, a_LoadData.Argument);
+		delete a_LoadData.SkeletonTarget;
 		LM_DEL(&a_LoadData);
-		delete &a_LoadData.SkeletonTarget;
 		return;
 	}
 
@@ -660,11 +665,16 @@ void Application::OnMeshLoad(MeshLoadData& a_LoadData)
 	t_Mesh.BoneIndexBuffer = t_ShaderProgram.GetVertexBuffer<glm::vec4>("v_BoneIndices");
 	t_Mesh.BoneWeightBuffer = t_ShaderProgram.GetVertexBuffer<glm::vec4>("v_BoneWeights");
 
-	if (t_Mesh.PositionBuffer) t_Mesh.PositionBuffer->Upload(t_Skin.GetPositions());
-	if (t_Mesh.UVBuffer) t_Mesh.UVBuffer->Upload(t_Skin.GetUVs());
-	if (t_Mesh.NormalBuffer) t_Mesh.NormalBuffer->Upload(t_Skin.GetNormals());
-	if (t_Mesh.BoneWeightBuffer) t_Mesh.BoneWeightBuffer->Upload(t_Skin.GetWeights());
-	if (t_Mesh.BoneIndexBuffer) t_Mesh.BoneIndexBuffer->Upload(t_Skin.GetBoneIndices());
+	t_Mesh.Positions = t_Skin.GetPositions();
+	t_Mesh.Normals = t_Skin.GetNormals();
+	t_Mesh.BoneWeights = t_Skin.GetWeights();
+	t_Mesh.BoneIndices = t_Skin.GetBoneIndices();
+
+	if (t_Mesh.PositionBuffer) t_Mesh.PositionBuffer->Upload(t_Skin.GetPositions(), true);
+	if (t_Mesh.UVBuffer) t_Mesh.UVBuffer->Upload(t_Skin.GetUVs(), true);
+	if (t_Mesh.NormalBuffer) t_Mesh.NormalBuffer->Upload(t_Skin.GetNormals(), true);
+	if (t_Mesh.BoneWeightBuffer) t_Mesh.BoneWeightBuffer->Upload(t_Skin.GetWeights(), true);
+	if (t_Mesh.BoneIndexBuffer) t_Mesh.BoneIndexBuffer->Upload(t_Skin.GetBoneIndices(), true);
 
 	auto& t_BoundingBox = t_Skin.GetBoundingBox();
 	auto& t_SkinMeshes = t_Skin.GetMeshes();
@@ -705,10 +715,10 @@ void Application::LoadMesh(const std::string& a_SkinPath, const std::string& a_S
 	t_LoadData->SkeletonTarget->Load(a_SkeletonPath, [](League::Skeleton& a_Skeleton, void* a_Argument)
 	{
 		Profiler::Context t("Application::LoadMesh->LoadSkeleton");
-		auto& t_LoadData = *(MeshLoadData*)a_Argument;
+		auto* t_LoadData = (MeshLoadData*)a_Argument;
 
-		t_LoadData.SkeletonLoaded = true;
-		Application::Instance->OnMeshLoad(t_LoadData);
+		t_LoadData->SkeletonLoaded = true;
+		Application::Instance->OnMeshLoad(*t_LoadData);
 	}, t_LoadData);
 }
 
@@ -813,6 +823,11 @@ const std::string & Application::GetAssetRoot() const
 	return m_Root;
 }
 
+void Application::SetCPUSkinning(bool a_Use)
+{
+	m_UsingCPUSkinning = a_Use;
+}
+
 void Application::OnMouseDownEvent(const MouseDownEvent * a_Event)
 {
 	if (a_Event->Button != Mouse::Button::Left) return;
@@ -875,8 +890,24 @@ void Application::LoadShaders()
 {
 	Profiler::Context t(__FUNCTION__);
 
-	m_FragmentShader.Load("data/league_model.frag", [](Shader* a, void* b) { Instance->LoadShaderVariables(); });
-	m_VertexShader.Load("data/league_model.vert", [](Shader* a, void* b) { Instance->LoadShaderVariables(); });
+	m_FragmentShader.Load("data/league_model.frag", [](Shader& a, void* b) { Instance->LoadShaderVariables(); });
+
+	// Try to load normal 
+	m_VertexShader.Load("data/league_model.vert", [](Shader& a_VertexShader, void* b) 
+	{ 
+		if (a_VertexShader.GetLoadState() != File::LoadState::Loaded)
+		{
+			printf("Main shader failed to load, probably because it doesn't support a high number of uniforms, falling back to CPU skinning.\n");
+			a_VertexShader.Load("data/league_model_no_bones.vert", [](Shader& a_VertexShader, void* b)
+			{
+				Instance->SetCPUSkinning(a_VertexShader.GetLoadState() == File::LoadState::Loaded);
+				Instance->LoadShaderVariables();
+			});
+			return;
+		}
+
+		Instance->LoadShaderVariables();
+	});
 }
 
 void Application::LoadShaderVariables()
@@ -937,7 +968,16 @@ bool Application::Update(double a_DT)
 		*m_MVPUniform = m_ProjectionMatrix * m_ViewMatrix * glm::translate(t_DrawMesh.Center);
 
 		m_Time += a_DT;
-		t_DrawMesh.Draw(m_Time, m_ShaderProgram, *m_MVPUniform, m_TextureUniform ? &m_TextureUniform->Get() : nullptr, m_BoneArrayUniform ? &m_BoneArrayUniform->Get() : nullptr);
+
+		if (m_UsingCPUSkinning)
+		{
+			std::vector<glm::mat4> t_BoneArrayFallback;
+			t_DrawMesh.Draw(m_Time, m_ShaderProgram, *m_MVPUniform, m_TextureUniform ? &m_TextureUniform->Get() : nullptr, &t_BoneArrayFallback);
+		}
+		else
+		{
+			t_DrawMesh.Draw(m_Time, m_ShaderProgram, *m_MVPUniform, m_TextureUniform ? &m_TextureUniform->Get() : nullptr, m_BoneArrayUniform ? &m_BoneArrayUniform->Get() : nullptr);
+		}
 	}
 
 	{

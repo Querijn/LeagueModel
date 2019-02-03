@@ -42,6 +42,9 @@ public:
 	void SetAssetRoot(const std::string& a_AssetRoot);
 	const std::string& GetAssetRoot() const;
 
+	void SetCPUSkinning(bool a_Use);
+	bool IsUsingCPUSkinning() const { return m_UsingCPUSkinning; }
+
 private:
 	void OnMouseDownEvent(const MouseDownEvent* a_Event);
 	void OnMouseUp(const MouseUpEvent* a_Event);
@@ -69,6 +72,7 @@ private:
 	Shader m_VertexShader;
 	Shader m_FragmentShader;
 
+	bool m_UsingCPUSkinning = false;
 	ShaderVariable<glm::mat4>* m_MVPUniform = nullptr;
 	ShaderVariable<std::vector<glm::mat4>>* m_BoneArrayUniform = nullptr;
 	ShaderVariable<Texture>* m_TextureUniform = nullptr;

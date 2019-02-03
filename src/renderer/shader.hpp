@@ -6,7 +6,7 @@
 class Shader
 {
 public:
-	using OnLoadFunction = void(*)(Shader* a_Shader, void* a_Argument);
+	using OnLoadFunction = void(*)(Shader& a_Shader, void* a_Argument);
 	enum Type
 	{
 		Vertex = GL_VERTEX_SHADER,
@@ -20,7 +20,7 @@ public:
 
 	operator GLuint() const;
 
-	void LM_DEL();
+	void Delete();
 	
 	File::LoadState GetLoadState() const { return m_State; }
 

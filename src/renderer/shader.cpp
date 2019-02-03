@@ -12,7 +12,7 @@ Shader::Shader(Type a_Type) :
 
 Shader::~Shader()
 {
-	LM_DEL();
+	Delete();
 }
 
 void Shader::Load(const std::string& a_FilePath, Shader::OnLoadFunction a_OnLoadFunction, void * a_Argument)
@@ -38,7 +38,7 @@ void Shader::Load(const std::string& a_FilePath, Shader::OnLoadFunction a_OnLoad
 		if (a_LoadState != File::LoadState::Loaded)
 		{
 			t_Shader->m_State = a_LoadState;
-			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(t_Shader, t_LoadData->Argument);
+			if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Shader, t_LoadData->Argument);
 			return;
 		}
 
@@ -76,12 +76,12 @@ void Shader::Load(const std::string& a_FilePath, Shader::OnLoadFunction a_OnLoad
 		}
 
 		t_Shader->m_State = t_HasSucceeded ? File::LoadState::Loaded : File::LoadState::FailedToLoad;
-		if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(t_Shader, t_LoadData->Argument);
+		if (t_LoadData->OnLoadFunction) t_LoadData->OnLoadFunction(*t_Shader, t_LoadData->Argument);
 		delete t_LoadData;
 	}, t_LoadData);
 }
 
-void Shader::LM_DEL()
+void Shader::Delete()
 {
 	if (m_ID == (GLuint)-1) return;
 

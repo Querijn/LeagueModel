@@ -46,25 +46,32 @@ template<typename T>
 T FindNearestTime(const std::vector<League::Animation::Bone::Frame<T>>& a_Vector, float a_Time, size_t& a_Index)
 {
 	auto t_Min = a_Vector[0];
-	auto t_Max = a_Vector[a_Vector.size() - 1];
+	auto t_Max = a_Vector.back();
 
-	if (a_Time < a_Vector[a_Index].Time)
-		a_Index = 0;
-
-	a_Index = a_Index ? a_Index - 1 : 0;
-
-	for (; a_Index < a_Vector.size(); a_Index++)
+	if (a_Time > a_Vector.back().Time)
 	{
-		const auto& t_Current = a_Vector[a_Index];
+		t_Min = a_Vector[a_Vector.size() - 2];
+	}
+	else
+	{
+		if (a_Time < a_Vector[a_Index].Time)
+			a_Index = 0;
 
-		if (t_Current.Time <= a_Time)
+		a_Index = a_Index ? a_Index - 1 : 0;
+
+		for (; a_Index < a_Vector.size(); a_Index++)
 		{
-			t_Min = t_Current;
-			continue;
-		}
+			const auto& t_Current = a_Vector[a_Index];
 
-		t_Max = t_Current;
-		break;
+			if (t_Current.Time <= a_Time)
+			{
+				t_Min = t_Current;
+				continue;
+			}
+
+			t_Max = t_Current;
+			break;
+		}
 	}
 
 	float t_Div = t_Max.Time - t_Min.Time;
@@ -100,14 +107,6 @@ void ApplicationMesh::Draw(float a_Time, ShaderProgram& a_Program, glm::mat4& a_
 {
 	Profiler::Frame t(__FUNCTION__, a_Time);
 
-	a_Program.Use();
-
-	if (PositionBuffer) PositionBuffer->Use();
-	if (UVBuffer) UVBuffer->Use();
-	if (NormalBuffer) NormalBuffer->Use();
-	if (BoneIndexBuffer) BoneIndexBuffer->Use();
-	if (BoneWeightBuffer) BoneWeightBuffer->Use();
-
 	bool t_HasVisible = false;
 	for (auto& t_Submesh : SubMeshes)
 	{
@@ -121,7 +120,7 @@ void ApplicationMesh::Draw(float a_Time, ShaderProgram& a_Program, glm::mat4& a_
 	if (!t_HasVisible)
 		return;
 
-	if (Skeleton && a_BoneTransforms)
+	if (Skeleton)
 	{
 		const auto& t_AnimationIndex = Animations.find(CurrentAnimation);
 		if (t_AnimationIndex != Animations.end())
@@ -153,6 +152,42 @@ void ApplicationMesh::Draw(float a_Time, ShaderProgram& a_Program, glm::mat4& a_
 				a_BoneTransforms->at(i) = glm::identity<glm::mat4>();
 		}
 	}
+
+	a_Program.Use();
+
+	if (Application::Instance->IsUsingCPUSkinning())
+	{
+		std::vector<glm::vec3> t_Positions = Positions;
+		std::vector<glm::vec3> t_Normals = Normals;
+
+		for (int i = 0; i < Positions.size(); i++)
+		{
+			glm::vec3& t_TargetPos = t_Positions[i];
+			const glm::vec4& t_BoneIndices = BoneIndices[i];
+			const glm::vec4& t_BoneWeights = BoneWeights[i];
+
+			const auto& t_Bone = a_BoneTransforms->at((size_t)t_BoneIndices[0]);
+			const auto& t_Bone2 = a_BoneTransforms->at((size_t)t_BoneIndices[1]);
+			const auto& t_Bone3 = a_BoneTransforms->at((size_t)t_BoneIndices[2]);
+			const auto& t_Bone4 = a_BoneTransforms->at((size_t)t_BoneIndices[3]);
+
+			glm::mat4 BoneTransform = t_Bone * t_BoneWeights[0];
+			BoneTransform += t_Bone2 * t_BoneWeights[1];
+			BoneTransform += t_Bone3 * t_BoneWeights[2];
+			BoneTransform += t_Bone4 * t_BoneWeights[3];
+
+			t_TargetPos = BoneTransform * glm::vec4(t_TargetPos, 1.0);
+		}
+
+		if (PositionBuffer) PositionBuffer->Update(t_Positions);
+		if (NormalBuffer) NormalBuffer->Update(t_Normals);
+	}
+
+	if (PositionBuffer) PositionBuffer->Use();
+	if (UVBuffer) UVBuffer->Use();
+	if (NormalBuffer) NormalBuffer->Use();
+	if (BoneIndexBuffer) BoneIndexBuffer->Use();
+	if (BoneWeightBuffer) BoneWeightBuffer->Use();
 
 	for (auto& t_Submesh : SubMeshes)
 	{
