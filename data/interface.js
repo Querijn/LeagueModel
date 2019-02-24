@@ -42,10 +42,13 @@ function UploadLog() {
 	if (!confirm("This will send information from your browser and your recent log to https://irule.at.\n\nThings that this sends:\n- Your error log, everything caught during run-time that was reported with console.log, console.warn and console.error.\n- The navigator javascript object, to identify your device (https://developer.mozilla.org/en-US/docs/Web/API/Navigator)\n- The screen object, to identify your window state (https://developer.mozilla.org/en-US/docs/Web/API/Screen)\n\nIf you are not okay with this, you can click cancel below. Otherwise this information is stored for 3 months."))
 		return;
 	
+	var reason = prompt("What went wrong?");
+	
 	var nav = {}, view = {};
 	for (var i in navigator) nav[i] = navigator[i];
 	for (var i in screen) view[i] = screen[i];
 	var blob = new Blob([JSON.stringify({
+		reason: reason,
 		log: log,
 		screen: view,
 		navigator: nav
@@ -82,7 +85,6 @@ fetch("data/small-summary.json")
 
 		let added = false;
 		for (let champ of data) {
-			if (champ.id < 0) continue;
 			var option = document.createElement("option");
 			option.text = champ.name;
 			option.value = champ.id.toLowerCase();
@@ -129,10 +131,26 @@ function LoadSkin() {
 	var skinSelect = document.getElementById("skin-select");
 	var champ = champSelect.options[champSelect.selectedIndex].value.toLowerCase();
 	var skin = skinSelect.options[skinSelect.selectedIndex].value;
-	Module.LoadSkin(
-		`data/output/data/characters/${champ}/skins/skin${skin}.bin`,
-		`data/output/data/characters/${champ}/animations/skin${skin}.bin`
-	);
+	
+	fetch(`data/output/data/characters/${champ}/animations/skin${skin}.bin`, { method: 'HEAD' })
+	.then(response => {
+		
+		var animationSkin = (response.status == 200) ? skin : 0;
+
+		Module.LoadSkin(
+			`data/output/data/characters/${champ}/skins/skin${skin}.bin`,
+			`data/output/data/characters/${champ}/animations/skin${animationSkin}.bin`
+		);
+	})
+	.catch(error => {
+	    console.error(`Error occurred trying to load animations/skin${skin}.bin: ${error}`);
+		Module.LoadSkin(
+			`data/output/data/characters/${champ}/skins/skin${skin}.bin`,
+			`data/output/data/characters/${champ}/animations/skin0.bin`
+		);
+	});
+	
+	
 }
 
 function SetupAnimationHTML() {
