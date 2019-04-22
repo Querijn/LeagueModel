@@ -230,8 +230,16 @@ void ApplicationMesh::SubMesh::SetTexture(const std::string& a_FilePath)
 {
 	Profiler::Context t(__FUNCTION__);
 
-	printf("Attempting to set texture '%s' for this submesh\n", a_FilePath.c_str());
-	Image.Load(a_FilePath, [](Texture& a_Texture, void* a_UserData)
+	std::string t_FilePath = a_FilePath;
+	static const std::string t_PNG = "png";
+	size_t i = t_FilePath.rfind('.', t_FilePath.length());
+
+	if (i != std::string::npos) {
+		t_FilePath.replace(i + 1, t_PNG.length(), t_PNG);
+	}
+
+	printf("Attempting to set texture '%s' for this submesh\n", t_FilePath.c_str());
+	Image.Load(t_FilePath, [](Texture& a_Texture, void* a_UserData)
 	{
 		Profiler::Context t("ApplicationMesh::SubMesh::SetTexture->OnLoad");
 
