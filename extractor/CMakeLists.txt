@@ -38,8 +38,8 @@ set_target_properties(zlibstatic PROPERTIES FOLDER Libraries/zlib)
 set_target_properties(uninstall PROPERTIES FOLDER Libraries/zlib)
 
 set_target_properties("clean-all" PROPERTIES FOLDER Libraries/zstd)
-set_target_properties(zstd PROPERTIES FOLDER Libraries/zstd)
-set_target_properties(libzstd_shared PROPERTIES FOLDER Libraries/zstd)
+#set_target_properties(zstd PROPERTIES FOLDER Libraries/zstd)
+#set_target_properties(libzstd_shared PROPERTIES FOLDER Libraries/zstd)
 set_target_properties(libzstd_static PROPERTIES FOLDER Libraries/zstd)
 
 #local includes
@@ -48,6 +48,7 @@ include_directories("external/LeagueModel/include")
 
 ADD_LEAGUE_EXTRACT_SOURCE(Application	""							"src/main.cpp")
 ADD_LEAGUE_EXTRACT_SOURCE(WAD			"src/wad_file.hpp"			"src/wad_file.cpp")
+ADD_LEAGUE_EXTRACT_SOURCE(DDS			"src/ddsreader.hpp"			"src/ddsreader.cpp")
 
 add_executable(LeagueExtract ${LEAGUE_EXTRACT_SOURCES})
 set_target_properties(LeagueExtract PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")

@@ -5,6 +5,12 @@
 #include <direct.h>
 #endif
 
+#include "ddsreader.hpp"
+
+#define STBI_MSC_SECURE_CRT
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 extern "C"
 {
 	#define ZSTD_STATIC_LINKING_ONLY
@@ -233,6 +239,32 @@ bool WAD::ExtractFile(const char * a_FileName, const char* a_Destination)
 	t_OutputFile.open(t_FileName, std::ios::binary | std::ios::out);
 	t_OutputFile.write((const char*)t_Result.data(), t_Result.size());
 	t_OutputFile.close();
+
+	auto t_FileNameLength = (int)strlen(t_FileName) - (int)strlen("dds");
+
+	if (t_FileNameLength > 0)
+	{
+		char* t_DDS = t_FileName + t_FileNameLength;
+		if (t_DDS[0] != 'd' && t_DDS[0] != 'D') return true;
+		if (t_DDS[1] != 'd' && t_DDS[1] != 'D') return true;
+		if (t_DDS[2] != 's' && t_DDS[2] != 'S') return true;
+
+		auto t_Image = read_dds(t_Result);
+
+		for (int i = 0; i < t_Image.data.size(); i += 4)
+		{
+			uint8_t red = t_Image.data[i];
+			t_Image.data[i] = t_Image.data[i + 2];
+			t_Image.data[i + 2] = red;
+		}
+
+		t_DDS[0] = 'p';
+		t_DDS[1] = 'n';
+		t_DDS[2] = 'g';
+
+		stbi_write_png(t_FileName, t_Image.width, t_Image.height, 4, t_Image.data.data(), 0);
+	}
+
 	return true;
 }
 
