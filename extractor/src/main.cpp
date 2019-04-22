@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
 			std::string t_Skeleton = t_SkeletonValue->Get();
 			t_Destination = g_Output + t_Skeleton;
 			t_WadFile.ExtractFile(t_Skeleton.c_str(), t_Destination.c_str());
-			if (g_OutputMessages) printf("Extracting skeleton '%s'", t_Skeleton.c_str());
+			if (g_OutputMessages) printf("Extracting skeleton '%s'\n", t_Skeleton.c_str());
 
 			// Get the skin file
 			auto t_SkinValue = (const League::StringValueStorage*)t_MeshProperties->GetChild("simpleSkin");
@@ -143,7 +143,7 @@ int main(int argc, char* argv[])
 			std::string t_Skin = t_SkinValue->Get();
 			t_Destination = g_Output + t_Skin;
 			t_WadFile.ExtractFile(t_Skin.c_str(), t_Destination.c_str());
-			if (g_OutputMessages) printf("Extracting skin '%s'", t_Skin.c_str());
+			if (g_OutputMessages) printf("Extracting skin '%s'\n", t_Skin.c_str());
 
 			// Get the texture file
 			auto t_TextureValue = (const League::StringValueStorage*)t_MeshProperties->GetChild("texture");
@@ -154,31 +154,34 @@ int main(int argc, char* argv[])
 				if (t_MaterialHash != nullptr)
 				{
 					auto t_MaterialDefinition = SkinBin.GetTopLevel(t_MaterialHash->GetData());
-					for (auto& t_MatDefMember : *t_MaterialDefinition)
+					if (t_MaterialDefinition != nullptr)
 					{
-						if (t_MatDefMember->GetType() != League::Bin::ValueStorage::Container)
-							continue;
-
-						const auto& t_Array = ((const League::ContainerValueStorage*)t_MatDefMember)->Get();
-						for (int i = 0; i < t_Array.size(); i++)
+						for (auto& t_MatDefMember : *t_MaterialDefinition)
 						{
-							const auto& t_Struct = ((const League::StructValueStorage*)t_Array[i]);
-							auto t_Results = t_Struct->Find([](const League::BaseValueStorage& a_Value, void* a_UserData)
-							{
-								if (a_Value.GetType() != League::BaseValueStorage::Type::String)
-									return false;
-
-								auto t_Value = ((const League::StringValueStorage&)a_Value).Get();
-								return t_Value == "Diffuse_Texture";
-							});
-
-							if (t_Results.size() == 0)
+							if (t_MatDefMember->GetType() != League::Bin::ValueStorage::Container)
 								continue;
 
-							auto t_TextureStorage = t_Results[0]->GetParent()->GetChild("textureName");
-							t_Texture = t_TextureStorage->DebugPrint();
-							t_Destination = g_Output + t_Texture;
-							break;
+							const auto& t_Array = ((const League::ContainerValueStorage*)t_MatDefMember)->Get();
+							for (int i = 0; i < t_Array.size(); i++)
+							{
+								const auto& t_Struct = ((const League::StructValueStorage*)t_Array[i]);
+								auto t_Results = t_Struct->Find([](const League::BaseValueStorage& a_Value, void* a_UserData)
+									{
+										if (a_Value.GetType() != League::BaseValueStorage::Type::String)
+											return false;
+
+										auto t_Value = ((const League::StringValueStorage&)a_Value).Get();
+										return t_Value == "Diffuse_Texture";
+									});
+
+								if (t_Results.size() == 0)
+									continue;
+
+								auto t_TextureStorage = t_Results[0]->GetParent()->GetChild("textureName");
+								t_Texture = t_TextureStorage->DebugPrint();
+								t_Destination = g_Output + t_Texture;
+								break;
+							}
 						}
 					}
 				}
@@ -189,7 +192,7 @@ int main(int argc, char* argv[])
 			{
 				t_Destination = g_Output + t_Texture;
 				t_WadFile.ExtractFile(t_Texture.c_str(), t_Destination.c_str());
-				if (g_OutputMessages) printf("Extracting texture '%s'", t_Skin.c_str());
+				if (g_OutputMessages) printf("Extracting texture '%s'\n", t_Skin.c_str());
 			}
 
 			const League::BaseValueStorage* t_MaterialOverrides = nullptr;
@@ -263,7 +266,7 @@ int main(int argc, char* argv[])
 
 								t_Destination = g_Output + t_Texture;
 								t_WadFile.ExtractFile(t_Texture.c_str(), t_Destination.c_str());
-								if (g_OutputMessages) printf("Extracting texture '%s'", t_Skin.c_str());
+								if (g_OutputMessages) printf("Extracting texture '%s'\n", t_Skin.c_str());
 								break;
 							}
 							break;
