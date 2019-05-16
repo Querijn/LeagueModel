@@ -227,6 +227,11 @@ var Module = {
 			},
 			false
 		);
+		
+		var devicePixelRatio = window.devicePixelRatio || 1;
+		console.log("Device pixel ratio: " + devicePixelRatio);
+		canvas.width = canvas.clientWidth * devicePixelRatio;
+		canvas.height = canvas.clientHeight * devicePixelRatio;
 		return canvas;
 	})()
 };

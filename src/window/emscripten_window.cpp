@@ -9,10 +9,10 @@
 
 #include <iostream>
 
-EM_BOOL OnMouseMove(int eventType, const EmscriptenMouseEvent *e, void *userData)
+EM_BOOL OnMouseMove(int a_EventType, const EmscriptenMouseEvent *a_Event, void *a_UserData)
 {
 	Mouse::Button t_Button;
-	switch (e->button)
+	switch (a_Event->button)
 	{
 	default:
 	case 0:
@@ -26,32 +26,32 @@ EM_BOOL OnMouseMove(int eventType, const EmscriptenMouseEvent *e, void *userData
 		break;
 	}
 
-	switch (eventType)
+	switch (a_EventType)
 	{
 	case EMSCRIPTEN_EVENT_MOUSEDOWN:
-		EventHandler::EmitEvent<MouseDownEvent>(t_Button, e->canvasX, e->canvasY);
+		EventHandler::EmitEvent<MouseDownEvent>(t_Button, a_Event->canvasX, a_Event->canvasY);
 		break;
 
 	case EMSCRIPTEN_EVENT_MOUSEUP:
-		EventHandler::EmitEvent<MouseUpEvent>(t_Button, e->canvasX, e->canvasY);
+		EventHandler::EmitEvent<MouseUpEvent>(t_Button, a_Event->canvasX, a_Event->canvasY);
 		break;
 
 	case EMSCRIPTEN_EVENT_MOUSEMOVE:
-		EventHandler::EmitEvent<PointerMoveEvent>(0, e->canvasX, e->canvasY);
+		EventHandler::EmitEvent<PointerMoveEvent>(0, a_Event->canvasX, a_Event->canvasY);
 		break;
 	}
 
 	return 0;
 }
 
-EM_BOOL OnTouchCallback(int eventType, const EmscriptenTouchEvent *e, void *userData)
+EM_BOOL OnTouchCallback(int a_EventType, const EmscriptenTouchEvent *a_Event, void *a_UserData)
 {
-	for (int i = 0; i < e->numTouches; ++i)
+	for (int i = 0; i < a_Event->numTouches; ++i)
 	{
-		const EmscriptenTouchPoint *t = &e->touches[i];
+		const EmscriptenTouchPoint *t = &a_Event->touches[i];
 		if (!t->isChanged) continue;
 
-		switch (eventType)
+		switch (a_EventType)
 		{
 		case EMSCRIPTEN_EVENT_TOUCHSTART:
 			EventHandler::EmitEvent<PointerDownEvent>(t->identifier, t->canvasX, t->canvasY);
@@ -71,6 +71,15 @@ EM_BOOL OnTouchCallback(int eventType, const EmscriptenTouchEvent *e, void *user
 	return 0;
 }
 
+void EmscriptenWindow::Resize(size_t a_Width, size_t a_Height)
+{
+	printf("Resized window to width/height: %zu, %zu\n", a_Width, a_Height);
+	m_Width = a_Width * 0.8;
+	m_Height = a_Height;
+	EventHandler::EmitEvent<WindowResizeEvent>(m_Width, m_Height);
+	emscripten_set_canvas_element_size("canvas", m_Width, m_Height);
+}
+
 EmscriptenWindow::EmscriptenWindow(const WindowSettings & a_WindowSettings) :
 	BaseWindow(a_WindowSettings)
 {
@@ -78,7 +87,18 @@ EmscriptenWindow::EmscriptenWindow(const WindowSettings & a_WindowSettings) :
 	emscripten_webgl_init_context_attributes(&t_Attributes);
 	EMSCRIPTEN_WEBGL_CONTEXT_HANDLE t_Context = emscripten_webgl_create_context(0, &t_Attributes);
 	emscripten_webgl_make_context_current(t_Context);
-	emscripten_set_canvas_element_size("canvas", a_WindowSettings.Width, a_WindowSettings.Height);
+
+	int t_Width;
+	int t_Height;
+	emscripten_get_canvas_element_size("canvas", &t_Width, &t_Height);
+	Resize(t_Width, t_Height);
+
+	emscripten_set_resize_callback(nullptr, this, 1, [](int a_EventType, const EmscriptenUiEvent *a_Event, void *a_UserData)
+	{
+		EmscriptenWindow* t_Window = (EmscriptenWindow*)a_UserData;
+		t_Window->Resize(a_Event->windowInnerWidth, a_Event->windowInnerHeight);
+		return 0;
+	});
 	
 	emscripten_set_mousedown_callback("#canvas", this, 1, OnMouseMove);
 	emscripten_set_mouseup_callback("#canvas", this, 1, OnMouseMove);
@@ -89,9 +109,9 @@ EmscriptenWindow::EmscriptenWindow(const WindowSettings & a_WindowSettings) :
 	emscripten_set_touchmove_callback("#canvas", this, 1, OnTouchCallback);
 	emscripten_set_touchcancel_callback("#canvas", this, 1, OnTouchCallback);
 
-	emscripten_set_wheel_callback("#canvas", this, 1, [](int eventType, const EmscriptenWheelEvent *e, void *userData)
+	emscripten_set_wheel_callback("#canvas", this, 1, [](int a_EventType, const EmscriptenWheelEvent *a_Event, void *a_UserData)
 	{
-		EventHandler::EmitEvent<MouseScrollEvent>(-e->deltaY);
+		EventHandler::EmitEvent<MouseScrollEvent>(-a_Event->deltaY);
 		return 0;
 	});
 }

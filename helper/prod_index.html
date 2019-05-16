@@ -1,20 +1,78 @@
 <html>
-	<head>
-		<title>LeagueModel</title>
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<body>
-		<canvas id='canvas' width='256' height='256'></canvas><br />
-		<br />
-		Skin: <select id="champ-select"></select>
-		<select id="skin-select"></select>
-		<button onclick='LoadSkin();'>Load Skin</button><br />
-		<br />
-		Animation: <select id="animation-select"></select>
-		<button onclick='PlayAnimation();'>Play Animation</button><br />
-		<br />
-		<button onclick='UploadLog();'>Report Bug</button><br />
+  <head>
+    <title>LeagueModel</title>
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1, maximum-scale=1, user-scalable=0"
+    />
+    <link rel="stylesheet" href="data/main.css" />
+  </head>
 
-		<script src="data/interface.js"></script>
-		{{{ SCRIPT }}}
-	</body>
+  <body>
+    <canvas id="canvas" width="100" height="100"></canvas>
+    <input id="burger" type="checkbox" />
+    <label for="burger">
+      <span></span>
+      <span></span>
+      <span></span>
+    </label>
+    <div class="sidebar">
+      <h1>Skin</h1>
+      <div style="text-align: center;">
+        <select id="champ-select">
+          <option value="0"> Select champion</option>
+        </select>
+      </div>
+      <div style="text-align: center;">
+        <select id="skin-select">
+          <option value="0">Select skin </option>
+        </select>
+      </div>
+      <div style="text-align:center">
+        <button onclick="LoadSkin();" class="squareRoundedBtn">
+          Load Skin
+        </button>
+      </div>
+      <h1>Animation</h1>
+      <div style="text-align: center;">
+        <select id="animation-select">
+          <option value="0">Select Animation</option>
+        </select>
+      </div>
+      <div style="text-align:center">
+        <button onclick="PlayAnimation();" class="squareRoundedBtn">
+          Play Animation
+        </button>
+      </div>
+      <!-- <h1>Settings</h1> -->
+      <!-- <h4>Render Resolution</h4> -->
+      <!-- <div class="slidecontainer"> -->
+        <!-- <input -->
+          <!-- type="range" -->
+          <!-- min="50" -->
+          <!-- max="125" -->
+          <!-- value="50" -->
+          <!-- class="slider" -->
+          <!-- id="range" -->
+          <!-- onclick="changePerc()" -->
+        <!-- /> -->
+      <!-- </div> -->
+      <!-- <p><span id="percentage"></span>%</p> -->
+      <!-- <h4>Show/Hide Sub-Meshes</h4> -->
+      <!-- <div> -->
+        <!-- <label class="switch"> -->
+          <!-- <input type="checkbox" /> -->
+          <!-- <span class="toggle round"></span> -->
+        <!-- </label> -->
+      <!-- </div> -->
+      <div style="text-align:center">
+        <button onclick="UploadLog();" class="squareRoundedBtn specialBtn">
+          Report Bug
+        </button>
+      </div>
+    </div>
+
+    <script src="data/interface.js"></script>
+    {{{ SCRIPT }}}
+  </body>
 </html>

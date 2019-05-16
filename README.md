@@ -1,4 +1,4 @@
-# LeagueModel
+﻿# LeagueModel
 An application to display League of Legends models on Windows and Web. You can find it at https://irule.at/models
 
 ## How do I use it?
@@ -34,3 +34,4 @@ For web:
 - The CDragon people (Stelar7, Le Poussin), for helping me out decyphering these files.
 - Literally [this video](https://www.youtube.com/watch?v=F-kcaonjHf8) for fixing my animations. Thanks, ThinMatrix.
 - Everyone that had a model viewer for me to compare my output against.
+- [Radu Pașparugă](https://radupasparuga.github.io/) for the HTML/CSS redesign!

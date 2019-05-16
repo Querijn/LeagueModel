@@ -14,17 +14,19 @@ public:
 	EmscriptenWindow(const WindowSettings& a_WindowSettings);
 	~EmscriptenWindow();
 
+	void Resize(size_t a_Width, size_t a_Height);
+
 	bool HasFocus();
 
 	bool RunFrame();
 	void SwapBuffers();
 
-	// TODO
-	size_t GetWidth() const { return 800; }
-	size_t GetHeight() const { return 600; }
+	size_t GetWidth() const { return m_Width; }
+	size_t GetHeight() const { return m_Height; }
 
 private:
 	bool m_MouseIsInside = false;
+	size_t m_Width, m_Height;
 };
 
 #endif
