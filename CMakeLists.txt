@@ -87,7 +87,5 @@ else (LEAGUE_MODEL_LIBRARY)
 	
 	if (WIN32)
 		target_link_libraries(LeagueModel opengl32)
-
-		add_custom_command(TARGET LeagueModel POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/libs" $<TARGET_FILE_DIR:LeagueModel>)
 	endif (WIN32)
 endif (LEAGUE_MODEL_LIBRARY)
