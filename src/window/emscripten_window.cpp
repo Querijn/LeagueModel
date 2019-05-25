@@ -74,10 +74,10 @@ EM_BOOL OnTouchCallback(int a_EventType, const EmscriptenTouchEvent *a_Event, vo
 void EmscriptenWindow::Resize(size_t a_Width, size_t a_Height)
 {
 	printf("Resized window to width/height: %zu, %zu\n", a_Width, a_Height);
-	m_Width = a_Width * 0.8;
+	m_Width = a_Width;
 	m_Height = a_Height;
 	EventHandler::EmitEvent<WindowResizeEvent>(m_Width, m_Height);
-	emscripten_set_canvas_element_size("canvas", m_Width, m_Height);
+	// emscripten_set_canvas_element_size("canvas", m_Width, m_Height);
 }
 
 EmscriptenWindow::EmscriptenWindow(const WindowSettings & a_WindowSettings) :
@@ -88,7 +88,7 @@ EmscriptenWindow::EmscriptenWindow(const WindowSettings & a_WindowSettings) :
 	EMSCRIPTEN_WEBGL_CONTEXT_HANDLE t_Context = emscripten_webgl_create_context(0, &t_Attributes);
 	emscripten_webgl_make_context_current(t_Context);
 
-	int t_Width;
+	/*int t_Width;
 	int t_Height;
 	emscripten_get_canvas_element_size("canvas", &t_Width, &t_Height);
 	Resize(t_Width, t_Height);
@@ -98,7 +98,7 @@ EmscriptenWindow::EmscriptenWindow(const WindowSettings & a_WindowSettings) :
 		EmscriptenWindow* t_Window = (EmscriptenWindow*)a_UserData;
 		t_Window->Resize(a_Event->windowInnerWidth, a_Event->windowInnerHeight);
 		return 0;
-	});
+	});*/
 	
 	emscripten_set_mousedown_callback("#canvas", this, 1, OnMouseMove);
 	emscripten_set_mouseup_callback("#canvas", this, 1, OnMouseMove);
