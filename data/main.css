@@ -15,7 +15,7 @@ html {
   height: 34px;
 }
 
-.switch input { 
+.switch input {
   opacity: 0;
   width: 0;
   height: 0;
@@ -71,20 +71,14 @@ input:checked + .toggle:before {
 /* End of custom css for toggle */
 
 /* Custom css for select */
-.sidebar * {
-  text-align: center;
-}
-
 select {
   appearance: none;
   -moz-appearance: none;
   -webkit-appearance: none;
-  text-indent: 0.01px;
   text-overflow: '';
   padding: .7em 3em .7em 1em;
   /* Targetting Webkit browsers only. FF will show the dropdown arrow with so much padding. */
   border: 1px solid white;
-  border-radius: 0;
   background-color: #333;
   color: white;
   outline: none;
@@ -128,14 +122,14 @@ select::-ms-expand {
   opacity: 1; /* Fully shown on mouse-over */
 }
 
-/* The slider handle (use -webkit- (Chrome, Opera, Safari, Edge) and -moz- (Firefox) to override default look) */ 
+/* The slider handle (use -webkit- (Chrome, Opera, Safari, Edge) and -moz- (Firefox) to override default look) */
 .slider::-webkit-slider-thumb {
   -webkit-appearance: none; /* Override default look */
   appearance: none;
   width: 25px; /* Set a specific slider handle width */
   height: 25px; /* Slider handle height */
   border-radius: 50%;
-  background: #333; 
+  background: #333;
   cursor: pointer; /* Cursor on hover */
 }
 
@@ -150,7 +144,6 @@ select::-ms-expand {
 
 #canvas {
   position: absolute;
-  z-index: 0;
   height: 100%;
   right:0;
   width: 80vw;
@@ -204,23 +197,20 @@ select::-ms-expand {
 }
 
 .sidebar * {
-  text-align:center;
+  text-align: center;
 }
 
 #burger {
-  display:none;
+  display: none;
 }
 
 body nav ul {
-  display:none;
+  display: none;
   list-style-type: none;
 }
 @media screen and (max-width: 700px) {
   #canvas {
     width: 100vw;
-  }
-  .sidebar{
-    display:none;
   }
   .specialBtn {
     bottom: 0;
@@ -228,26 +218,17 @@ body nav ul {
   }
   body input + label {
     position: fixed;
-    top: 40px;
-    right: 40px;
-    height: 20px;
-    width: 15px;
-    z-index: 5;
-  }
-  body input + label {
-    position: fixed;
-    top: 40px;
+    top: 35px;
     left: 40px;
     height: 20px;
     width: 15px;
-    z-index: 5;
+    z-index: 1;
   }
   body input + label span {
     position: absolute;
     width: 100%;
     height: 2px;
     top: 50%;
-    margin-top: -1px;
     left: 0;
     display: block;
     background: #020304;
@@ -276,36 +257,16 @@ body nav ul {
   }
   body input ~ .sidebar {
     background: white;
-    position: fixed;
-    top: 0;
-    left: 0;
+    right: 100%;
     width: 100%;
-    height: 100%;
-    z-index: 3;
-    transition: .5s;
-    transition-delay: .5s;
-    overflow: hidden;
+    transition: .25s;
   }
   body input ~ .sidebar  {
-    overflow:scroll;
-    text-align: center;
-    left: 20%;
-    right: 20%;
-  }
-  body input ~ .sidebar > * {
-    opacity: 0;
-    transition: .5s;
-    transition-delay: 0s;
+    overflow: scroll;
   }
   body input:checked ~ .sidebar {
-    display:block;
-    left: 0;
-    height: 100%;
-    transition-delay: 0s;
+    right: 0;
+    display: block;
+    transition: .45s;
   }
-  body input:checked ~ .sidebar > * {
-    opacity: 1;
-    transition-delay: .5s;
-  }
-  
 }
