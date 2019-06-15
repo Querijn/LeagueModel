@@ -77,7 +77,7 @@ void Application::Init()
 
 	UpdateViewMatrix();
 
-	Platform::SetMainLoop([]() 
+	Platform::SetMainLoop([]()
 	{
 		// FileSystem::CloseLoadedFiles();
 
@@ -89,7 +89,7 @@ void Application::Init()
 		EventHandler::EmitEvent<UpdateEvent>(t_Deltatime);
 		EventHandler::Run();
 
-		return Instance->Update(t_Deltatime); 
+		return Instance->Update(t_Deltatime);
 	});
 
 #if defined(__EMSCRIPTEN__)
@@ -99,7 +99,7 @@ void Application::Init()
 
 struct SkinLoadData
 {
-	SkinLoadData(const std::string& a_AnimationBinPath) : AnimationBinPath(a_AnimationBinPath) 
+	SkinLoadData(const std::string& a_AnimationBinPath) : AnimationBinPath(a_AnimationBinPath)
 	{
 #if defined(__EMSCRIPTEN__)
 		Unready();
@@ -232,7 +232,7 @@ void OnSkinAndAnimationBin(SkinLoadData& a_LoadData)
 {
 	Profiler::Context t(__FUNCTION__);
 	if (a_LoadData.AnimationLoaded == false || a_LoadData.SkinLoaded == false) return;
-	
+
 	if (a_LoadData.Target == nullptr)
 	{
 		printf("Callback for LoadSkin was called but target was unset, did we get an error?\n");
@@ -286,7 +286,7 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 			printf("Skin information bin %s!\n", a_Bin.GetLoadState() != File::LoadState::FailedToLoad ? "was not found" : "failed to load");
 
 			t_LoadData->SkinLoaded = true;
-			OnSkinAndAnimationBin(*t_LoadData); 
+			OnSkinAndAnimationBin(*t_LoadData);
 			return;
 		}
 		printf("Skin information is loaded!\n");
@@ -366,7 +366,7 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 		}
 
 		printf("Starting to load the mesh..\n");
-		
+
 		// Load the mesh (Skeleton + Skin)
 		Application::Instance->LoadMesh(t_Skin, t_Skeleton, [](const std::string& a_SkinPath, const std::string& a_SkeletonPath, Application::Mesh* a_Mesh, League::Skin& a_Skin, void* a_UserData)
 		{
@@ -396,7 +396,7 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 					for (size_t i = 0; i < t_String.size(); )
 					{
 						size_t t_Index = t_String.find(' ', i);
-						if (t_Index == std::string::npos) 
+						if (t_Index == std::string::npos)
 							t_Index = t_String.size();
 
 						auto t_Mesh = t_String.substr(i, t_Index - i);
@@ -486,7 +486,7 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 							printf("Material ID was set as %u but I could not find it!\n", t_MaterialID->Get());
 							continue;
 						}
-						
+
 						for (auto& t_MatDefMember : *t_MaterialDefinition)
 						{
 							if (t_MatDefMember->GetType() != League::Bin::ValueStorage::Container)
@@ -496,13 +496,13 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 							for (int i = 0; i < t_Array.size(); i++)
 							{
 								const auto& t_Struct = ((const League::StructValueStorage*)t_Array[i]);
-								auto t_Results = t_Struct->Find([](const League::BaseValueStorage& a_Value, void* a_UserData) 
-								{ 
+								auto t_Results = t_Struct->Find([](const League::BaseValueStorage& a_Value, void* a_UserData)
+								{
 									if (a_Value.GetType() != League::BaseValueStorage::Type::String)
 										return false;
 
 									auto t_Value = ((const League::StringValueStorage&)a_Value).Get();
-									return t_Value == "Diffuse_Texture"; 
+									return t_Value == "Diffuse_Texture";
 								});
 
 								if (t_Results.size() == 0)
@@ -548,6 +548,7 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 	{
 		Profiler::Context t("Application::LoadSkin->LoadAnimationBin");
 
+		Application:Instance->m_AvailableAnimations.clear();
 		auto* t_LoadData = (SkinLoadData*)a_UserData;
 		if (a_Bin.GetLoadState() != File::LoadState::Loaded)
 		{
@@ -562,7 +563,7 @@ void Application::LoadSkin(const std::string& a_BinPath, const std::string& a_An
 		{
 			if (a_ValueStorage.GetType() != League::Bin::ValueStorage::Type::String)
 				return false;
-			
+
 			return a_ValueStorage.Is("mAnimationFilePath");
 		});
 		auto t_Name = t_AnimationNames.size() > 0 ? t_AnimationNames[0]->DebugPrint() : "";
@@ -635,7 +636,7 @@ void Application::OnMeshLoad(MeshLoadData& a_LoadData)
 
 	if (a_LoadData.SkinTarget.GetLoadState() != File::LoadState::Loaded)
 	{
-		if (a_LoadData.OnLoadFunction) 
+		if (a_LoadData.OnLoadFunction)
 			a_LoadData.OnLoadFunction(a_LoadData.SkinPath, a_LoadData.SkeletonPath, nullptr, a_LoadData.SkinTarget, a_LoadData.Argument);
 		delete a_LoadData.SkeletonTarget;
 		LM_DEL(&a_LoadData);
@@ -700,7 +701,6 @@ void Application::LoadMesh(const std::string& a_SkinPath, const std::string& a_S
 {
 	Profiler::Context t(__FUNCTION__);
 	m_Meshes.clear();
-	m_AvailableAnimations.clear();
 
 	auto* t_LoadData = LM_NEW(MeshLoadData(a_SkinPath, a_SkeletonPath, a_OnLoadFunction, a_UserData));
 
@@ -893,9 +893,9 @@ void Application::LoadShaders()
 
 	m_FragmentShader.Load("data/league_model.frag", [](Shader& a, void* b) { Instance->LoadShaderVariables(); });
 
-	// Try to load normal 
-	m_VertexShader.Load("data/league_model.vert", [](Shader& a_VertexShader, void* b) 
-	{ 
+	// Try to load normal
+	m_VertexShader.Load("data/league_model.vert", [](Shader& a_VertexShader, void* b)
+	{
 		if (a_VertexShader.GetLoadState() != File::LoadState::Loaded)
 		{
 			printf("Main shader failed to load, probably because it doesn't support a high number of uniforms, falling back to CPU skinning.\n");
