@@ -84,7 +84,7 @@ if (LEAGUE_MODEL_LIBRARY)
 else (LEAGUE_MODEL_LIBRARY)
 	add_executable(LeagueModel ${LEAGUEMODEL_SOURCES})
 	set_target_properties(LeagueModel PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
-	
+
 	if (WIN32)
 		target_link_libraries(LeagueModel opengl32)
 	endif (WIN32)
