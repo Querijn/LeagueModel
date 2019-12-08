@@ -19,12 +19,13 @@
 /*---  Dependencies  ---*/
 
 #include <stddef.h>   /* size_t */
-#include <stdlib.h>   /* malloc, free */
-#include <stdio.h>    /* printf */
+#include <stdlib.h>   /* malloc, free, abort */
+#include <stdio.h>    /* fprintf */
+#include <limits.h>   /* UINT_MAX */
 #include <assert.h>   /* assert */
 
 #include "util.h"
-#include "bench.h"
+#include "benchfn.h"
 #define ZSTD_STATIC_LINKING_ONLY
 #include "zstd.h"
 #include "zdict.h"
@@ -49,9 +50,10 @@
 
 
 /*---  Macros  ---*/
-#define CONTROL(c)   assert(c)
+
+#define CONTROL(c)   { if (!(c)) abort(); }
 #undef MIN
-#define MIN(a,b)   ((a) < (b) ? (a) : (b))
+#define MIN(a,b)     ((a) < (b) ? (a) : (b))
 
 
 /*---  Display Macros  ---*/
@@ -126,7 +128,7 @@ static buffer_t createBuffer_fromFile(const char* fileName)
 static buffer_t
 createDictionaryBuffer(const char* dictionaryName,
                        const void* srcBuffer,
-                       const size_t* srcBlockSizes, unsigned nbBlocks,
+                       const size_t* srcBlockSizes, size_t nbBlocks,
                        size_t requestedDictSize)
 {
     if (dictionaryName) {
@@ -140,9 +142,10 @@ createDictionaryBuffer(const char* dictionaryName,
         void* const dictBuffer = malloc(requestedDictSize);
         CONTROL(dictBuffer != NULL);
 
+        assert(nbBlocks <= UINT_MAX);
         size_t const dictSize = ZDICT_trainFromBuffer(dictBuffer, requestedDictSize,
                                                       srcBuffer,
-                                                      srcBlockSizes, nbBlocks);
+                                                      srcBlockSizes, (unsigned)nbBlocks);
         CONTROL(!ZSTD_isError(dictSize));
 
         buffer_t result;
@@ -226,42 +229,50 @@ void shrinkSizes(slice_collection_t collection,
 }
 
 
-slice_collection_t splitSlices(slice_collection_t srcSlices, size_t blockSize)
+/* splitSlices() :
+ * nbSlices : if == 0, nbSlices is automatically determined from srcSlices and blockSize.
+ *            otherwise, creates exactly nbSlices slices,
+ *            by either truncating input (when smaller)
+ *            or repeating input from beginning */
+static slice_collection_t
+splitSlices(slice_collection_t srcSlices, size_t blockSize, size_t nbSlices)
 {
     if (blockSize==0) blockSize = (size_t)(-1);   /* means "do not cut" */
-    size_t nbBlocks = 0;
+    size_t nbSrcBlocks = 0;
     for (size_t ssnb=0; ssnb < srcSlices.nbSlices; ssnb++) {
         size_t pos = 0;
         while (pos <= srcSlices.capacities[ssnb]) {
-            nbBlocks++;
+            nbSrcBlocks++;
             pos += blockSize;
         }
     }
 
-    void** const sliceTable = (void**)malloc(nbBlocks * sizeof(*sliceTable));
-    size_t* const capacities = (size_t*)malloc(nbBlocks * sizeof(*capacities));
+    if (nbSlices == 0) nbSlices = nbSrcBlocks;
+
+    void** const sliceTable = (void**)malloc(nbSlices * sizeof(*sliceTable));
+    size_t* const capacities = (size_t*)malloc(nbSlices * sizeof(*capacities));
     if (sliceTable == NULL || capacities == NULL) {
         free(sliceTable);
         free(capacities);
         return kNullCollection;
     }
 
-    size_t blockNb = 0;
-    for (size_t ssnb=0; ssnb < srcSlices.nbSlices; ssnb++) {
+    size_t ssnb = 0;
+    for (size_t sliceNb=0; sliceNb < nbSlices; ) {
+        ssnb = (ssnb + 1) % srcSlices.nbSlices;
         size_t pos = 0;
         char* const ptr = (char*)srcSlices.slicePtrs[ssnb];
-        while (pos < srcSlices.capacities[ssnb]) {
+        while (pos < srcSlices.capacities[ssnb] && sliceNb < nbSlices) {
             size_t const size = MIN(blockSize, srcSlices.capacities[ssnb] - pos);
-            sliceTable[blockNb] = ptr + pos;
-            capacities[blockNb] = size;
-            blockNb++;
+            sliceTable[sliceNb] = ptr + pos;
+            capacities[sliceNb] = size;
+            sliceNb++;
             pos += blockSize;
         }
     }
-    assert(blockNb == nbBlocks);
 
     slice_collection_t result;
-    result.nbSlices = nbBlocks;
+    result.nbSlices = nbSlices;
     result.slicePtrs = sliceTable;
     result.capacities = capacities;
     return result;
@@ -329,6 +340,7 @@ static buffer_collection_t
 createBufferCollection_fromFiles(const char* const * fileNamesTable, unsigned nbFiles)
 {
     U64 const totalSizeToLoad = UTIL_getTotalFileSize(fileNamesTable, nbFiles);
+    assert(totalSizeToLoad != UTIL_FILESIZE_UNKNOWN);
     assert(totalSizeToLoad <= BENCH_SIZE_MAX);
     size_t const loadedSize = (size_t)totalSizeToLoad;
     assert(loadedSize > 0);
@@ -412,19 +424,19 @@ static ddict_collection_t createDDictCollection(const void* dictBuffer, size_t d
 }
 
 
-/* mess with adresses, so that linear scanning dictionaries != linear address scanning */
+/* mess with addresses, so that linear scanning dictionaries != linear address scanning */
 void shuffleDictionaries(ddict_collection_t dicts)
 {
     size_t const nbDicts = dicts.nbDDict;
     for (size_t r=0; r<nbDicts; r++) {
-        size_t const d = rand() % nbDicts;
+        size_t const d = (size_t)rand() % nbDicts;
         ZSTD_DDict* tmpd = dicts.ddicts[d];
         dicts.ddicts[d] = dicts.ddicts[r];
         dicts.ddicts[r] = tmpd;
     }
     for (size_t r=0; r<nbDicts; r++) {
-        size_t const d1 = rand() % nbDicts;
-        size_t const d2 = rand() % nbDicts;
+        size_t const d1 = (size_t)rand() % nbDicts;
+        size_t const d2 = (size_t)rand() % nbDicts;
         ZSTD_DDict* tmpd = dicts.ddicts[d1];
         dicts.ddicts[d1] = dicts.ddicts[d2];
         dicts.ddicts[d2] = tmpd;
@@ -516,7 +528,7 @@ size_t decompress(const void* src, size_t srcSize, void* dst, size_t dstCapacity
 static int benchMem(slice_collection_t dstBlocks,
                     slice_collection_t srcBlocks,
                     ddict_collection_t dictionaries,
-                    int nbRounds)
+                    unsigned nbRounds)
 {
     assert(dstBlocks.nbSlices == srcBlocks.nbSlices);
 
@@ -528,19 +540,26 @@ static int benchMem(slice_collection_t dstBlocks,
     BMK_timedFnState_t* const benchState =
             BMK_createTimedFnState(total_time_ms, ms_per_round);
     decompressInstructions di = createDecompressInstructions(dictionaries);
+    BMK_benchParams_t const bp = {
+        .benchFn = decompress,
+        .benchPayload = &di,
+        .initFn = NULL,
+        .initPayload = NULL,
+        .errorFn = ZSTD_isError,
+        .blockCount = dstBlocks.nbSlices,
+        .srcBuffers = (const void* const*) srcBlocks.slicePtrs,
+        .srcSizes = srcBlocks.capacities,
+        .dstBuffers = dstBlocks.slicePtrs,
+        .dstCapacities = dstBlocks.capacities,
+        .blockResults = NULL
+    };
 
     for (;;) {
-        BMK_runOutcome_t const outcome = BMK_benchTimedFn(benchState,
-                                decompress, &di,
-                                NULL, NULL,
-                                dstBlocks.nbSlices,
-                                (const void* const *)srcBlocks.slicePtrs, srcBlocks.capacities,
-                                dstBlocks.slicePtrs, dstBlocks.capacities,
-                                NULL);
+        BMK_runOutcome_t const outcome = BMK_benchTimedFn(benchState, bp);
         CONTROL(BMK_isSuccessful_runOutcome(outcome));
 
         BMK_runTime_t const result = BMK_extract_runTime(outcome);
-        U64 const dTime_ns = result.nanoSecPerRun;
+        double const dTime_ns = result.nanoSecPerRun;
         double const dTime_sec = (double)dTime_ns / 1000000000;
         size_t const srcSize = result.sumOfReturn;
         double const dSpeed_MBps = (double)srcSize / dTime_sec / (1 MB);
@@ -565,7 +584,9 @@ static int benchMem(slice_collection_t dstBlocks,
  * @return : 0 is success, 1+ otherwise */
 int bench(const char** fileNameTable, unsigned nbFiles,
           const char* dictionary,
-          size_t blockSize, int clevel, unsigned nbDictMax, int nbRounds)
+          size_t blockSize, int clevel,
+          unsigned nbDictMax, unsigned nbBlocks,
+          unsigned nbRounds)
 {
     int result = 0;
 
@@ -577,12 +598,13 @@ int bench(const char** fileNameTable, unsigned nbFiles,
     DISPLAYLEVEL(3, "created src buffer of size %.1f MB \n",
                     (double)srcSize / (1 MB));
 
-    slice_collection_t const srcSlices = splitSlices(srcs.slices, blockSize);
-    unsigned const nbBlocks = (unsigned)(srcSlices.nbSlices);
+    slice_collection_t const srcSlices = splitSlices(srcs.slices, blockSize, nbBlocks);
+    nbBlocks = (unsigned)(srcSlices.nbSlices);
     DISPLAYLEVEL(3, "split input into %u blocks ", nbBlocks);
     if (blockSize)
         DISPLAYLEVEL(3, "of max size %u bytes ", (unsigned)blockSize);
     DISPLAYLEVEL(3, "\n");
+    size_t const totalSrcSlicesSize = sliceCollection_totalCapacity(srcSlices);
 
 
     size_t* const dstCapacities = malloc(nbBlocks * sizeof(*dstCapacities));
@@ -596,10 +618,10 @@ int bench(const char** fileNameTable, unsigned nbFiles,
     buffer_t dstBuffer = createBuffer(dstBufferCapacity);
     CONTROL(dstBuffer.ptr != NULL);
 
-    void** const sliceTable = (void**)malloc(nbBlocks * sizeof(*sliceTable));
+    void** const sliceTable = malloc(nbBlocks * sizeof(*sliceTable));
     CONTROL(sliceTable != NULL);
 
-    {   char* const ptr = (char*)dstBuffer.ptr;
+    {   char* const ptr = dstBuffer.ptr;
         size_t pos = 0;
         for (size_t snb=0; snb < nbBlocks; snb++) {
             sliceTable[snb] = ptr + pos;
@@ -614,8 +636,8 @@ int bench(const char** fileNameTable, unsigned nbFiles,
 
     /* dictionary determination */
     buffer_t const dictBuffer = createDictionaryBuffer(dictionary,
-                                srcBuffer.ptr,
-                                srcSlices.capacities, nbBlocks,
+                                srcs.buffer.ptr,
+                                srcs.slices.capacities, srcs.slices.nbSlices,
                                 DICTSIZE);
     CONTROL(dictBuffer.ptr != NULL);
 
@@ -626,7 +648,7 @@ int bench(const char** fileNameTable, unsigned nbFiles,
     CONTROL(cTotalSizeNoDict != 0);
     DISPLAYLEVEL(3, "compressing at level %u without dictionary : Ratio=%.2f  (%u bytes) \n",
                     clevel,
-                    (double)srcSize / cTotalSizeNoDict, (unsigned)cTotalSizeNoDict);
+                    (double)totalSrcSlicesSize / cTotalSizeNoDict, (unsigned)cTotalSizeNoDict);
 
     size_t* const cSizes = malloc(nbBlocks * sizeof(size_t));
     CONTROL(cSizes != NULL);
@@ -635,7 +657,7 @@ int bench(const char** fileNameTable, unsigned nbFiles,
     CONTROL(cTotalSize != 0);
     DISPLAYLEVEL(3, "compressed using a %u bytes dictionary : Ratio=%.2f  (%u bytes) \n",
                     (unsigned)dictBuffer.size,
-                    (double)srcSize / cTotalSize, (unsigned)cTotalSize);
+                    (double)totalSrcSlicesSize / cTotalSize, (unsigned)cTotalSize);
 
     /* now dstSlices contain the real compressed size of each block, instead of the maximum capacity */
     shrinkSizes(dstSlices, cSizes);
@@ -685,7 +707,7 @@ static unsigned readU32FromChar(const char** stringPtr)
     while ((**stringPtr >='0') && (**stringPtr <='9')) {
         unsigned const max = (((unsigned)(-1)) / 10) - 1;
         assert(result <= max);   /* check overflow */
-        result *= 10, result += **stringPtr - '0', (*stringPtr)++ ;
+        result *= 10, result += (unsigned)**stringPtr - '0', (*stringPtr)++ ;
     }
     if ((**stringPtr=='K') || (**stringPtr=='M')) {
         unsigned const maxK = ((unsigned)(-1)) >> 10;
@@ -707,7 +729,7 @@ static unsigned readU32FromChar(const char** stringPtr)
  *  If yes, @return 1 and advances *stringPtr to the position which immediately follows longCommand.
  * @return 0 and doesn't modify *stringPtr otherwise.
  */
-static unsigned longCommandWArg(const char** stringPtr, const char* longCommand)
+static int longCommandWArg(const char** stringPtr, const char* longCommand)
 {
     size_t const comSize = strlen(longCommand);
     int const result = !strncmp(*stringPtr, longCommand, comSize);
@@ -727,6 +749,7 @@ int usage(const char* exeName)
     DISPLAY ("-#          : use compression level # (default: %u) \n", CLEVEL_DEFAULT);
     DISPLAY ("-D #        : use # as a dictionary (default: create one) \n");
     DISPLAY ("-i#         : nb benchmark rounds (default: %u) \n", BENCH_TIME_DEFAULT_S);
+    DISPLAY ("--nbBlocks=#: use # blocks for bench (default: one per file) \n");
     DISPLAY ("--nbDicts=# : create # dictionaries for bench (default: one per block) \n");
     DISPLAY ("-h          : help (this text) \n");
     return 0;
@@ -742,19 +765,20 @@ int bad_usage(const char* exeName)
 int main (int argc, const char** argv)
 {
     int recursiveMode = 0;
-    int nbRounds = BENCH_TIME_DEFAULT_S;
+    unsigned nbRounds = BENCH_TIME_DEFAULT_S;
     const char* const exeName = argv[0];
 
     if (argc < 2) return bad_usage(exeName);
 
-    const char** nameTable = (const char**)malloc(argc * sizeof(const char*));
+    const char** nameTable = (const char**)malloc((size_t)argc * sizeof(const char*));
     assert(nameTable != NULL);
     unsigned nameIdx = 0;
 
     const char* dictionary = NULL;
     int cLevel = CLEVEL_DEFAULT;
     size_t blockSize = BLOCKSIZE_DEFAULT;
-    size_t nbDicts = 0;  /* determine nbDicts automatically: 1 dictionary per block */
+    unsigned nbDicts = 0;  /* determine nbDicts automatically: 1 dictionary per block */
+    unsigned nbBlocks = 0; /* determine nbBlocks automatically, from source and blockSize */
 
     for (int argNb = 1; argNb < argc ; argNb++) {
         const char* argument = argv[argNb];
@@ -766,26 +790,28 @@ int main (int argc, const char** argv)
         if (longCommandWArg(&argument, "-B")) { blockSize = readU32FromChar(&argument); continue; }
         if (longCommandWArg(&argument, "--blockSize=")) { blockSize = readU32FromChar(&argument); continue; }
         if (longCommandWArg(&argument, "--nbDicts=")) { nbDicts = readU32FromChar(&argument); continue; }
-        if (longCommandWArg(&argument, "--clevel=")) { cLevel = readU32FromChar(&argument); continue; }
-        if (longCommandWArg(&argument, "-")) { cLevel = readU32FromChar(&argument); continue; }
+        if (longCommandWArg(&argument, "--nbBlocks=")) { nbBlocks = readU32FromChar(&argument); continue; }
+        if (longCommandWArg(&argument, "--clevel=")) { cLevel = (int)readU32FromChar(&argument); continue; }
+        if (longCommandWArg(&argument, "-")) { cLevel = (int)readU32FromChar(&argument); continue; }
         /* anything that's not a command is a filename */
         nameTable[nameIdx++] = argument;
     }
 
-    const char** filenameTable = nameTable;
-    unsigned nbFiles = nameIdx;
-    char* buffer_containing_filenames = NULL;
+    FileNamesTable* filenameTable;
 
     if (recursiveMode) {
 #ifndef UTIL_HAS_CREATEFILELIST
         assert(0);   /* missing capability, do not run */
 #endif
-        filenameTable = UTIL_createFileList(nameTable, nameIdx, &buffer_containing_filenames, &nbFiles, 1 /* follow_links */);
+        filenameTable = UTIL_createExpandedFNT(nameTable, nameIdx, 1 /* follow_links */);
+    } else {
+        filenameTable = UTIL_assembleFileNamesTable(nameTable, nameIdx, NULL);
+        nameTable = NULL;  /* UTIL_createFileNamesTable() takes ownership of nameTable */
     }
 
-    int result = bench(filenameTable, nbFiles, dictionary, blockSize, cLevel, nbDicts, nbRounds);
+    int result = bench(filenameTable->fileNames, (unsigned)filenameTable->tableSize, dictionary, blockSize, cLevel, nbDicts, nbBlocks, nbRounds);
 
-    free(buffer_containing_filenames);
+    UTIL_freeFileNamesTable(filenameTable);
     free(nameTable);
 
     return result;

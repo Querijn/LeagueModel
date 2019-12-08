@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree) and the GPLv2 (found
  * in the COPYING file in the root directory of this source tree).
  */
+#include "platform.h"   /* Large Files support, SET_BINARY_MODE */
 #include "Pzstd.h"
 #include "SkippableFrame.h"
 #include "utils/FileSystem.h"
@@ -21,14 +22,6 @@
 #include <memory>
 #include <string>
 
-#if defined(MSDOS) || defined(OS2) || defined(WIN32) || defined(_WIN32) || defined(__CYGWIN__)
-#  include <fcntl.h>    /* _O_BINARY */
-#  include <io.h>       /* _setmode, _isatty */
-#  define SET_BINARY_MODE(file) { if (_setmode(_fileno(file), _O_BINARY) == -1) perror("Cannot set _O_BINARY"); }
-#else
-#  include <unistd.h>   /* isatty */
-#  define SET_BINARY_MODE(file)
-#endif
 
 namespace pzstd {
 
@@ -62,7 +55,7 @@ static std::uint64_t handleOneInput(const Options &options,
                              SharedState& state) {
   auto inputSize = fileSizeOrZero(inputFile);
   // WorkQueue outlives ThreadPool so in the case of error we are certain
-  // we don't accidently try to call push() on it after it is destroyed
+  // we don't accidentally try to call push() on it after it is destroyed
   WorkQueue<std::shared_ptr<BufferWorkQueue>> outs{options.numThreads + 1};
   std::uint64_t bytesRead;
   std::uint64_t bytesWritten;

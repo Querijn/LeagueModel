@@ -17,6 +17,7 @@ LIBVER_MINOR := $(shell echo $(LIBVER_MINOR_SCRIPT))
 LIBVER_PATCH := $(shell echo $(LIBVER_PATCH_SCRIPT))
 LIBVER := $(shell echo $(LIBVER_SCRIPT))
 VERSION?= $(LIBVER)
+CCVER := $(shell $(CC) --version)
 
 CPPFLAGS+= -I. -I./common -DXXH_NAMESPACE=ZSTD_
 ifeq ($(OS),Windows_NT)   # MinGW assumed
@@ -25,11 +26,18 @@ endif
 CFLAGS  ?= -O3
 DEBUGFLAGS= -Wall -Wextra -Wcast-qual -Wcast-align -Wshadow \
             -Wstrict-aliasing=1 -Wswitch-enum -Wdeclaration-after-statement \
-            -Wstrict-prototypes -Wundef -Wpointer-arith -Wformat-security \
+            -Wstrict-prototypes -Wundef -Wpointer-arith \
             -Wvla -Wformat=2 -Winit-self -Wfloat-equal -Wwrite-strings \
-            -Wredundant-decls
+            -Wredundant-decls -Wmissing-prototypes -Wc++-compat
 CFLAGS  += $(DEBUGFLAGS) $(MOREFLAGS)
 FLAGS    = $(CPPFLAGS) $(CFLAGS)
+
+HAVE_COLORNEVER = $(shell echo a | grep --color=never a > /dev/null 2> /dev/null && echo 1 || echo 0)
+GREP_OPTIONS ?=
+ifeq ($HAVE_COLORNEVER, 1)
+GREP_OPTIONS += --color=never
+endif
+GREP = grep $(GREP_OPTIONS)
 
 ZSTDCOMMON_FILES := $(sort $(wildcard common/*.c))
 ZSTDCOMP_FILES := $(sort $(wildcard compress/*.c))
@@ -38,11 +46,22 @@ ZDICT_FILES := $(sort $(wildcard dictBuilder/*.c))
 ZDEPR_FILES := $(sort $(wildcard deprecated/*.c))
 ZSTD_FILES := $(ZSTDCOMMON_FILES)
 
-ZSTD_LEGACY_SUPPORT ?= 4
+ifeq ($(findstring GCC,$(CCVER)),GCC)
+decompress/zstd_decompress_block.o :	CFLAGS+=-fno-tree-vectorize
+endif
+
+ZSTD_LEGACY_SUPPORT ?= 5
 ZSTD_LIB_COMPRESSION ?= 1
 ZSTD_LIB_DECOMPRESSION ?= 1
 ZSTD_LIB_DICTBUILDER ?= 1
 ZSTD_LIB_DEPRECATED ?= 1
+HUF_FORCE_DECOMPRESS_X1 ?= 0
+HUF_FORCE_DECOMPRESS_X2 ?= 0
+ZSTD_FORCE_DECOMPRESS_SHORT ?= 0
+ZSTD_FORCE_DECOMPRESS_LONG ?= 0
+ZSTD_NO_INLINE ?= 0
+ZSTD_STRIP_ERROR_STRINGS ?= 0
+ZSTD_LEGACY_MULTITHREADED_API ?= 0
 
 ifeq ($(ZSTD_LIB_COMPRESSION), 0)
 	ZSTD_LIB_DICTBUILDER = 0
@@ -70,9 +89,37 @@ ifneq ($(ZSTD_LIB_DICTBUILDER), 0)
 	ZSTD_FILES += $(ZDICT_FILES)
 endif
 
+ifneq ($(HUF_FORCE_DECOMPRESS_X1), 0)
+	CFLAGS += -DHUF_FORCE_DECOMPRESS_X1
+endif
+
+ifneq ($(HUF_FORCE_DECOMPRESS_X2), 0)
+	CFLAGS += -DHUF_FORCE_DECOMPRESS_X2
+endif
+
+ifneq ($(ZSTD_FORCE_DECOMPRESS_SHORT), 0)
+	CFLAGS += -DZSTD_FORCE_DECOMPRESS_SHORT
+endif
+
+ifneq ($(ZSTD_FORCE_DECOMPRESS_LONG), 0)
+	CFLAGS += -DZSTD_FORCE_DECOMPRESS_LONG
+endif
+
+ifneq ($(ZSTD_NO_INLINE), 0)
+	CFLAGS += -DZSTD_NO_INLINE
+endif
+
+ifneq ($(ZSTD_STRIP_ERROR_STRINGS), 0)
+	CFLAGS += -DZSTD_STRIP_ERROR_STRINGS
+endif
+
+ifneq ($(ZSTD_LEGACY_MULTITHREADED_API), 0)
+	CFLAGS += -DZSTD_LEGACY_MULTITHREADED_API
+endif
+
 ifneq ($(ZSTD_LEGACY_SUPPORT), 0)
 ifeq ($(shell test $(ZSTD_LEGACY_SUPPORT) -lt 8; echo $$?), 0)
-	ZSTD_FILES += $(shell ls legacy/*.c | grep 'v0[$(ZSTD_LEGACY_SUPPORT)-7]')
+	ZSTD_FILES += $(shell ls legacy/*.c | $(GREP) 'v0[$(ZSTD_LEGACY_SUPPORT)-7]')
 endif
 	CPPFLAGS += -I./legacy
 endif
@@ -94,8 +141,6 @@ else
 	SHARED_EXT_VER = $(SHARED_EXT).$(LIBVER)
 endif
 
-LIBZSTD = libzstd.$(SHARED_EXT_VER)
-
 
 .PHONY: default all clean install uninstall
 
@@ -111,18 +156,26 @@ libzstd.a: $(ZSTD_OBJ)
 libzstd.a-mt: CPPFLAGS += -DZSTD_MULTITHREAD
 libzstd.a-mt: libzstd.a
 
+ifneq (,$(filter Windows%,$(OS)))
+
+LIBZSTD = dll\libzstd.dll
+$(LIBZSTD): $(ZSTD_FILES)
+	@echo compiling dynamic library $(LIBVER)
+	$(CC) $(FLAGS) -DZSTD_DLL_EXPORT=1 -Wl,--out-implib,dll\libzstd.dll.a -shared $^ -o $@
+
+else
+
+LIBZSTD = libzstd.$(SHARED_EXT_VER)
 $(LIBZSTD): LDFLAGS += -shared -fPIC -fvisibility=hidden
 $(LIBZSTD): $(ZSTD_FILES)
 	@echo compiling dynamic library $(LIBVER)
-ifneq (,$(filter Windows%,$(OS)))
-	@$(CC) $(FLAGS) -DZSTD_DLL_EXPORT=1 -shared $^ -o dll\libzstd.dll
-	dlltool -D dll\libzstd.dll -d dll\libzstd.def -l dll\libzstd.lib
-else
 	@$(CC) $(FLAGS) $^ $(LDFLAGS) $(SONAME_FLAGS) -o $@
 	@echo creating versioned links
 	@ln -sf $@ libzstd.$(SHARED_EXT_MAJOR)
 	@ln -sf $@ libzstd.$(SHARED_EXT)
+
 endif
+
 
 libzstd : $(LIBZSTD)
 
@@ -157,7 +210,7 @@ clean:
 #-----------------------------------------------------------------------------
 # make install is validated only for Linux, macOS, BSD, Hurd and Solaris targets
 #-----------------------------------------------------------------------------
-ifneq (,$(filter $(shell uname),Linux Darwin GNU/kFreeBSD GNU OpenBSD FreeBSD NetBSD DragonFly SunOS))
+ifneq (,$(filter $(shell uname),Linux Darwin GNU/kFreeBSD GNU OpenBSD FreeBSD NetBSD DragonFly SunOS Haiku))
 
 DESTDIR     ?=
 # directory variables : GNU conventions prefer lowercase
@@ -191,8 +244,6 @@ libzstd.pc:
 libzstd.pc: libzstd.pc.in
 	@echo creating pkgconfig
 	@sed -e 's|@PREFIX@|$(PREFIX)|' \
-             -e 's|@LIBDIR@|$(LIBDIR)|' \
-             -e 's|@INCLUDEDIR@|$(INCLUDEDIR)|' \
              -e 's|@VERSION@|$(VERSION)|' \
              $< >$@
 

@@ -14,7 +14,7 @@
 *.dylib
 
 # Executables
-zstd
+/zstd
 zstdmt
 *.exe
 *.out
@@ -22,7 +22,8 @@ zstdmt
 
 # Test artefacts
 tmp*
-dictionary*
+dictionary.
+dictionary
 NUL
 
 # Build artefacts
@@ -30,6 +31,7 @@ projects/
 bin/
 .buckd/
 buck-out/
+build-*
 
 # Other files
 .directory
@@ -41,3 +43,6 @@ _zstdbench/
 .DS_Store
 googletest/
 *.d
+*.vscode
+compile_commands.json
+.clangd

@@ -7,6 +7,7 @@ zstd-decompress
 zstd-frugal
 zstd-small
 zstd-nolegacy
+zstd-dictBuilder
 
 # Object files
 *.o
@@ -33,4 +34,5 @@ afl
 
 # Misc files
 *.bat
+!windres/generate_res.bat
 dirTest*

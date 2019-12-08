@@ -15,11 +15,12 @@
 #include "util.h"        /* Compiler options, UTIL_GetFileSize */
 #include <stdlib.h>      /* malloc */
 #include <stdio.h>       /* fprintf, fopen, ftello64 */
-#include <assert.h>      /* assert */
+#include <assert.h>
 
+#include "timefn.h"      /* UTIL_clockSpanNano, UTIL_getTime */
 #include "mem.h"         /* U32 */
 #ifndef ZSTD_DLL_IMPORT
-    #include "zstd_internal.h"   /* ZSTD_blockHeaderSize, blockType_e, KB, MB */
+    #include "zstd_internal.h"   /* ZSTD_decodeSeqHeaders, ZSTD_blockHeaderSize, blockType_e, KB, MB */
 #else
     #define KB *(1 <<10)
     #define MB *(1 <<20)
@@ -30,7 +31,8 @@
 #include "zstd.h"        /* ZSTD_versionString */
 #include "util.h"        /* time functions */
 #include "datagen.h"
-#include "bench.h"       /* CustomBench*/
+#include "benchfn.h"     /* CustomBench */
+#include "benchzstd.h"   /* MB_UNIT */
 
 
 /*_************************************
@@ -43,13 +45,12 @@
 #define NBLOOPS    6
 #define TIMELOOP_S 2
 
-#define KNUTH      2654435761U
 #define MAX_MEM    (1984 MB)
 
 #define DEFAULT_CLEVEL 1
 
 #define COMPRESSIBILITY_DEFAULT 0.50
-static const size_t g_sampleSize = 10000000;
+static const size_t kSampleSizeDefault = 10000000;
 
 #define TIMELOOP_NANOSEC      (1*1000000000ULL) /* 1 second */
 
@@ -59,18 +60,12 @@ static const size_t g_sampleSize = 10000000;
 **************************************/
 #define DISPLAY(...)  fprintf(stderr, __VA_ARGS__)
 
+#define CONTROL(c)  { if (!(c)) { abort(); } }   /* like assert(), but cannot be disabled */
 
 /*_************************************
 *  Benchmark Parameters
 **************************************/
-static U32 g_nbIterations = NBLOOPS;
-static double g_compressibility = COMPRESSIBILITY_DEFAULT;
-
-static void BMK_SetNbIterations(U32 nbLoops)
-{
-    g_nbIterations = nbLoops;
-    DISPLAY("- %i iterations -\n", g_nbIterations);
-}
+static unsigned g_nbIterations = NBLOOPS;
 
 
 /*_*******************************************************
@@ -104,12 +99,12 @@ static ZSTD_CCtx* g_zcc = NULL;
 static size_t
 local_ZSTD_compress(const void* src, size_t srcSize,
                     void* dst, size_t dstSize,
-                    void* buff2)
+                    void* payload)
 {
     ZSTD_parameters p;
     ZSTD_frameParameters f = { 1 /* contentSizeHeader*/, 0, 0 };
     p.fParams = f;
-    p.cParams = *(ZSTD_compressionParameters*)buff2;
+    p.cParams = *(ZSTD_compressionParameters*)payload;
     return ZSTD_compress_advanced (g_zcc, dst, dstSize, src, srcSize, NULL ,0, p);
     //return ZSTD_compress(dst, dstSize, src, srcSize, cLevel);
 }
@@ -127,14 +122,13 @@ static ZSTD_DCtx* g_zdc = NULL;
 
 #ifndef ZSTD_DLL_IMPORT
 extern size_t ZSTD_decodeLiteralsBlock(ZSTD_DCtx* ctx, const void* src, size_t srcSize);
-size_t local_ZSTD_decodeLiteralsBlock(const void* src, size_t srcSize, void* dst, size_t dstSize, void* buff2)
+static size_t local_ZSTD_decodeLiteralsBlock(const void* src, size_t srcSize, void* dst, size_t dstSize, void* buff2)
 {
     (void)src; (void)srcSize; (void)dst; (void)dstSize;
-    return ZSTD_decodeLiteralsBlock((ZSTD_DCtx*)g_zdc, buff2, g_cSize);
+    return ZSTD_decodeLiteralsBlock(g_zdc, buff2, g_cSize);
 }
 
-extern size_t ZSTD_decodeSeqHeaders(ZSTD_DCtx* dctx, int* nbSeq, const void* src, size_t srcSize);
-size_t local_ZSTD_decodeSeqHeaders(const void* src, size_t srcSize, void* dst, size_t dstSize, void* buff2)
+static size_t local_ZSTD_decodeSeqHeaders(const void* src, size_t srcSize, void* dst, size_t dstSize, void* buff2)
 {
     int nbSeq;
     (void)src; (void)srcSize; (void)dst; (void)dstSize;
@@ -146,14 +140,14 @@ static ZSTD_CStream* g_cstream= NULL;
 static size_t
 local_ZSTD_compressStream(const void* src, size_t srcSize,
                           void* dst, size_t dstCapacity,
-                          void* buff2)
+                          void* payload)
 {
     ZSTD_outBuffer buffOut;
     ZSTD_inBuffer buffIn;
     ZSTD_parameters p;
     ZSTD_frameParameters f = {1 /* contentSizeHeader*/, 0, 0};
     p.fParams = f;
-    p.cParams = *(ZSTD_compressionParameters*)buff2;
+    p.cParams = *(ZSTD_compressionParameters*)payload;
     ZSTD_initCStream_advanced(g_cstream, NULL, 0, p, ZSTD_CONTENTSIZE_UNKNOWN);
     buffOut.dst = dst;
     buffOut.size = dstCapacity;
@@ -167,78 +161,76 @@ local_ZSTD_compressStream(const void* src, size_t srcSize,
 }
 
 static size_t
+local_ZSTD_compressStream_freshCCtx(const void* src, size_t srcSize,
+                          void* dst, size_t dstCapacity,
+                          void* payload)
+{
+    ZSTD_CCtx* const cctx = ZSTD_createCCtx();
+    size_t r;
+    assert(cctx != NULL);
+
+    r = local_ZSTD_compressStream(src, srcSize, dst, dstCapacity, payload);
+
+    ZSTD_freeCCtx(cctx);
+
+    return r;
+}
+
+static size_t
 local_ZSTD_compress_generic_end(const void* src, size_t srcSize,
                                 void* dst, size_t dstCapacity,
-                                void* buff2)
+                                void* payload)
 {
-    ZSTD_outBuffer buffOut;
-    ZSTD_inBuffer buffIn;
-    (void)buff2;
-    buffOut.dst = dst;
-    buffOut.size = dstCapacity;
-    buffOut.pos = 0;
-    buffIn.src = src;
-    buffIn.size = srcSize;
-    buffIn.pos = 0;
-    ZSTD_compress_generic(g_cstream, &buffOut, &buffIn, ZSTD_e_end);
-    return buffOut.pos;
+    (void)payload;
+    return ZSTD_compress2(g_cstream, dst, dstCapacity, src, srcSize);
 }
 
 static size_t
 local_ZSTD_compress_generic_continue(const void* src, size_t srcSize,
                                      void* dst, size_t dstCapacity,
-                                     void* buff2)
+                                     void* payload)
 {
     ZSTD_outBuffer buffOut;
     ZSTD_inBuffer buffIn;
-    (void)buff2;
+    (void)payload;
     buffOut.dst = dst;
     buffOut.size = dstCapacity;
     buffOut.pos = 0;
     buffIn.src = src;
     buffIn.size = srcSize;
     buffIn.pos = 0;
-    ZSTD_compress_generic(g_cstream, &buffOut, &buffIn, ZSTD_e_continue);
-    ZSTD_compress_generic(g_cstream, &buffOut, &buffIn, ZSTD_e_end);
+    ZSTD_compressStream2(g_cstream, &buffOut, &buffIn, ZSTD_e_continue);
+    ZSTD_compressStream2(g_cstream, &buffOut, &buffIn, ZSTD_e_end);
     return buffOut.pos;
 }
 
 static size_t
 local_ZSTD_compress_generic_T2_end(const void* src, size_t srcSize,
                                    void* dst, size_t dstCapacity,
-                                   void* buff2)
+                                   void* payload)
 {
-    ZSTD_outBuffer buffOut;
-    ZSTD_inBuffer buffIn;
-    (void)buff2;
-    ZSTD_CCtx_setParameter(g_cstream, ZSTD_p_nbWorkers, 2);
-    buffOut.dst = dst;
-    buffOut.size = dstCapacity;
-    buffOut.pos = 0;
-    buffIn.src = src;
-    buffIn.size = srcSize;
-    buffIn.pos = 0;
-    while (ZSTD_compress_generic(g_cstream, &buffOut, &buffIn, ZSTD_e_end)) {}
-    return buffOut.pos;
+    (void)payload;
+    ZSTD_CCtx_setParameter(g_cstream, ZSTD_c_nbWorkers, 2);
+    return ZSTD_compress2(g_cstream, dst, dstCapacity, src, srcSize);
 }
 
 static size_t
 local_ZSTD_compress_generic_T2_continue(const void* src, size_t srcSize,
                                         void* dst, size_t dstCapacity,
-                                        void* buff2)
+                                        void* payload)
 {
     ZSTD_outBuffer buffOut;
     ZSTD_inBuffer buffIn;
-    (void)buff2;
-    ZSTD_CCtx_setParameter(g_cstream, ZSTD_p_nbWorkers, 2);
+    (void)payload;
+    ZSTD_CCtx_setParameter(g_cstream, ZSTD_c_nbWorkers, 2);
     buffOut.dst = dst;
     buffOut.size = dstCapacity;
     buffOut.pos = 0;
     buffIn.src = src;
     buffIn.size = srcSize;
     buffIn.pos = 0;
-    ZSTD_compress_generic(g_cstream, &buffOut, &buffIn, ZSTD_e_continue);
-    while(ZSTD_compress_generic(g_cstream, &buffOut, &buffIn, ZSTD_e_end)) {}
+    ZSTD_compressStream2(g_cstream, &buffOut, &buffIn, ZSTD_e_continue);
+    while(ZSTD_compressStream2(g_cstream, &buffOut, &buffIn, ZSTD_e_end)) {}
     return buffOut.pos;
 }
 
@@ -263,29 +255,30 @@ local_ZSTD_decompressStream(const void* src, size_t srcSize,
 }
 
 #ifndef ZSTD_DLL_IMPORT
-size_t local_ZSTD_compressContinue(const void* src, size_t srcSize,
-                                   void* dst, size_t dstCapacity,
-                                   void* buff2)
+static size_t local_ZSTD_compressContinue(const void* src, size_t srcSize,
+                                          void* dst, size_t dstCapacity,
+                                          void* payload)
 {
     ZSTD_parameters p;
     ZSTD_frameParameters f = { 1 /* contentSizeHeader*/, 0, 0 };
     p.fParams = f;
-    p.cParams = *(ZSTD_compressionParameters*)buff2;
+    p.cParams = *(ZSTD_compressionParameters*)payload;
     ZSTD_compressBegin_advanced(g_zcc, NULL, 0, p, srcSize);
     return ZSTD_compressEnd(g_zcc, dst, dstCapacity, src, srcSize);
 }
 
 #define FIRST_BLOCK_SIZE 8
-size_t local_ZSTD_compressContinue_extDict(const void* src, size_t srcSize,
-                                           void* dst, size_t dstCapacity,
-                                           void* buff2)
+static size_t
+local_ZSTD_compressContinue_extDict(const void* src, size_t srcSize,
+                                    void* dst, size_t dstCapacity,
+                                    void* payload)
 {
     BYTE firstBlockBuf[FIRST_BLOCK_SIZE];
 
     ZSTD_parameters p;
-    ZSTD_frameParameters f = { 1, 0, 0 };
+    ZSTD_frameParameters const f = { 1, 0, 0 };
     p.fParams = f;
-    p.cParams = *(ZSTD_compressionParameters*)buff2;
+    p.cParams = *(ZSTD_compressionParameters*)payload;
     ZSTD_compressBegin_advanced(g_zcc, NULL, 0, p, srcSize);
     memcpy(firstBlockBuf, src, FIRST_BLOCK_SIZE);
 
@@ -305,9 +298,9 @@ size_t local_ZSTD_compressContinue_extDict(const void* src, size_t srcSize,
                             srcSize - FIRST_BLOCK_SIZE);
 }
 
-size_t local_ZSTD_decompressContinue(const void* src, size_t srcSize,
-                                           void* dst, size_t dstCapacity,
-                                           void* buff2)
+static size_t local_ZSTD_decompressContinue(const void* src, size_t srcSize,
+                                            void* dst, size_t dstCapacity,
+                                            void* buff2)
 {
     size_t regeneratedSize = 0;
     const BYTE* ip = (const BYTE*)buff2;
@@ -334,14 +327,14 @@ size_t local_ZSTD_decompressContinue(const void* src, size_t srcSize,
 /*_*******************************************************
 *  Bench functions
 *********************************************************/
-static size_t benchMem(U32 benchNb,
-                       const void* src, size_t srcSize,
-                       int cLevel, ZSTD_compressionParameters cparams)
+static int benchMem(unsigned benchNb,
+                    const void* src, size_t srcSize,
+                    int cLevel, ZSTD_compressionParameters cparams)
 {
     size_t dstBuffSize = ZSTD_compressBound(srcSize);
     BYTE*  dstBuff;
     void*  dstBuff2;
-    void*  buff2;
+    void*  payload;
     const char* benchName;
     BMK_benchFn_t benchFunction;
     int errorcode = 0;
@@ -378,6 +371,9 @@ static size_t benchMem(U32 benchNb,
     case 42:
         benchFunction = local_ZSTD_decompressStream; benchName = "decompressStream";
         break;
+    case 43:
+        benchFunction = local_ZSTD_compressStream_freshCCtx; benchName = "compressStream_freshCCtx";
+        break;
     case 51:
         benchFunction = local_ZSTD_compress_generic_continue; benchName = "compress_generic, continue";
         break;
@@ -402,94 +398,99 @@ static size_t benchMem(U32 benchNb,
         free(dstBuff); free(dstBuff2);
         return 12;
     }
-    buff2 = dstBuff2;
+    payload = dstBuff2;
     if (g_zcc==NULL) g_zcc = ZSTD_createCCtx();
     if (g_zdc==NULL) g_zdc = ZSTD_createDCtx();
     if (g_cstream==NULL) g_cstream = ZSTD_createCStream();
     if (g_dstream==NULL) g_dstream = ZSTD_createDStream();
 
-    /* DISPLAY("params: cLevel %d, wlog %d hlog %d clog %d slog %d slen %d tlen %d strat %d \n",
+    /* DISPLAY("params: cLevel %d, wlog %d hlog %d clog %d slog %d mml %d tlen %d strat %d \n",
           cLevel, cparams->windowLog, cparams->hashLog, cparams->chainLog, cparams->searchLog,
-          cparams->searchLength, cparams->targetLength, cparams->strategy); */
+          cparams->minMatch, cparams->targetLength, cparams->strategy); */
 
-    ZSTD_CCtx_setParameter(g_zcc, ZSTD_p_compressionLevel, cLevel);
-    ZSTD_CCtx_setParameter(g_zcc, ZSTD_p_windowLog, cparams.windowLog);
-    ZSTD_CCtx_setParameter(g_zcc, ZSTD_p_hashLog, cparams.hashLog);
-    ZSTD_CCtx_setParameter(g_zcc, ZSTD_p_chainLog, cparams.chainLog);
-    ZSTD_CCtx_setParameter(g_zcc, ZSTD_p_searchLog, cparams.searchLog);
-    ZSTD_CCtx_setParameter(g_zcc, ZSTD_p_minMatch, cparams.searchLength);
-    ZSTD_CCtx_setParameter(g_zcc, ZSTD_p_targetLength, cparams.targetLength);
-    ZSTD_CCtx_setParameter(g_zcc, ZSTD_p_compressionStrategy, cparams.strategy);
+    ZSTD_CCtx_setParameter(g_zcc, ZSTD_c_compressionLevel, cLevel);
+    ZSTD_CCtx_setParameter(g_zcc, ZSTD_c_windowLog, (int)cparams.windowLog);
+    ZSTD_CCtx_setParameter(g_zcc, ZSTD_c_hashLog, (int)cparams.hashLog);
+    ZSTD_CCtx_setParameter(g_zcc, ZSTD_c_chainLog, (int)cparams.chainLog);
+    ZSTD_CCtx_setParameter(g_zcc, ZSTD_c_searchLog, (int)cparams.searchLog);
+    ZSTD_CCtx_setParameter(g_zcc, ZSTD_c_minMatch, (int)cparams.minMatch);
+    ZSTD_CCtx_setParameter(g_zcc, ZSTD_c_targetLength, (int)cparams.targetLength);
+    ZSTD_CCtx_setParameter(g_zcc, ZSTD_c_strategy, cparams.strategy);
 
 
-    ZSTD_CCtx_setParameter(g_cstream, ZSTD_p_compressionLevel, cLevel);
-    ZSTD_CCtx_setParameter(g_cstream, ZSTD_p_windowLog, cparams.windowLog);
-    ZSTD_CCtx_setParameter(g_cstream, ZSTD_p_hashLog, cparams.hashLog);
-    ZSTD_CCtx_setParameter(g_cstream, ZSTD_p_chainLog, cparams.chainLog);
-    ZSTD_CCtx_setParameter(g_cstream, ZSTD_p_searchLog, cparams.searchLog);
-    ZSTD_CCtx_setParameter(g_cstream, ZSTD_p_minMatch, cparams.searchLength);
-    ZSTD_CCtx_setParameter(g_cstream, ZSTD_p_targetLength, cparams.targetLength);
-    ZSTD_CCtx_setParameter(g_cstream, ZSTD_p_compressionStrategy, cparams.strategy);
+    ZSTD_CCtx_setParameter(g_cstream, ZSTD_c_compressionLevel, cLevel);
+    ZSTD_CCtx_setParameter(g_cstream, ZSTD_c_windowLog, (int)cparams.windowLog);
+    ZSTD_CCtx_setParameter(g_cstream, ZSTD_c_hashLog, (int)cparams.hashLog);
+    ZSTD_CCtx_setParameter(g_cstream, ZSTD_c_chainLog, (int)cparams.chainLog);
+    ZSTD_CCtx_setParameter(g_cstream, ZSTD_c_searchLog, (int)cparams.searchLog);
+    ZSTD_CCtx_setParameter(g_cstream, ZSTD_c_minMatch, (int)cparams.minMatch);
+    ZSTD_CCtx_setParameter(g_cstream, ZSTD_c_targetLength, (int)cparams.targetLength);
+    ZSTD_CCtx_setParameter(g_cstream, ZSTD_c_strategy, cparams.strategy);
 
     /* Preparation */
     switch(benchNb)
     {
     case 1:
-        buff2 = &cparams;
+        payload = &cparams;
         break;
     case 2:
-        g_cSize = ZSTD_compress(buff2, dstBuffSize, src, srcSize, cLevel);
+        g_cSize = ZSTD_compress(dstBuff2, dstBuffSize, src, srcSize, cLevel);
         break;
 #ifndef ZSTD_DLL_IMPORT
     case 11:
-        buff2 = &cparams;
+        payload = &cparams;
         break;
     case 12:
-        buff2 = &cparams;
+        payload = &cparams;
         break;
     case 13 :
-        g_cSize = ZSTD_compress(buff2, dstBuffSize, src, srcSize, cLevel);
+        g_cSize = ZSTD_compress(dstBuff2, dstBuffSize, src, srcSize, cLevel);
         break;
-    case 31:  /* ZSTD_decodeLiteralsBlock */
-        {   blockProperties_t bp;
-            ZSTD_frameHeader zfp;
-            size_t frameHeaderSize, skippedSize;
+    case 31:  /* ZSTD_decodeLiteralsBlock : starts literals block in dstBuff2 */
+        {   size_t frameHeaderSize;
             g_cSize = ZSTD_compress(dstBuff, dstBuffSize, src, srcSize, cLevel);
-            frameHeaderSize = ZSTD_getFrameHeader(&zfp, dstBuff, ZSTD_frameHeaderSize_min);
-            if (frameHeaderSize==0) frameHeaderSize = ZSTD_frameHeaderSize_min;
-            ZSTD_getcBlockSize(dstBuff+frameHeaderSize, dstBuffSize, &bp);  /* Get 1st block type */
-            if (bp.blockType != bt_compressed) {
-                DISPLAY("ZSTD_decodeLiteralsBlock : impossible to test on this sample (not compressible)\n");
-                goto _cleanOut;
+            frameHeaderSize = ZSTD_frameHeaderSize(dstBuff, ZSTD_FRAMEHEADERSIZE_PREFIX(ZSTD_f_zstd1));
+            CONTROL(!ZSTD_isError(frameHeaderSize));
+            /* check block is compressible, hence contains a literals section */
+            {   blockProperties_t bp;
+                ZSTD_getcBlockSize(dstBuff+frameHeaderSize, dstBuffSize, &bp);  /* Get 1st block type */
+                if (bp.blockType != bt_compressed) {
+                    DISPLAY("ZSTD_decodeLiteralsBlock : impossible to test on this sample (not compressible)\n");
+                    goto _cleanOut;
+            }   }
+            {   size_t const skippedSize = frameHeaderSize + ZSTD_blockHeaderSize;
+                memcpy(dstBuff2, dstBuff+skippedSize, g_cSize-skippedSize);
             }
-            skippedSize = frameHeaderSize + ZSTD_blockHeaderSize;
-            memcpy(buff2, dstBuff+skippedSize, g_cSize-skippedSize);
             srcSize = srcSize > 128 KB ? 128 KB : srcSize;    /* speed relative to block */
             ZSTD_decompressBegin(g_zdc);
             break;
         }
     case 32:   /* ZSTD_decodeSeqHeaders */
         {   blockProperties_t bp;
-            ZSTD_frameHeader zfp;
             const BYTE* ip = dstBuff;
             const BYTE* iend;
-            size_t frameHeaderSize, cBlockSize;
-            ZSTD_compress(dstBuff, dstBuffSize, src, srcSize, cLevel);   /* it would be better to use direct block compression here */
-            g_cSize = ZSTD_compress(dstBuff, dstBuffSize, src, srcSize, cLevel);
-            frameHeaderSize = ZSTD_getFrameHeader(&zfp, dstBuff, ZSTD_frameHeaderSize_min);
-            if (frameHeaderSize==0) frameHeaderSize = ZSTD_frameHeaderSize_min;
-            ip += frameHeaderSize;   /* Skip frame Header */
-            cBlockSize = ZSTD_getcBlockSize(ip, dstBuffSize, &bp);   /* Get 1st block type */
-            if (bp.blockType != bt_compressed) {
-                DISPLAY("ZSTD_decodeSeqHeaders : impossible to test on this sample (not compressible)\n");
-                goto _cleanOut;
+            {   size_t const cSize = ZSTD_compress(dstBuff, dstBuffSize, src, srcSize, cLevel);
+                CONTROL(cSize > ZSTD_FRAMEHEADERSIZE_PREFIX(ZSTD_f_zstd1));
             }
-            iend = ip + ZSTD_blockHeaderSize + cBlockSize;   /* End of first block */
-            ip += ZSTD_blockHeaderSize;                      /* skip block header */
+            /* Skip frame Header */
+            {   size_t const frameHeaderSize = ZSTD_frameHeaderSize(dstBuff, ZSTD_FRAMEHEADERSIZE_PREFIX(ZSTD_f_zstd1));
+                CONTROL(!ZSTD_isError(frameHeaderSize));
+                ip += frameHeaderSize;
+            }
+            /* Find end of block */
+            {   size_t const cBlockSize = ZSTD_getcBlockSize(ip, dstBuffSize, &bp);   /* Get 1st block type */
+                if (bp.blockType != bt_compressed) {
+                    DISPLAY("ZSTD_decodeSeqHeaders : impossible to test on this sample (not compressible)\n");
+                    goto _cleanOut;
+                }
+                iend = ip + ZSTD_blockHeaderSize + cBlockSize;   /* End of first block */
+            }
+            ip += ZSTD_blockHeaderSize;    /* skip block header */
             ZSTD_decompressBegin(g_zdc);
-            ip += ZSTD_decodeLiteralsBlock(g_zdc, ip, iend-ip);   /* skip literal segment */
-            g_cSize = iend-ip;
-            memcpy(buff2, ip, g_cSize);   /* copy rest of block (it starts by SeqHeader) */
+            CONTROL(iend > ip);
+            ip += ZSTD_decodeLiteralsBlock(g_zdc, ip, (size_t)(iend-ip));   /* skip literal segment */
+            g_cSize = (size_t)(iend-ip);
+            memcpy(dstBuff2, ip, g_cSize);   /* copy rest of block (it starts by SeqHeader) */
             srcSize = srcSize > 128 KB ? 128 KB : srcSize;   /* speed relative to block */
             break;
         }
@@ -498,10 +499,13 @@ static size_t benchMem(U32 benchNb,
         goto _cleanOut;
 #endif
     case 41 :
-        buff2 = &cparams;
+        payload = &cparams;
         break;
     case 42 :
-        g_cSize = ZSTD_compress(buff2, dstBuffSize, src, srcSize, cLevel);
+        g_cSize = ZSTD_compress(payload, dstBuffSize, src, srcSize, cLevel);
+        break;
+    case 43 :
+        payload = &cparams;
         break;
 
     /* test functions */
@@ -515,20 +519,28 @@ static size_t benchMem(U32 benchNb,
 
     /* benchmark loop */
     {   BMK_timedFnState_t* const tfs = BMK_createTimedFnState(g_nbIterations * 1000, 1000);
+        void* const avoidStrictAliasingPtr = &dstBuff;
+        BMK_benchParams_t bp;
         BMK_runTime_t bestResult;
         bestResult.sumOfReturn = 0;
-        bestResult.nanoSecPerRun = (unsigned long long)(-1LL);
-        assert(tfs != NULL);
+        bestResult.nanoSecPerRun = (double)TIMELOOP_NANOSEC * 2000000000;  /* hopefully large enough : must be larger than any potential measurement */
+        CONTROL(tfs != NULL);
+
+        bp.benchFn = benchFunction;
+        bp.benchPayload = payload;
+        bp.initFn = NULL;
+        bp.initPayload = NULL;
+        bp.errorFn = ZSTD_isError;
+        bp.blockCount = 1;
+        bp.srcBuffers = &src;
+        bp.srcSizes = &srcSize;
+        bp.dstBuffers = (void* const*) avoidStrictAliasingPtr;  /* circumvent strict aliasing warning on gcc-8,
+                                                                 * because gcc considers that `void* const *`  and `void**` are 2 different types */
+        bp.dstCapacities = &dstBuffSize;
+        bp.blockResults = NULL;
+
         for (;;) {
-            void* const dstBuffv = dstBuff;
-            BMK_runOutcome_t const bOutcome =
-                    BMK_benchTimedFn( tfs,
-                            benchFunction, buff2,
-                            NULL, NULL,   /* initFn */
-                            1,  /* blockCount */
-                            &src, &srcSize,
-                            &dstBuffv, &dstBuffSize,
-                            NULL);
+            BMK_runOutcome_t const bOutcome = BMK_benchTimedFn(tfs, bp);
 
             if (!BMK_isSuccessful_runOutcome(bOutcome)) {
                 DISPLAY("ERROR benchmarking function ! ! \n");
@@ -563,21 +575,19 @@ _cleanOut:
 
 
 static int benchSample(U32 benchNb,
+                       size_t benchedSize, double compressibility,
                        int cLevel, ZSTD_compressionParameters cparams)
 {
-    size_t const benchedSize = g_sampleSize;
-    const char* const name = "Sample 10MiB";
-
     /* Allocation */
     void* const origBuff = malloc(benchedSize);
     if (!origBuff) { DISPLAY("\nError: not enough memory!\n"); return 12; }
 
     /* Fill buffer */
-    RDG_genBuffer(origBuff, benchedSize, g_compressibility, 0.0, 0);
+    RDG_genBuffer(origBuff, benchedSize, compressibility, 0.0, 0);
 
     /* bench */
     DISPLAY("\r%70s\r", "");
-    DISPLAY(" %s : \n", name);
+    DISPLAY(" Sample %u bytes : \n", (unsigned)benchedSize);
     if (benchNb) {
         benchMem(benchNb, origBuff, benchedSize, cLevel, cparams);
     } else {  /* 0 == run all tests */
@@ -616,7 +626,7 @@ static int benchFiles(U32 benchNb,
                 benchedSize = (size_t)inFileSize;
             if ((U64)benchedSize < inFileSize) {
                 DISPLAY("Not enough memory for '%s' full size; testing %u MB only... \n",
-                        inFileName, (U32)(benchedSize>>20));
+                        inFileName, (unsigned)(benchedSize>>20));
         }   }
 
         /* Alloc */
@@ -664,7 +674,9 @@ static unsigned readU32FromChar(const char** stringPtr)
     while ((**stringPtr >='0') && (**stringPtr <='9')) {
         unsigned const max = (((unsigned)(-1)) / 10) - 1;
         if (result > max) ERROR_OUT(errorMsg);
-        result *= 10, result += **stringPtr - '0', (*stringPtr)++ ;
+        result *= 10;
+        result += (unsigned)(**stringPtr - '0');
+        (*stringPtr)++ ;
     }
     if ((**stringPtr=='K') || (**stringPtr=='M')) {
         unsigned const maxK = ((unsigned)(-1)) >> 10;
@@ -681,7 +693,7 @@ static unsigned readU32FromChar(const char** stringPtr)
     return result;
 }
 
-static unsigned longCommandWArg(const char** stringPtr, const char* longCommand)
+static int longCommandWArg(const char** stringPtr, const char* longCommand)
 {
     size_t const comSize = strlen(longCommand);
     int const result = !strncmp(*stringPtr, longCommand, comSize);
@@ -708,10 +720,11 @@ static int usage_advanced(const char* exename)
     usage(exename);
     DISPLAY( "\nAdvanced options :\n");
     DISPLAY( " -b#    : test only function # \n");
-    DISPLAY( " -i#    : iteration loops [1-9](default : %i)\n", NBLOOPS);
-    DISPLAY( " -P#    : sample compressibility (default : %.1f%%)\n", COMPRESSIBILITY_DEFAULT * 100);
     DISPLAY( " -l#    : benchmark functions at that compression level (default : %i)\n", DEFAULT_CLEVEL);
-    DISPLAY( " --zstd : custom parameter selection. Format same as zstdcli \n");
+    DISPLAY( "--zstd= : custom parameter selection. Format same as zstdcli \n");
+    DISPLAY( " -P#    : sample compressibility (default : %.1f%%)\n", COMPRESSIBILITY_DEFAULT * 100);
+    DISPLAY( " -B#    : sample size (default : %u)\n", (unsigned)kSampleSizeDefault);
+    DISPLAY( " -i#    : iteration loops [1-9](default : %i)\n", NBLOOPS);
     return 0;
 }
 
@@ -730,13 +743,15 @@ int main(int argc, const char** argv)
     U32 benchNb = 0, main_pause = 0;
     int cLevel = DEFAULT_CLEVEL;
     ZSTD_compressionParameters cparams = ZSTD_getCParams(cLevel, 0, 0);
+    size_t sampleSize = kSampleSizeDefault;
+    double compressibility = COMPRESSIBILITY_DEFAULT;
 
     DISPLAY(WELCOME_MESSAGE);
     if (argc<1) return badusage(exename);
 
     for (argNb=1; argNb<argc; argNb++) {
         const char* argument = argv[argNb];
-        assert(argument != NULL);
+        CONTROL(argument != NULL);
 
         if (longCommandWArg(&argument, "--zstd=")) {
             for ( ; ;) {
@@ -744,7 +759,7 @@ int main(int argc, const char** argv)
                 if (longCommandWArg(&argument, "chainLog=") || longCommandWArg(&argument, "clog=")) { cparams.chainLog = readU32FromChar(&argument); if (argument[0]==',') { argument++; continue; } else break; }
                 if (longCommandWArg(&argument, "hashLog=") || longCommandWArg(&argument, "hlog=")) { cparams.hashLog = readU32FromChar(&argument); if (argument[0]==',') { argument++; continue; } else break; }
                 if (longCommandWArg(&argument, "searchLog=") || longCommandWArg(&argument, "slog=")) { cparams.searchLog = readU32FromChar(&argument); if (argument[0]==',') { argument++; continue; } else break; }
-                if (longCommandWArg(&argument, "searchLength=") || longCommandWArg(&argument, "slen=")) { cparams.searchLength = readU32FromChar(&argument); if (argument[0]==',') { argument++; continue; } else break; }
+                if (longCommandWArg(&argument, "minMatch=") || longCommandWArg(&argument, "mml=")) { cparams.minMatch = readU32FromChar(&argument); if (argument[0]==',') { argument++; continue; } else break; }
                 if (longCommandWArg(&argument, "targetLength=") || longCommandWArg(&argument, "tlen=")) { cparams.targetLength = readU32FromChar(&argument); if (argument[0]==',') { argument++; continue; } else break; }
                 if (longCommandWArg(&argument, "strategy=") || longCommandWArg(&argument, "strat=")) { cparams.strategy = (ZSTD_strategy)(readU32FromChar(&argument)); if (argument[0]==',') { argument++; continue; } else break; }
                 if (longCommandWArg(&argument, "level=") || longCommandWArg(&argument, "lvl=")) { cLevel = (int)readU32FromChar(&argument); cparams = ZSTD_getCParams(cLevel, 0, 0); if (argument[0]==',') { argument++; continue; } else break; }
@@ -779,21 +794,29 @@ int main(int argc, const char** argv)
                     benchNb = readU32FromChar(&argument);
                     break;
 
-                    /* Modify Nb Iterations */
-                case 'i':
+                    /* Select compression level to use */
+                case 'l':
                     argument++;
-                    BMK_SetNbIterations((int)readU32FromChar(&argument));
+                    cLevel = (int)readU32FromChar(&argument);
+                    cparams = ZSTD_getCParams(cLevel, 0, 0);
                     break;
 
                     /* Select compressibility of synthetic sample */
                 case 'P':
                     argument++;
-                    g_compressibility = (double)readU32FromChar(&argument) / 100.;
+                    compressibility = (double)readU32FromChar(&argument) / 100.;
                     break;
-                case 'l':
+
+                    /* Select size of synthetic sample */
+                case 'B':
                     argument++;
-                    cLevel = readU32FromChar(&argument);
-                    cparams = ZSTD_getCParams(cLevel, 0, 0);
+                    sampleSize = (size_t)readU32FromChar(&argument);
+                    break;
+
+                    /* Modify Nb Iterations */
+                case 'i':
+                    argument++;
+                    g_nbIterations = readU32FromChar(&argument);
                     break;
 
                     /* Unknown command */
@@ -810,7 +833,7 @@ int main(int argc, const char** argv)
 
 
     if (filenamesStart==0)   /* no input file */
-        result = benchSample(benchNb, cLevel, cparams);
+        result = benchSample(benchNb, sampleSize, compressibility, cLevel, cparams);
     else
         result = benchFiles(benchNb, argv+filenamesStart, argc-filenamesStart, cLevel, cparams);
 

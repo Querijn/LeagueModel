@@ -29,6 +29,7 @@
 #include <errno.h>          /* errno */
 #include <assert.h>
 
+#include "timefn.h"         /* UTIL_time_t, UTIL_clockSpanMicro, UTIL_getTime */
 #include "mem.h"            /* read */
 #include "error_private.h"
 #include "dibio.h"
@@ -84,10 +85,6 @@ static UTIL_time_t g_displayClock = UTIL_TIME_INITIALIZER;
 /* ********************************************************
 *  Helper functions
 **********************************************************/
-unsigned DiB_isError(size_t errorCode) { return ERR_isError(errorCode); }
-
-const char* DiB_getErrorName(size_t errorCode) { return ERR_getErrorName(errorCode); }
-
 #undef MIN
 #define MIN(a,b)    ((a) < (b) ? (a) : (b))
 
@@ -143,7 +140,7 @@ static unsigned DiB_loadFiles(void* buffer, size_t* bufferSizePtr,
     }
     DISPLAYLEVEL(2, "\r%79s\r", "");
     *bufferSizePtr = pos;
-    DISPLAYLEVEL(4, "loaded : %u KB \n", (U32)(pos >> 10))
+    DISPLAYLEVEL(4, "loaded : %u KB \n", (unsigned)(pos >> 10))
     return nbLoadedChunks;
 }
 
@@ -204,7 +201,7 @@ static void DiB_fillNoise(void* buffer, size_t length)
     unsigned const prime1 = 2654435761U;
     unsigned const prime2 = 2246822519U;
     unsigned acc = prime1;
-    size_t p=0;;
+    size_t p=0;
 
     for (p=0; p<length; p++) {
         acc *= prime2;
@@ -253,7 +250,7 @@ static fileStats DiB_fileStats(const char** fileNamesTable, unsigned nbFiles, si
         fs.oneSampleTooLarge |= (chunkSize > 2*SAMPLESIZE_MAX);
         fs.nbSamples += nbSamples;
     }
-    DISPLAYLEVEL(4, "Preparing to load : %u KB \n", (U32)(fs.totalSizeToLoad >> 10));
+    DISPLAYLEVEL(4, "Preparing to load : %u KB \n", (unsigned)(fs.totalSizeToLoad >> 10));
     return fs;
 }
 
@@ -362,7 +359,7 @@ int DiB_trainFromFiles(const char* dictFileName, unsigned maxDictSize,
             goto _cleanup;
         }
         /* save dict */
-        DISPLAYLEVEL(2, "Save dictionary of size %u into file %s \n", (U32)dictSize, dictFileName);
+        DISPLAYLEVEL(2, "Save dictionary of size %u into file %s \n", (unsigned)dictSize, dictFileName);
         DiB_saveDict(dictFileName, dictBuffer, dictSize);
     }
 
