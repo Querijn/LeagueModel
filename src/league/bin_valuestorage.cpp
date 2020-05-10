@@ -41,6 +41,15 @@ std::string GetStringByHash(uint32_t a_Hash)
 	return NumberToHexString(a_Hash) + " (I'm a hash!)";
 }
 
+League::BaseValueStorage::Type ParseBaseValueStorageType(uint8_t v)
+{
+	if (v == 128)
+		return League::BaseValueStorage::Type::Container;
+	else if (v > 128)
+		return (League::BaseValueStorage::Type)(v - 128 + 17);
+	return (League::BaseValueStorage::Type)v;
+}
+
 bool League::BaseValueStorage::Is(const std::string & a_Name) const
 {
 	return FNV1Hash(a_Name) == m_Hash;
@@ -176,7 +185,7 @@ using RGBAStorage = League::NumberVectorValueStorage<glm::ivec4, glm::ivec4::val
 
 League::BaseValueStorage * League::BaseValueStorage::Create(League::Bin& a_Bin, Type a_Type, uint32_t a_Hash, BaseValueStorage* a_Parent)
 {
-	unsigned int t_Type = a_Type >= 128 ? a_Type - 110 : a_Type;
+	auto t_Type = ParseBaseValueStorageType(t_Type);
 	switch ((Type)t_Type)
 	{
 	case Bool: return LM_NEW(NumberValueStorage<bool>(a_Bin, a_Parent, a_Type, a_Hash));
