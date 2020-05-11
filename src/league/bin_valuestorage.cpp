@@ -185,7 +185,7 @@ using RGBAStorage = League::NumberVectorValueStorage<glm::ivec4, glm::ivec4::val
 
 League::BaseValueStorage * League::BaseValueStorage::Create(League::Bin& a_Bin, Type a_Type, uint32_t a_Hash, BaseValueStorage* a_Parent)
 {
-	auto t_Type = ParseBaseValueStorageType(t_Type);
+	auto t_Type = ParseBaseValueStorageType(a_Type);
 	switch ((Type)t_Type)
 	{
 	case Bool: return LM_NEW(NumberValueStorage<bool>(a_Bin, a_Parent, a_Type, a_Hash));
