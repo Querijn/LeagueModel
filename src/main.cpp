@@ -56,7 +56,11 @@ static void Init()
 	desc.logger.func = slog_func;
 	sg_setup(&desc);
 
+	if (!fs::exists("cache"))
+		fs::create_directory("cache");
+
 	simgui_desc_t simgui_desc = { };
+	simgui_desc.ini_filename = "cache/imgui.ini";
 	simgui_setup(&simgui_desc);
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
