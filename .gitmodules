@@ -1,0 +1,3 @@
+[submodule "ext/leaguelib"]
+	path = ext/leaguelib
+	url = https://github.com/Querijn/LeagueLib.git
