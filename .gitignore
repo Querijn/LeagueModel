@@ -1,6 +1,0 @@
-/build/
-/data/output/
-/helper/node_modules/
-
-include/glm/* linguist-vendored
-external/stb/* linguist-vendored
