@@ -17,6 +17,17 @@ namespace LeagueModel
 			{
 				printf("Failed to load image %s.\n", fileName.c_str());
 				loadState = Spek::File::LoadState::FailedToLoad;
+
+				// TODO: Do something better than create a 1x1 black image.
+				const u8 imageData[4] = { 0, 0, 0, 255 };
+				sg_image_desc imageDesc = {};
+				imageDesc.width = 1;
+				imageDesc.height = 1;
+				imageDesc.pixel_format = SG_PIXELFORMAT_RGBA8;
+				imageDesc.data.subimage[0][0].ptr = imageData;
+				imageDesc.data.subimage[0][0].size = 4;
+				image = sg_make_image(imageDesc);
+
 				if (onImageLoaded)
 					onImageLoaded(*this);
 				return;
