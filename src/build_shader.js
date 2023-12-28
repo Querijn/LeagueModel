@@ -9,7 +9,7 @@ if (fs.existsSync(toolLocation) == false) {
     return;
 }
 
-const folders = [ "src/shaders" ];
+const folders = ["src/shaders", "src/shaders/generated" ];
 (async function () {
     for (let folder of folders) {
         if (folder.startsWith("#") || folder == "")
