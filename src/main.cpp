@@ -271,8 +271,13 @@ void MountDir(const char* wadPath)
 sapp_desc sokol_main(int argc, char* argv[])
 {
 	// Load current working directory and default or argument path
-	MountDir(argc <= 1 ? "C:/Riot Games/League of Legends/Game/DATA/FINAL" : argv[1]);
-	MountDir(fs::current_path().string().c_str());
+	const char* argumentDirectory = argc <= 1 ? "C:/Riot Games/League of Legends/Game/DATA/FINAL" : argv[1];
+	if (fs::exists(argumentDirectory))
+		MountDir(argumentDirectory);
+
+	fs::path localDirectory = fs::current_path();
+	if (fs::exists(localDirectory))
+		MountDir(localDirectory.string().c_str());
 
 	sapp_desc appDesc = {};
 	appDesc.init_cb = Init;
