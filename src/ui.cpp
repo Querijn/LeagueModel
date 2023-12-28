@@ -60,7 +60,7 @@ namespace LeagueModel
 		{
 			std::string url = "https://cdn.merakianalytics.com/riot/lol/resources/latest/en-US/champions.json";
 
-			HINTERNET client = InternetOpenA("LeagueGameReader", INTERNET_OPEN_TYPE_DIRECT, nullptr, nullptr, 0);
+			HINTERNET client = InternetOpenA("LeagueModel", INTERNET_OPEN_TYPE_DIRECT, nullptr, nullptr, 0);
 			if (client == nullptr)
 			{
 				assert(false);
