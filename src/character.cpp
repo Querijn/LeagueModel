@@ -28,7 +28,7 @@ namespace LeagueModel
 	void TryLoadMeshInfo(Character& character, Character::OnMeshLoadFunction onMeshLoaded, const LeagueLib::Bin& skinBin, const LeagueLib::BinVariable& base);
 	void TryGenerateMesh(Character& character, Character::OnMeshLoadFunction onMeshLoaded, const LeagueLib::Bin& skinBin);
 	void FinishLoad(Character& character, Character::OnMeshLoadFunction onMeshLoaded);
-	
+
 	void Character::Load(const char* modelName, u8 skinIndex, OnMeshLoadFunction onMeshLoaded)
 	{
 		std::string charName = modelName;
@@ -194,7 +194,24 @@ namespace LeagueModel
 			bool isTexture = !!strstr(samplerName->c_str(), "Texture") || !!strstr(samplerName->c_str(), "texture");
 			if (isDiffuse && isTexture)
 			{
-				return std::make_shared<ManagedImage>(samplerValue["textureName"].As<std::string>()->c_str(), onLoad);
+				const std::string* origPath = samplerValue["textureName"].As<std::string>();
+				if (origPath)
+					return std::make_shared<ManagedImage>(origPath->c_str(), onLoad);
+			}
+		}
+
+		for (const auto& samplerValue : *samplerValues)
+		{
+			const std::string* samplerName = samplerValue["samplerName"].As<std::string>();
+			if (samplerName == nullptr)
+				continue;
+
+			bool isDiffuse = !!strstr(samplerName->c_str(), "Diffuse") || !!strstr(samplerName->c_str(), "diffuse");
+			if (isDiffuse)
+			{
+				const std::string* origPath = samplerValue["textureName"].As<std::string>();
+				if (origPath)
+					return std::make_shared<ManagedImage>(origPath->c_str(), onLoad);
 			}
 		}
 
@@ -217,21 +234,15 @@ namespace LeagueModel
 			return;
 		}
 
-		if (textureFileName != nullptr)
+		const u32* materialHash = properties["material"].As<u32>();
+		if (materialHash)
 		{
-			character.globalTexture = std::make_shared<ManagedImage>(textureFileName->c_str());
-		}
-		else
-		{
-			character.globalTexture = nullptr;
-
-			// TODO: Deduplicate this code
-			const u32* materialHash = properties["material"].As<u32>();
 			auto var = skinBin[*materialHash];
 			const LeagueLib::BinArray* materialsArray = var.As<LeagueLib::BinArray>();
 			const LeagueLib::BinObject* materialsObj = var.As<LeagueLib::BinObject>();
 			if (materialsArray)
 			{
+				// TODO: This need to follow the same code path as GetDiffuseTextureFromSamplerValues, can we merge these?
 				for (const auto& material : *materialsArray)
 				{
 					const std::string* textureFileName = material["Diffuse_Texture"].As<std::string>();
@@ -246,6 +257,11 @@ namespace LeagueModel
 			{
 				character.globalTexture = GetDiffuseTextureFromSamplerValues(character, materialsObj);
 			}
+		}
+
+		if (character.globalTexture == nullptr && textureFileName != nullptr)
+		{
+			character.globalTexture = std::make_shared<ManagedImage>(textureFileName->c_str());
 		}
 
 		bool hasOverriddenBBox = false;

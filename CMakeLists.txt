@@ -67,5 +67,5 @@ if (EMSCRIPTEN)
 	set_target_properties(LEAMOD PROPERTIES LINK_FLAGS ${LEAMOD_FLAGS} "-s FULL_ES2=1 -s DISABLE_EXCEPTION_CATCHING=2 -s MINIMAL_RUNTIME -lwebgl.js -s ALLOW_MEMORY_GROWTH=1 -std=c++20")
 endif ()
 
-add_custom_target(LeagueModelShaderGen ${LEAMOD_TEMPLATES} COMMAND cmd /c "node ${CMAKE_CURRENT_SOURCE_DIR}/src/build_shader.js" WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-add_dependencies(LeagueModel LeagueModelShaderGen)
+# add_custom_target(LeagueModelShaderGen ${LEAMOD_TEMPLATES} COMMAND cmd /c "node ${CMAKE_CURRENT_SOURCE_DIR}/src/build_shader.js" WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+# add_dependencies(LeagueModel LeagueModelShaderGen)

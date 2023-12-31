@@ -48,7 +48,7 @@ namespace LeagueModel
 			}
 			else
 			{
-				stbi_uc* imageData = stbi_load_from_memory(data.data(), data.size(), &imageWidth, &imageHeight, &bytesPerPixel, 4);
+				imageData = stbi_load_from_memory(data.data(), data.size(), &imageWidth, &imageHeight, &bytesPerPixel, 4);
 			}
 
 			if (imageData == nullptr)
