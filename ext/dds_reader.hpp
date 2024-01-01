@@ -279,8 +279,8 @@ namespace DDS
 	} DDSHEADER;
 
 	#define MAKEFOURCC(ch0, ch1, ch2, ch3) \
-		((DWORD)(BYTE)(ch0) | ((DWORD)(BYTE)(ch1) << 8) |   \
-		((DWORD)(BYTE)(ch2) << 16) | ((DWORD)(BYTE)(ch3) << 24 ))
+		((uint32_t)(uint8_t)(ch0)		 | ((uint32_t)(uint8_t)(ch1) << 8) |   \
+		((uint32_t)(uint8_t)(ch2) << 16) | ((uint32_t)(uint8_t)(ch3) << 24 ))
 
 	#define FOURCC_DXT1	MAKEFOURCC('D','X','T','1')
 	#define FOURCC_DXT2	MAKEFOURCC('D','X','T','2')

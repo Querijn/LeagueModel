@@ -19,3 +19,4 @@ namespace LeagueModel
 		Spek::File::Handle file = nullptr;
 	};
 }
+	
